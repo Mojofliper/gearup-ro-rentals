@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { Camera, Upload, X, Plus } from 'lucide-react';
+import { Camera, Upload, X, Plus, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 export const AddGear: React.FC = () => {
@@ -56,12 +56,15 @@ export const AddGear: React.FC = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      // În aplicația reală ar face upload pe server
-      // Aici simulăm cu URLs mock
-      const newImages = Array.from(files).map((file, index) => 
-        `https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop&t=${Date.now()}-${index}`
-      );
-      setImages([...images, ...newImages]);
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            setImages(prev => [...prev, event.target.result as string]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -120,8 +123,8 @@ export const AddGear: React.FC = () => {
     // Validare de bază
     if (!formData.name || !formData.category || !formData.pricePerDay) {
       toast({
-        title: 'Eroare validare',
-        description: 'Te rugăm să completezi toate câmpurile obligatorii.',
+        title: 'Câmpuri incomplete',
+        description: 'Completează toate câmpurile obligatorii pentru a continua.',
         variant: 'destructive',
       });
       setIsSubmitting(false);
@@ -130,8 +133,8 @@ export const AddGear: React.FC = () => {
 
     if (images.length === 0) {
       toast({
-        title: 'Eroare validare',
-        description: 'Te rugăm să adaugi cel puțin o fotografie.',
+        title: 'Fotografii lipsă',
+        description: 'Adaugă cel puțin o fotografie a echipamentului.',
         variant: 'destructive',
       });
       setIsSubmitting(false);
@@ -141,54 +144,72 @@ export const AddGear: React.FC = () => {
     // Simulare submit
     setTimeout(() => {
       toast({
-        title: 'Echipament adăugat cu succes!',
-        description: 'Echipamentul tău va fi vizibil după verificare.',
+        title: 'Echipament publicat cu succes!',
+        description: 'Echipamentul tău este acum disponibil în platformă.',
       });
       setIsSubmitting(false);
-      // În aplicația reală ar redirecta către pagina de echipamente
+      // Reset form
+      setFormData({
+        name: '',
+        category: '',
+        description: '',
+        pricePerDay: '',
+        depositAmount: '',
+        condition: '',
+        brand: '',
+        model: '',
+        isAvailable: true,
+        pickupLocation: user?.location || '',
+        specifications: [''],
+        includedItems: ['']
+      });
+      setImages([]);
     }, 2000);
   };
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <Header />
       
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Adaugă echipament nou</h1>
-          <p className="text-muted-foreground">
-            Pune-ți echipamentul la dispoziția comunității de creatori români
+      <div className="container mx-auto px-4 py-12 max-w-4xl">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            Publică echipament nou
+          </h1>
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            Transformă-ți echipamentul neutilizat într-o sursă de venit și ajută comunitatea de creatori
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Informații de bază */}
-          <Card>
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
             <CardHeader>
-              <CardTitle>Informații de bază</CardTitle>
+              <CardTitle className="text-2xl text-slate-800">Informații de bază</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="name">Nume echipament *</Label>
+                  <Label htmlFor="name" className="text-slate-700 font-medium">Nume echipament *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="ex: Sony A7 III"
+                    className="mt-2 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="category">Categorie *</Label>
+                  <Label htmlFor="category" className="text-slate-700 font-medium">Categorie *</Label>
                   <Select 
                     value={formData.category} 
                     onValueChange={(value) => setFormData({ ...formData, category: value })}
                     required
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="mt-2 border-slate-200 focus:border-blue-500">
                       <SelectValue placeholder="Selectează categoria" />
                     </SelectTrigger>
                     <SelectContent>
@@ -202,45 +223,48 @@ export const AddGear: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="brand">Marca</Label>
+                  <Label htmlFor="brand" className="text-slate-700 font-medium">Marca</Label>
                   <Input
                     id="brand"
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     placeholder="ex: Sony, Canon, Nikon"
+                    className="mt-2 border-slate-200 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="model">Model</Label>
+                  <Label htmlFor="model" className="text-slate-700 font-medium">Model</Label>
                   <Input
                     id="model"
                     value={formData.model}
                     onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                     placeholder="ex: A7 III, 5D Mark IV"
+                    className="mt-2 border-slate-200 focus:border-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="description">Descriere</Label>
+                <Label htmlFor="description" className="text-slate-700 font-medium">Descriere</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Descrie echipamentul, starea sa, utilizările recomandate..."
                   rows={4}
+                  className="mt-2 border-slate-200 focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <Label htmlFor="condition">Starea echipamentului</Label>
+                <Label htmlFor="condition" className="text-slate-700 font-medium">Starea echipamentului</Label>
                 <Select 
                   value={formData.condition} 
                   onValueChange={(value) => setFormData({ ...formData, condition: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="mt-2 border-slate-200 focus:border-blue-500">
                     <SelectValue placeholder="Selectează starea" />
                   </SelectTrigger>
                   <SelectContent>
@@ -256,14 +280,14 @@ export const AddGear: React.FC = () => {
           </Card>
 
           {/* Preț și disponibilitate */}
-          <Card>
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
             <CardHeader>
-              <CardTitle>Preț și disponibilitate</CardTitle>
+              <CardTitle className="text-2xl text-slate-800">Preț și disponibilitate</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="pricePerDay">Preț pe zi (RON) *</Label>
+                  <Label htmlFor="pricePerDay" className="text-slate-700 font-medium">Preț pe zi (RON) *</Label>
                   <Input
                     id="pricePerDay"
                     type="number"
@@ -271,11 +295,12 @@ export const AddGear: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, pricePerDay: e.target.value })}
                     placeholder="120"
                     min="0"
+                    className="mt-2 border-slate-200 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="depositAmount">Garanție (RON)</Label>
+                  <Label htmlFor="depositAmount" className="text-slate-700 font-medium">Garanție (RON)</Label>
                   <Input
                     id="depositAmount"
                     type="number"
@@ -283,59 +308,63 @@ export const AddGear: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, depositAmount: e.target.value })}
                     placeholder="500"
                     min="0"
+                    className="mt-2 border-slate-200 focus:border-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="pickupLocation">Locația de preluare</Label>
+                <Label htmlFor="pickupLocation" className="text-slate-700 font-medium">Locația de preluare</Label>
                 <Input
                   id="pickupLocation"
                   value={formData.pickupLocation}
                   onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })}
                   placeholder="Cluj-Napoca"
+                  className="mt-2 border-slate-200 focus:border-blue-500"
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
                 <Switch
                   id="isAvailable"
                   checked={formData.isAvailable}
                   onCheckedChange={(checked) => setFormData({ ...formData, isAvailable: checked })}
                 />
-                <Label htmlFor="isAvailable">Disponibil pentru închiriere</Label>
+                <Label htmlFor="isAvailable" className="text-slate-700 font-medium">
+                  Disponibil pentru închiriere
+                </Label>
               </div>
             </CardContent>
           </Card>
 
           {/* Fotografii */}
-          <Card>
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
             <CardHeader>
-              <CardTitle>Fotografii *</CardTitle>
+              <CardTitle className="text-2xl text-slate-800">Fotografii *</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {images.map((image, index) => (
-                    <div key={index} className="relative">
+                    <div key={index} className="relative group">
                       <img
                         src={image}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
+                        className="w-full h-24 object-cover rounded-lg shadow-md"
                       />
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                       >
                         <X className="h-3 w-3" />
                       </button>
                     </div>
                   ))}
                   
-                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                    <Upload className="h-6 w-6 text-gray-400" />
-                    <span className="text-xs text-gray-500 mt-1">Adaugă foto</span>
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-50 bg-gradient-to-br from-blue-25 to-purple-25 transition-colors">
+                    <Upload className="h-6 w-6 text-blue-500" />
+                    <span className="text-xs text-blue-600 mt-1 font-medium">Adaugă foto</span>
                     <input
                       type="file"
                       multiple
@@ -345,17 +374,17 @@ export const AddGear: React.FC = () => {
                     />
                   </label>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Adaugă cel puțin o fotografie. Prima fotografie va fi folosită ca imagine principală.
+                <p className="text-sm text-slate-600">
+                  Adaugă fotografii clare ale echipamentului. Prima fotografie va fi folosită ca imagine principală.
                 </p>
               </div>
             </CardContent>
           </Card>
 
           {/* Specificații */}
-          <Card>
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
             <CardHeader>
-              <CardTitle>Specificații tehnice</CardTitle>
+              <CardTitle className="text-2xl text-slate-800">Specificații tehnice</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -365,7 +394,7 @@ export const AddGear: React.FC = () => {
                       value={spec}
                       onChange={(e) => updateSpecification(index, e.target.value)}
                       placeholder="ex: ISO: 100-51200"
-                      className="flex-1"
+                      className="flex-1 border-slate-200 focus:border-blue-500"
                     />
                     {formData.specifications.length > 1 && (
                       <Button
@@ -373,6 +402,7 @@ export const AddGear: React.FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => removeSpecification(index)}
+                        className="border-slate-200 hover:border-red-300 hover:text-red-600"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -384,6 +414,7 @@ export const AddGear: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={addSpecification}
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Adaugă specificație
@@ -393,9 +424,9 @@ export const AddGear: React.FC = () => {
           </Card>
 
           {/* Ce este inclus */}
-          <Card>
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
             <CardHeader>
-              <CardTitle>Ce este inclus în închiriere</CardTitle>
+              <CardTitle className="text-2xl text-slate-800">Ce este inclus în închiriere</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -405,7 +436,7 @@ export const AddGear: React.FC = () => {
                       value={item}
                       onChange={(e) => updateIncludedItem(index, e.target.value)}
                       placeholder="ex: Geantă de transport"
-                      className="flex-1"
+                      className="flex-1 border-slate-200 focus:border-blue-500"
                     />
                     {formData.includedItems.length > 1 && (
                       <Button
@@ -413,6 +444,7 @@ export const AddGear: React.FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => removeIncludedItem(index)}
+                        className="border-slate-200 hover:border-red-300 hover:text-red-600"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -424,6 +456,7 @@ export const AddGear: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={addIncludedItem}
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Adaugă item
@@ -436,23 +469,27 @@ export const AddGear: React.FC = () => {
           <div className="flex space-x-4">
             <Button 
               type="submit" 
-              className="flex-1"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3 shadow-lg"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>
-                  <Camera className="h-4 w-4 mr-2 animate-spin" />
+                  <Camera className="h-5 w-5 mr-2 animate-pulse" />
                   Se procesează...
                 </>
               ) : (
                 <>
-                  <Camera className="h-4 w-4 mr-2" />
+                  <Check className="h-5 w-5 mr-2" />
                   Publică echipamentul
                 </>
               )}
             </Button>
-            <Button type="button" variant="outline">
-              Salvează ca draft
+            <Button 
+              type="button" 
+              variant="outline"
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Salvează draft
             </Button>
           </div>
         </form>
