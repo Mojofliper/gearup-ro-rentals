@@ -66,8 +66,8 @@ const mockGear = [
 export const BrowseGear: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [selectedLocation, setSelectedLocation] = useState(searchParams.get('location') || '');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState(searchParams.get('location') || 'all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('relevance');
   const [filteredGear, setFilteredGear] = useState(mockGear);
 
@@ -81,13 +81,13 @@ export const BrowseGear: React.FC = () => {
       );
     }
 
-    if (selectedLocation) {
+    if (selectedLocation && selectedLocation !== 'all') {
       filtered = filtered.filter(gear =>
         gear.location.toLowerCase().includes(selectedLocation.toLowerCase())
       );
     }
 
-    if (selectedCategory) {
+    if (selectedCategory && selectedCategory !== 'all') {
       filtered = filtered.filter(gear => gear.category === selectedCategory);
     }
 
@@ -125,7 +125,7 @@ export const BrowseGear: React.FC = () => {
                 <SelectValue placeholder="Toate orașele" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toate orașele</SelectItem>
+                <SelectItem value="all">Toate orașele</SelectItem>
                 <SelectItem value="bucuresti">București</SelectItem>
                 <SelectItem value="cluj-napoca">Cluj-Napoca</SelectItem>
                 <SelectItem value="timisoara">Timișoara</SelectItem>
@@ -138,7 +138,7 @@ export const BrowseGear: React.FC = () => {
                 <SelectValue placeholder="Toate categoriile" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toate categoriile</SelectItem>
+                <SelectItem value="all">Toate categoriile</SelectItem>
                 <SelectItem value="Camere foto">Camere foto</SelectItem>
                 <SelectItem value="Obiective">Obiective</SelectItem>
                 <SelectItem value="Drone">Drone</SelectItem>
@@ -236,8 +236,8 @@ export const BrowseGear: React.FC = () => {
             <p className="text-muted-foreground mb-4">Încearcă să modifici criteriile de căutare</p>
             <Button onClick={() => {
               setSearchQuery('');
-              setSelectedLocation('');
-              setSelectedCategory('');
+              setSelectedLocation('all');
+              setSelectedCategory('all');
             }}>
               Resetează filtrele
             </Button>
