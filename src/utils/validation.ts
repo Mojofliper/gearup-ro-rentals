@@ -1,4 +1,3 @@
-
 export const validateGearName = (name: string): string | null => {
   if (!name || name.trim().length < 3) {
     return 'Numele trebuie să aibă cel puțin 3 caractere';
@@ -51,10 +50,76 @@ export const validateImageFile = (file: File): string | null => {
   return null;
 };
 
+export const validateBookingDates = (startDate: string, endDate: string): string | null => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const now = new Date();
+  
+  if (start < now) {
+    return 'Data de început nu poate fi în trecut';
+  }
+  
+  if (end <= start) {
+    return 'Data de sfârșit trebuie să fie după data de început';
+  }
+  
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays > 365) {
+    return 'Perioada de închiriere nu poate depăși un an';
+  }
+  
+  return null;
+};
+
+export const validatePhoneNumber = (phone: string): string | null => {
+  if (!phone) return null;
+  
+  const phoneRegex = /^[\+]?[\d\s\-\(\)]{10,15}$/;
+  if (!phoneRegex.test(phone)) {
+    return 'Numărul de telefon nu este valid';
+  }
+  
+  return null;
+};
+
+export const validateAmount = (amount: string, min = 0, max = 1000000): string | null => {
+  const numAmount = parseFloat(amount);
+  
+  if (isNaN(numAmount)) {
+    return 'Suma trebuie să fie un număr valid';
+  }
+  
+  if (numAmount < min) {
+    return `Suma minimă este ${min} RON`;
+  }
+  
+  if (numAmount > max) {
+    return `Suma maximă este ${max} RON`;
+  }
+  
+  return null;
+};
+
+export const validateSearchQuery = (query: string): string | null => {
+  if (query.length > 100) {
+    return 'Termenul de căutare este prea lung';
+  }
+  
+  // Check for suspicious patterns
+  if (/[<>]|script|javascript|onclick|onerror/i.test(query)) {
+    return 'Termenul de căutare conține caractere nepermise';
+  }
+  
+  return null;
+};
+
 export const sanitizeInput = (input: string): string => {
   return input
     .replace(/[<>]/g, '') // Remove angle brackets
     .replace(/script/gi, '') // Remove script tags
     .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
     .trim();
 };

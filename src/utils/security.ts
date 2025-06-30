@@ -67,3 +67,41 @@ export const sanitizeForDisplay = (input: string): string => {
 export const reportCSPViolation = (violationReport: any) => {
   logSecurityEvent('CSP_VIOLATION', violationReport);
 };
+
+// Add additional security utilities
+export const escapeHtml = (text: string): string => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
+export const isValidUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return ['http:', 'https:'].includes(urlObj.protocol);
+  } catch {
+    return false;
+  }
+};
+
+export const sanitizeFileName = (fileName: string): string => {
+  return fileName
+    .replace(/[^a-zA-Z0-9.-]/g, '_')
+    .replace(/_{2,}/g, '_')
+    .substring(0, 255);
+};
+
+export const generateSecureToken = (): string => {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
+export const validateFileType = (file: File, allowedTypes: string[]): boolean => {
+  return allowedTypes.includes(file.type);
+};
+
+export const checkFileSize = (file: File, maxSizeMB: number): boolean => {
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  return file.size <= maxSizeBytes;
+};
