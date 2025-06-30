@@ -1,13 +1,12 @@
 
-import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useRateLimit = () => {
-  const [isChecking, setIsChecking] = useState(false);
-
-  const checkRateLimit = async (actionType: string, maxActions = 10, windowMinutes = 60): Promise<boolean> => {
-    setIsChecking(true);
-    
+  const checkRateLimit = async (
+    actionType: string, 
+    maxActions: number = 10, 
+    windowMinutes: number = 60
+  ): Promise<boolean> => {
     try {
       const { data, error } = await supabase.rpc('check_rate_limit', {
         action_type: actionType,
@@ -24,10 +23,8 @@ export const useRateLimit = () => {
     } catch (error) {
       console.error('Rate limit check failed:', error);
       return false;
-    } finally {
-      setIsChecking(false);
     }
   };
 
-  return { checkRateLimit, isChecking };
+  return { checkRateLimit };
 };

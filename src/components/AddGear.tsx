@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -161,20 +160,11 @@ export const AddGear: React.FC = () => {
     } catch (error: any) {
       console.error('Error creating gear:', error);
       
-      // Handle specific validation errors
-      if (error.message?.includes('Invalid gear data provided')) {
-        toast({
-          title: 'Date invalide',
-          description: 'Datele introduse nu respectă criteriile de siguranță.',
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Eroare',
-          description: 'Nu am putut adăuga echipamentul. Te rugăm să încerci din nou.',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Eroare',
+        description: 'Nu am putut adăuga echipamentul. Te rugăm să încerci din nou.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

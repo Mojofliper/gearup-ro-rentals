@@ -1,11 +1,9 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useSecureAuth } from './useSecureAuth';
 import { secureApiCall, SecureApiError } from '@/utils/secureApi';
 
 export const useSecureGear = () => {
-  const { requireAuth } = useSecureAuth();
   const [loading, setLoading] = useState(false);
 
   const createGear = async (gearData: any) => {
@@ -13,8 +11,6 @@ export const useSecureGear = () => {
     try {
       return await secureApiCall(
         async () => {
-          requireAuth();
-          
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) throw new SecureApiError('User not found', 'USER_NOT_FOUND', 401);
 
@@ -50,8 +46,6 @@ export const useSecureGear = () => {
     try {
       return await secureApiCall(
         async () => {
-          requireAuth();
-          
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) throw new SecureApiError('User not found', 'USER_NOT_FOUND', 401);
 
@@ -92,8 +86,6 @@ export const useSecureGear = () => {
     try {
       return await secureApiCall(
         async () => {
-          requireAuth();
-          
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) throw new SecureApiError('User not found', 'USER_NOT_FOUND', 401);
 
