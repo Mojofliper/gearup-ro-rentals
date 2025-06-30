@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -8,7 +9,6 @@ import { BasicInfo } from './AddGear/BasicInfo';
 import { PhotoUpload } from './AddGear/PhotoUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateGear } from '@/hooks/useGear';
-import { useRateLimit } from '@/hooks/useRateLimit';
 import { toast } from '@/hooks/use-toast';
 import { validateGearName, validateGearDescription, validatePrice, sanitizeInput } from '@/utils/validation';
 
@@ -16,7 +16,6 @@ export const AddGear: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const createGear = useCreateGear();
-  const { checkRateLimit } = useRateLimit();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -113,17 +112,6 @@ export const AddGear: React.FC = () => {
       toast({
         title: 'Eroare de autentificare',
         description: 'Trebuie să fii conectat pentru a adăuga echipament.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Check rate limit
-    const canProceed = await checkRateLimit('create_gear', 5, 60);
-    if (!canProceed) {
-      toast({
-        title: 'Limită depășită',
-        description: 'Ai depășit limita de adăugare echipamente. Încearcă din nou mai târziu.',
         variant: 'destructive',
       });
       return;

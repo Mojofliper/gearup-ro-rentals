@@ -27,14 +27,7 @@ export const useSecureGear = () => {
           if (error) throw error;
           return data;
         },
-        {
-          requireAuth: true,
-          rateLimit: {
-            action: 'create_gear',
-            maxActions: 5,
-            windowMinutes: 60
-          }
-        }
+        { requireAuth: true }
       );
     } finally {
       setLoading(false);

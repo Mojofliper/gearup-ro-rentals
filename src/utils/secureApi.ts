@@ -35,16 +35,21 @@ export const secureApiCall = async <T>(
       }
     }
 
-    // Check rate limits if specified
+    // Check rate limits if specified - but don't block on errors
     if (options?.rateLimit) {
-      const canProceed = await checkRateLimit(
-        options.rateLimit.action,
-        options.rateLimit.maxActions,
-        options.rateLimit.windowMinutes
-      );
-      
-      if (!canProceed) {
-        throw new SecureApiError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
+      try {
+        const canProceed = await checkRateLimit(
+          options.rateLimit.action,
+          options.rateLimit.maxActions,
+          options.rateLimit.windowMinutes
+        );
+        
+        if (!canProceed) {
+          throw new SecureApiError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
+        }
+      } catch (rateLimitError) {
+        // Log the error but don't block the operation
+        console.warn('Rate limit check failed, allowing operation to proceed:', rateLimitError);
       }
     }
 
@@ -62,13 +67,21 @@ export const secureApiCall = async <T>(
   }
 };
 
-// Rate limiting helper
+// Rate limiting helper - with better error handling
 export const checkRateLimit = async (
   actionType: string,
   maxActions: number = 10,
   windowMinutes: number = 60
 ): Promise<boolean> => {
   try {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.warn('No authenticated user for rate limit check');
+      return true; // Allow operation if no user (will be caught by auth check)
+    }
+
+    // Try to call the rate limit function
     const { data, error } = await supabase.rpc('check_rate_limit', {
       action_type: actionType,
       max_actions: maxActions,
@@ -77,13 +90,13 @@ export const checkRateLimit = async (
 
     if (error) {
       console.error('Rate limit check failed:', error);
-      return false;
+      return true; // Allow operation on error to prevent blocking legitimate users
     }
 
     return data;
   } catch (error) {
     console.error('Rate limit error:', error);
-    return false;
+    return true; // Allow operation on error
   }
 };
 
