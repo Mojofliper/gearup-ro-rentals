@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,9 +66,7 @@ export const FeaturedGear: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuredGear.map((gear) => {
             // Safely parse images from Json type
-            const images = Array.isArray(gear.images) ? gear.images as string[] : 
-                          (gear.images && typeof gear.images === 'object' && 'length' in gear.images) ? 
-                          gear.images as string[] : [];
+            const images = Array.isArray(gear.images) ? (gear.images as unknown as string[]) : [];
             const firstImage = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
             const ownerName = gear.owner?.full_name || 'Utilizator';
             const ownerLocation = gear.owner?.location || 'România';
