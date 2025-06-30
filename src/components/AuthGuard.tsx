@@ -2,14 +2,19 @@
 import React from 'react';
 import { useSecureAuth } from '@/hooks/useSecureAuth';
 import { LoadingScreen } from './LoadingScreen';
-import { AuthModal } from './AuthModal';
+import { Navigate } from 'react-router-dom';
 
 interface AuthGuardProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  redirectTo?: string;
 }
 
-export const AuthGuard: React.FC<AuthGuardProps> = ({ children, fallback }) => {
+export const AuthGuard: React.FC<AuthGuardProps> = ({ 
+  children, 
+  fallback,
+  redirectTo = '/'
+}) => {
   const { isAuthenticated, loading } = useSecureAuth();
 
   if (loading) {
@@ -17,7 +22,12 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children, fallback }) => {
   }
 
   if (!isAuthenticated) {
-    return fallback || <AuthModal />;
+    if (fallback) {
+      return <>{fallback}</>;
+    }
+    
+    // Redirect to home page where auth modal can be triggered
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;
