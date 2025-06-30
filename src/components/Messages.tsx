@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Send, Search, MoreVertical, Star } from 'lucide-react';
+import { Send, Search, MoreVertical, ArrowLeft } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -37,9 +36,10 @@ interface Conversation {
 }
 
 export const Messages: React.FC = () => {
-  const [selectedConversation, setSelectedConversation] = useState<string | null>('1');
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showConversationList, setShowConversationList] = useState(true);
 
   // Mock data pentru demonstrație
   const conversations: Conversation[] = [
@@ -167,182 +167,208 @@ export const Messages: React.FC = () => {
     conversation.gear.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleConversationSelect = (id: string) => {
+    setSelectedConversation(id);
+    setShowConversationList(false);
+  };
+
+  const handleBackToList = () => {
+    setShowConversationList(true);
+    setSelectedConversation(null);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-          {/* Conversation List */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Mesaje</span>
-                <Badge variant="secondary">{conversations.length}</Badge>
-              </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Caută conversații..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="space-y-1">
-                {filteredConversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    onClick={() => setSelectedConversation(conversation.id)}
-                    className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                      selectedConversation === conversation.id ? 'bg-muted' : ''
-                    }`}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="relative">
-                        <Avatar className="h-12 w-12">
-                          <AvatarFallback>
-                            {conversation.participant.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        {conversation.participant.isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-medium truncate">{conversation.participant.name}</p>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(conversation.lastMessageTime)}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 mb-2">
-                          <img
-                            src={conversation.gear.image}
-                            alt={conversation.gear.name}
-                            className="w-6 h-6 rounded object-cover"
-                          />
-                          <span className="text-sm text-muted-foreground truncate">
-                            {conversation.gear.name}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-muted-foreground truncate">
-                            {conversation.lastMessage}
-                          </p>
-                          {conversation.unreadCount > 0 && (
-                            <Badge variant="destructive" className="h-5 w-5 p-0 text-xs">
-                              {conversation.unreadCount}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Chat Window */}
-          <Card className="lg:col-span-2 flex flex-col">
-            {currentConversation ? (
-              <>
-                {/* Chat Header */}
-                <CardHeader className="flex-shrink-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {currentConversation.participant.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold">{currentConversation.participant.name}</h3>
-                          {currentConversation.participant.isOnline && (
-                            <Badge variant="secondary" className="text-xs">Online</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <img
-                            src={currentConversation.gear.image}
-                            alt={currentConversation.gear.name}
-                            className="w-4 h-4 rounded object-cover"
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            {currentConversation.gear.name} • {currentConversation.gear.price} RON/zi
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-
-                <Separator />
-
-                {/* Messages */}
-                <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {currentConversation.messages.map((message) => (
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-200px)] max-h-[600px]">
+          {/* Mobile: Show conversation list OR chat, Desktop: Show both */}
+          <div className={`${showConversationList ? 'block' : 'hidden lg:block'} w-full lg:w-1/3`}>
+            <Card className="h-full">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center justify-between">
+                  <span>Mesaje</span>
+                  <Badge variant="secondary">{conversations.length}</Badge>
+                </CardTitle>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Caută conversații..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 border-gray-200 focus:border-purple-500"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                  {filteredConversations.map((conversation) => (
                     <div
-                      key={message.id}
-                      className={`flex ${message.senderId === 'me' ? 'justify-end' : 'justify-start'}`}
+                      key={conversation.id}
+                      onClick={() => handleConversationSelect(conversation.id)}
+                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        selectedConversation === conversation.id ? 'bg-gray-50' : ''
+                      }`}
                     >
-                      <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          message.senderId === 'me'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                        <p className={`text-xs mt-1 ${
-                          message.senderId === 'me' 
-                            ? 'text-primary-foreground/70' 
-                            : 'text-muted-foreground'
-                        }`}>
-                          {formatTime(message.timestamp)}
-                        </p>
+                      <div className="flex items-start space-x-3">
+                        <div className="relative">
+                          <Avatar className="h-12 w-12">
+                            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+                              {conversation.participant.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          {conversation.participant.isOnline && (
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="font-medium truncate text-gray-800">{conversation.participant.name}</p>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(conversation.lastMessageTime)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2 mb-2">
+                            <img
+                              src={conversation.gear.image}
+                              alt={conversation.gear.name}
+                              className="w-6 h-6 rounded object-cover"
+                            />
+                            <span className="text-sm text-gray-600 truncate">
+                              {conversation.gear.name}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-500 truncate">
+                              {conversation.lastMessage}
+                            </p>
+                            {conversation.unreadCount > 0 && (
+                              <Badge variant="destructive" className="h-5 w-5 p-0 text-xs">
+                                {conversation.unreadCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
-                </CardContent>
-
-                {/* Message Input */}
-                <div className="p-4 border-t">
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Scrie un mesaj..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      className="flex-1"
-                    />
-                    <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <CardContent className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold mb-2">Selectează o conversație</h3>
-                  <p className="text-muted-foreground">
-                    Alege o conversație din lista din stânga pentru a începe să comunici.
-                  </p>
                 </div>
               </CardContent>
-            )}
-          </Card>
+            </Card>
+          </div>
+
+          {/* Chat Window */}
+          <div className={`${!showConversationList ? 'block' : 'hidden lg:block'} w-full lg:w-2/3`}>
+            <Card className="h-full flex flex-col">
+              {currentConversation ? (
+                <>
+                  {/* Chat Header */}
+                  <CardHeader className="flex-shrink-0 pb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleBackToList}
+                          className="lg:hidden p-2"
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+                            {currentConversation.participant.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-gray-800">{currentConversation.participant.name}</h3>
+                            {currentConversation.participant.isOnline && (
+                              <Badge variant="secondary" className="text-xs">Online</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <img
+                              src={currentConversation.gear.image}
+                              alt={currentConversation.gear.name}
+                              className="w-4 h-4 rounded object-cover"
+                            />
+                            <span className="text-sm text-gray-600">
+                              {currentConversation.gear.name} • {currentConversation.gear.price} RON/zi
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="hidden sm:flex">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+
+                  <Separator />
+
+                  {/* Messages */}
+                  <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {currentConversation.messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.senderId === 'me' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.senderId === 'me'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          <p className="text-sm">{message.content}</p>
+                          <p className={`text-xs mt-1 ${
+                            message.senderId === 'me' 
+                              ? 'text-purple-100' 
+                              : 'text-gray-500'
+                          }`}>
+                            {formatTime(message.timestamp)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+
+                  {/* Message Input */}
+                  <div className="p-4 border-t">
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="Scrie un mesaj..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        className="flex-1 border-gray-200 focus:border-purple-500"
+                      />
+                      <Button 
+                        onClick={handleSendMessage} 
+                        disabled={!newMessage.trim()}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <CardContent className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2 text-gray-800">Selectează o conversație</h3>
+                    <p className="text-gray-600">
+                      Alege o conversație din lista din {showConversationList ? 'jos' : 'stânga'} pentru a începe să comunici.
+                    </p>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -17,26 +17,10 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('gearup-theme');
-    if (stored) {
-      setIsDark(stored === 'dark');
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('gearup-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
+  // Always light mode now
+  const isDark = false;
   const toggleTheme = () => {
-    setIsDark(!isDark);
+    // No-op since we're removing dark mode
   };
 
   return (
