@@ -12,64 +12,49 @@ import { Separator } from '@/components/ui/separator';
 import { Star, MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
+import { useGear } from '@/hooks/useGear';
 import { toast } from '@/hooks/use-toast';
 
 export const GearDetail: React.FC = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const { data: gear, isLoading, error } = useGear(id);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-
-  // Mock data - în aplicația reală ar veni din API
-  const gear = {
-    id: '1',
-    name: 'Sony A7 III',
-    category: 'Camere foto',
-    price: 120,
-    images: [
-      'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=800&h=600&fit=crop'
-    ],
-    owner: {
-      name: 'Mihai Popescu',
-      avatar: '',
-      rating: 4.9,
-      reviews: 23,
-      verified: true,
-      memberSince: '2022'
-    },
-    location: 'Cluj-Napoca',
-    rating: 4.9,
-    reviews: 23,
-    available: true,
-    description: 'Camera foto mirrorless full-frame de înaltă calitate, perfectă pentru fotografia profesională și video 4K. Include încărcător, baterie suplimentară și geantă de transport.',
-    specifications: [
-      'Sensor: Full-frame 24.2MP',
-      'ISO: 100-51200 (expandabil până la 204800)',
-      'Video: 4K/30p, Full HD/120p',
-      'Stabilizare: 5 axe în corp',
-      'Ecran: Touchscreen 3" rabatabil',
-      'Conectivitate: Wi-Fi, Bluetooth, USB-C'
-    ],
-    included: [
-      'Camera Sony A7 III',
-      'Obiectiv kit 28-70mm',
-      'Baterie suplimentară',
-      'Încărcător',
-      'Geantă de transport',
-      'Card SD 64GB'
-    ],
-    depositAmount: 500,
-    unavailableDates: [
-      new Date(2024, 11, 15),
-      new Date(2024, 11, 16),
-      new Date(2024, 11, 20)
-    ]
-  };
-
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <p className="text-lg">Se încarcă...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !gear) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Echipament negăsit</h2>
+            <p className="text-gray-600">Ne pare rău, echipamentul căutat nu există.</p>
+            <Link to="/browse" className="text-purple-600 hover:underline mt-4 inline-block">
+              Înapoi la căutare
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   const handleRentRequest = () => {
     if (!user) {
@@ -105,8 +90,20 @@ export const GearDetail: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    return selectedDates.length * gear.price;
+    const pricePerDay = gear.price_per_day / 100; // Convert from cents
+    return selectedDates.length * pricePerDay;
   };
+
+  const depositAmount = gear.deposit_amount ? gear.deposit_amount / 100 : 0;
+  const pricePerDay = gear.price_per_day / 100;
+  
+  // Parse JSON fields safely
+  const images = Array.isArray(gear.images) ? gear.images : 
+                 (typeof gear.images === 'string' ? JSON.parse(gear.images || '[]') : []);
+  const specifications = Array.isArray(gear.specifications) ? gear.specifications : 
+                        (typeof gear.specifications === 'string' ? JSON.parse(gear.specifications || '[]') : []);
+  const includedItems = Array.isArray(gear.included_items) ? gear.included_items : 
+                       (typeof gear.included_items === 'string' ? JSON.parse(gear.included_items || '[]') : []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -126,27 +123,37 @@ export const GearDetail: React.FC = () => {
           <div className="lg:col-span-2">
             {/* Image Gallery */}
             <div className="mb-6">
-              <div className="relative mb-4">
-                <img
-                  src={gear.images[currentImageIndex]}
-                  alt={gear.name}
-                  className="w-full h-96 object-cover rounded-lg"
-                />
-                <Badge className="absolute top-4 left-4">{gear.category}</Badge>
-              </div>
-              <div className="flex space-x-2">
-                {gear.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                      index === currentImageIndex ? 'border-primary' : 'border-transparent'
-                    }`}
-                  >
-                    <img src={image} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+              {images.length > 0 ? (
+                <>
+                  <div className="relative mb-4">
+                    <img
+                      src={images[currentImageIndex]}
+                      alt={gear.name}
+                      className="w-full h-96 object-cover rounded-lg"
+                    />
+                    {gear.category && (
+                      <Badge className="absolute top-4 left-4">{gear.category.name}</Badge>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    {images.map((image: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                          index === currentImageIndex ? 'border-primary' : 'border-transparent'
+                        }`}
+                      >
+                        <img src={image} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
+                  <Camera className="h-16 w-16 text-gray-400" />
+                </div>
+              )}
             </div>
 
             {/* Title & Rating */}
@@ -155,102 +162,112 @@ export const GearDetail: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-1">
                   <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{gear.rating}</span>
-                  <span className="text-muted-foreground">({gear.reviews} recenzii)</span>
+                  <span className="font-medium">4.9</span>
+                  <span className="text-muted-foreground">(0 recenzii)</span>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{gear.location}</span>
-                </div>
+                {gear.owner?.location && (
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{gear.owner.location}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Description */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Descriere</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">{gear.description}</p>
-              </CardContent>
-            </Card>
+            {gear.description && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Descriere</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed">{gear.description}</p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Specifications */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Specificații tehnice</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {gear.specifications.map((spec, index) => (
-                    <li key={index} className="flex items-center space-x-2">
-                      <Camera className="h-4 w-4 text-primary" />
-                      <span>{spec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            {specifications.length > 0 && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Specificații tehnice</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {specifications.map((spec: string, index: number) => (
+                      <li key={index} className="flex items-center space-x-2">
+                        <Camera className="h-4 w-4 text-primary" />
+                        <span>{spec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
             {/* What's Included */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ce este inclus</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {gear.included.map((item, index) => (
-                    <li key={index} className="flex items-center space-x-2">
-                      <span className="text-green-600">✓</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            {includedItems.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ce este inclus</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {includedItems.map((item: string, index: number) => (
+                      <li key={index} className="flex items-center space-x-2">
+                        <span className="text-green-600">✓</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right Column - Booking */}
           <div className="space-y-6">
             {/* Owner Info */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback>
-                      {gear.owner.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold">{gear.owner.name}</h3>
-                      {gear.owner.verified && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Shield className="h-3 w-3 mr-1" />
-                          Verificat
-                        </Badge>
-                      )}
+            {gear.owner && (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback>
+                        {gear.owner.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold">{gear.owner.full_name || 'Utilizator'}</h3>
+                        {gear.owner.is_verified && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Verificat
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span>4.9 (0 recenzii)</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Membru din 2024
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span>{gear.owner.rating} ({gear.owner.reviews} recenzii)</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Membru din {gear.owner.memberSince}
-                    </p>
                   </div>
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={handleMessage}
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Trimite mesaj
-                </Button>
-              </CardContent>
-            </Card>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleMessage}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Trimite mesaj
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Booking Card */}
             <Card>
@@ -258,7 +275,7 @@ export const GearDetail: React.FC = () => {
                 <CardTitle className="flex items-center justify-between">
                   <span>Rezervare</span>
                   <div>
-                    <span className="text-2xl font-bold">{gear.price} RON</span>
+                    <span className="text-2xl font-bold">{pricePerDay} RON</span>
                     <span className="text-sm text-muted-foreground">/zi</span>
                   </div>
                 </CardTitle>
@@ -273,7 +290,6 @@ export const GearDetail: React.FC = () => {
                     mode="multiple"
                     selected={selectedDates}
                     onSelect={(dates) => setSelectedDates(dates || [])}
-                    disabled={gear.unavailableDates}
                     className="rounded-md border"
                   />
                 </div>
@@ -282,30 +298,34 @@ export const GearDetail: React.FC = () => {
                   <div className="space-y-2">
                     <Separator />
                     <div className="flex justify-between text-sm">
-                      <span>{gear.price} RON × {selectedDates.length} zile</span>
+                      <span>{pricePerDay} RON × {selectedDates.length} zile</span>
                       <span>{calculateTotal()} RON</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Garanție</span>
-                      <span>{gear.depositAmount} RON</span>
-                    </div>
+                    {depositAmount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Garanție</span>
+                        <span>{depositAmount} RON</span>
+                      </div>
+                    )}
                     <Separator />
                     <div className="flex justify-between font-semibold">
                       <span>Total</span>
-                      <span>{calculateTotal() + gear.depositAmount} RON</span>
+                      <span>{calculateTotal() + depositAmount} RON</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      * Garanția se returnează la finalul închirierii
-                    </p>
+                    {depositAmount > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        * Garanția se returnează la finalul închirierii
+                      </p>
+                    )}
                   </div>
                 )}
 
                 <Button 
                   className="w-full" 
                   onClick={handleRentRequest}
-                  disabled={!gear.available}
+                  disabled={!gear.is_available}
                 >
-                  {gear.available ? 'Solicită închirierea' : 'Indisponibil'}
+                  {gear.is_available ? 'Solicită închirierea' : 'Indisponibil'}
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
