@@ -3,6 +3,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
+import { useCategories } from '@/hooks/useCategories';
 
 interface SearchFiltersProps {
   searchQuery: string;
@@ -25,6 +26,8 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   onCategoryChange,
   onSortChange,
 }) => {
+  const { data: categories = [] } = useCategories();
+
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-100">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -44,10 +47,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">Toate orașele</SelectItem>
-            <SelectItem value="bucuresti">București</SelectItem>
-            <SelectItem value="cluj-napoca">Cluj-Napoca</SelectItem>
-            <SelectItem value="timisoara">Timișoara</SelectItem>
-            <SelectItem value="iasi">Iași</SelectItem>
+            <SelectItem value="București">București</SelectItem>
+            <SelectItem value="Cluj-Napoca">Cluj-Napoca</SelectItem>
+            <SelectItem value="Timișoara">Timișoara</SelectItem>
+            <SelectItem value="Iași">Iași</SelectItem>
+            <SelectItem value="Constanța">Constanța</SelectItem>
+            <SelectItem value="Brașov">Brașov</SelectItem>
+            <SelectItem value="Craiova">Craiova</SelectItem>
           </SelectContent>
         </Select>
 
@@ -57,11 +63,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">Toate categoriile</SelectItem>
-            <SelectItem value="Camere foto">Camere foto</SelectItem>
-            <SelectItem value="Obiective">Obiective</SelectItem>
-            <SelectItem value="Drone">Drone</SelectItem>
-            <SelectItem value="Iluminat">Iluminat</SelectItem>
-            <SelectItem value="Audio">Audio</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.slug}>
+                {category.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -75,7 +81,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             <SelectItem value="relevance">Relevanță</SelectItem>
             <SelectItem value="price-low">Preț: mic la mare</SelectItem>
             <SelectItem value="price-high">Preț: mare la mic</SelectItem>
-            <SelectItem value="rating">Rating</SelectItem>
+            <SelectItem value="rating">Cel mai recent</SelectItem>
           </SelectContent>
         </Select>
       </div>

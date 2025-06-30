@@ -1,22 +1,20 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
-  location: string;
-  isVerified: boolean;
-  role: 'renter' | 'lender' | 'both';
-}
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string, location: string) => Promise<boolean>;
-  logout: () => void;
-  updateProfile: (updates: Partial<User>) => void;
+  profile: Profile | null;
+  session: Session | null;
+  login: (email: string, password: string) => Promise<{ error?: string }>;
+  signup: (email: string, password: string, fullName: string, location: string) => Promise<{ error?: string }>;
+  logout: () => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<{ error?: string }>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,66 +29,111 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem('gearup-user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          setProfile(profile);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            setProfile(profile);
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock login - in real app would call API
-    if (email && password) {
-      const mockUser: User = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        location: 'Cluj-Napoca, Romania',
-        isVerified: true,
-        role: 'both'
-      };
-      setUser(mockUser);
-      localStorage.setItem('gearup-user', JSON.stringify(mockUser));
-      return true;
-    }
-    return false;
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    return { error: error?.message };
   };
 
-  const signup = async (email: string, password: string, name: string, location: string): Promise<boolean> => {
-    // Mock signup - in real app would call API
-    if (email && password && name && location) {
-      const mockUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        email,
-        name,
-        location,
-        isVerified: false,
-        role: 'renter'
-      };
-      setUser(mockUser);
-      localStorage.setItem('gearup-user', JSON.stringify(mockUser));
-      return true;
-    }
-    return false;
+  const signup = async (email: string, password: string, fullName: string, location: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: fullName,
+          location: location,
+        }
+      }
+    });
+    
+    return { error: error?.message };
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('gearup-user');
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
-  const updateProfile = (updates: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('gearup-user', JSON.stringify(updatedUser));
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user) return { error: 'Not authenticated' };
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id);
+    
+    if (!error && profile) {
+      setProfile({ ...profile, ...updates });
     }
+    
+    return { error: error?.message };
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, updateProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      session, 
+      login, 
+      signup, 
+      logout, 
+      updateProfile, 
+      loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

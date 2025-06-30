@@ -14,6 +14,7 @@ import { GearDetail } from '@/components/GearDetail';
 import { Profile } from '@/components/Profile';
 import { AddGear } from '@/components/AddGear';
 import { Messages } from '@/components/Messages';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import NotFound from "./pages/NotFound";
@@ -33,7 +34,11 @@ const HomePage = () => {
 };
 
 const AppRoutes = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <LoadingScreen />;
+  }
   
   return (
     <Routes>

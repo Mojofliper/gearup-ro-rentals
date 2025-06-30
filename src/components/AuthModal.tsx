@@ -18,7 +18,7 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onSwitchMode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, signup } = useAuth();
@@ -28,31 +28,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
     setLoading(true);
 
     try {
-      let success = false;
+      let result;
       if (mode === 'login') {
-        success = await login(email, password);
+        result = await login(email, password);
       } else {
-        success = await signup(email, password, name, location);
+        if (!fullName || !location) {
+          toast({
+            title: 'Eroare',
+            description: 'Te rugăm să completezi toate câmpurile.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+        result = await signup(email, password, fullName, location);
       }
 
-      if (success) {
+      if (!result.error) {
         toast({
           title: mode === 'login' ? 'Conectare reușită' : 'Cont creat cu succes',
-          description: mode === 'login' ? 'Bun venit pe GearUp!' : 'Poți începe să explorezi echipamentele disponibile.',
+          description: mode === 'login' 
+            ? 'Bun venit pe GearUp!' 
+            : 'Verifică-ți emailul pentru a confirma contul.',
         });
         onClose();
         resetForm();
       } else {
         toast({
           title: 'Eroare',
-          description: 'Verifică datele introduse și încearcă din nou.',
+          description: result.error,
           variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
         title: 'Eroare',
-        description: 'A apărut o eroare. Te rugăm să încerci din nou.',
+        description: 'A apărut o eroare neașteptată. Te rugăm să încerci din nou.',
         variant: 'destructive',
       });
     } finally {
@@ -63,7 +74,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
   const resetForm = () => {
     setEmail('');
     setPassword('');
-    setName('');
+    setFullName('');
     setLocation('');
   };
 
@@ -71,7 +82,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-center">
             {mode === 'login' ? 'Conectează-te' : 'Creează un cont'}
           </DialogTitle>
         </DialogHeader>
@@ -80,34 +91,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           {mode === 'signup' && (
             <>
               <div>
-                <Label htmlFor="name">Nume complet</Label>
+                <Label htmlFor="fullName">Nume complet *</Label>
                 <Input
-                  id="name"
+                  id="fullName"
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   required
                   placeholder="Ion Popescu"
+                  className="mt-1"
                 />
               </div>
 
               <div>
-                <Label htmlFor="location">Orașul tău</Label>
+                <Label htmlFor="location">Orașul tău *</Label>
                 <Select value={location} onValueChange={setLocation} required>
-                  <SelectTrigger>
+                  <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Selectează orașul" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bucuresti">București</SelectItem>
-                    <SelectItem value="cluj-napoca">Cluj-Napoca</SelectItem>
-                    <SelectItem value="timisoara">Timișoara</SelectItem>
-                    <SelectItem value="iasi">Iași</SelectItem>
-                    <SelectItem value="constanta">Constanța</SelectItem>
-                    <SelectItem value="brasov">Brașov</SelectItem>
-                    <SelectItem value="craiova">Craiova</SelectItem>
-                    <SelectItem value="galati">Galați</SelectItem>
-                    <SelectItem value="ploiesti">Ploiești</SelectItem>
-                    <SelectItem value="oradea">Oradea</SelectItem>
+                    <SelectItem value="București">București</SelectItem>
+                    <SelectItem value="Cluj-Napoca">Cluj-Napoca</SelectItem>
+                    <SelectItem value="Timișoara">Timișoara</SelectItem>
+                    <SelectItem value="Iași">Iași</SelectItem>
+                    <SelectItem value="Constanța">Constanța</SelectItem>
+                    <SelectItem value="Brașov">Brașov</SelectItem>
+                    <SelectItem value="Craiova">Craiova</SelectItem>
+                    <SelectItem value="Galați">Galați</SelectItem>
+                    <SelectItem value="Ploiești">Ploiești</SelectItem>
+                    <SelectItem value="Oradea">Oradea</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -115,7 +127,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           )}
 
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
               type="email"
@@ -123,11 +135,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="exemplu@email.com"
+              className="mt-1"
             />
           </div>
 
           <div>
-            <Label htmlFor="password">Parolă</Label>
+            <Label htmlFor="password">Parolă *</Label>
             <Input
               id="password"
               type="password"
@@ -136,6 +149,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               required
               placeholder="Minim 6 caractere"
               minLength={6}
+              className="mt-1"
             />
           </div>
 
@@ -148,7 +162,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           <button
             type="button"
             onClick={() => onSwitchMode(mode === 'login' ? 'signup' : 'login')}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-sm text-gray-600 hover:text-gray-800"
           >
             {mode === 'login' ? 'Nu ai cont? Înregistrează-te' : 'Ai deja cont? Conectează-te'}
           </button>

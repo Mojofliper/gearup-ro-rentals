@@ -9,7 +9,321 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          created_at: string | null
+          deposit_amount: number
+          end_date: string
+          gear_id: string
+          id: string
+          notes: string | null
+          owner_id: string
+          renter_id: string
+          start_date: string
+          status: string | null
+          total_amount: number
+          total_days: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deposit_amount: number
+          end_date: string
+          gear_id: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          renter_id: string
+          start_date: string
+          status?: string | null
+          total_amount: number
+          total_days: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deposit_amount?: number
+          end_date?: string
+          gear_id?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          renter_id?: string
+          start_date?: string
+          status?: string | null
+          total_amount?: number
+          total_days?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_gear_id_fkey"
+            columns: ["gear_id"]
+            isOneToOne: false
+            referencedRelation: "gear"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_renter_id_fkey"
+            columns: ["renter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon_name: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      gear: {
+        Row: {
+          brand: string | null
+          category_id: string | null
+          condition: string | null
+          created_at: string | null
+          deposit_amount: number | null
+          description: string | null
+          id: string
+          images: Json | null
+          included_items: Json | null
+          is_available: boolean | null
+          model: string | null
+          name: string
+          owner_id: string
+          pickup_location: string | null
+          price_per_day: number
+          specifications: Json | null
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          brand?: string | null
+          category_id?: string | null
+          condition?: string | null
+          created_at?: string | null
+          deposit_amount?: number | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          included_items?: Json | null
+          is_available?: boolean | null
+          model?: string | null
+          name: string
+          owner_id: string
+          pickup_location?: string | null
+          price_per_day: number
+          specifications?: Json | null
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          brand?: string | null
+          category_id?: string | null
+          condition?: string | null
+          created_at?: string | null
+          deposit_amount?: number | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          included_items?: Json | null
+          is_available?: boolean | null
+          model?: string | null
+          name?: string
+          owner_id?: string
+          pickup_location?: string | null
+          price_per_day?: number
+          specifications?: Json | null
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gear_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          booking_id: string
+          content: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          sender_id: string
+        }
+        Insert: {
+          booking_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id: string
+        }
+        Update: {
+          booking_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          is_verified: boolean | null
+          location: string | null
+          phone: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          is_verified?: boolean | null
+          location?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          is_verified?: boolean | null
+          location?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          booking_id: string
+          comment: string | null
+          created_at: string | null
+          gear_id: string
+          id: string
+          rating: number
+          reviewed_id: string
+          reviewer_id: string
+        }
+        Insert: {
+          booking_id: string
+          comment?: string | null
+          created_at?: string | null
+          gear_id: string
+          id?: string
+          rating: number
+          reviewed_id: string
+          reviewer_id: string
+        }
+        Update: {
+          booking_id?: string
+          comment?: string | null
+          created_at?: string | null
+          gear_id?: string
+          id?: string
+          rating?: number
+          reviewed_id?: string
+          reviewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_gear_id_fkey"
+            columns: ["gear_id"]
+            isOneToOne: false
+            referencedRelation: "gear"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewed_id_fkey"
+            columns: ["reviewed_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -7,45 +7,50 @@ import { Button } from '@/components/ui/button';
 import { Star, MapPin, Camera, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-interface GearItem {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  image: string;
-  owner: string;
-  location: string;
-  rating: number;
-  reviews: number;
-  available: boolean;
-}
-
 interface GearCardProps {
-  gear: GearItem;
+  gear: {
+    id: string;
+    name: string;
+    description?: string;
+    price_per_day: number;
+    images: any[];
+    is_available: boolean;
+    owner: {
+      full_name: string;
+      location: string;
+      is_verified: boolean;
+    };
+    category?: {
+      name: string;
+    };
+  };
 }
 
 export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
+  const price = Math.round(gear.price_per_day / 100); // Convert from cents
+  const imageUrl = gear.images?.[0] || 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
+
   return (
     <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white overflow-hidden">
       <div className="relative overflow-hidden">
         <img
-          src={gear.image}
+          src={imageUrl}
           alt={gear.name}
           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
         />
         <div className="absolute top-3 left-3">
           <Badge variant="secondary" className="bg-white/90 text-gray-700 shadow-sm">
-            {gear.category}
+            {gear.category?.name || 'Echipament'}
           </Badge>
         </div>
-        {!gear.available && (
+        {!gear.is_available && (
           <div className="absolute top-3 right-3">
             <Badge variant="destructive" className="bg-red-500/90 text-white shadow-sm">
               Indisponibil
             </Badge>
           </div>
         )}
-        {gear.available && (
+        {gear.is_available && (
           <div className="absolute top-3 right-3">
             <Badge className="bg-green-500/90 text-white shadow-sm">
               <Zap className="h-3 w-3 mr-1" />
@@ -63,39 +68,42 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
           </h3>
           <div className="flex items-center space-x-1 bg-yellow-50 px-2 py-1 rounded-full">
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            <span className="text-xs font-medium text-yellow-700">{gear.rating}</span>
+            <span className="text-xs font-medium text-yellow-700">5.0</span>
           </div>
         </div>
 
         <div className="flex items-center space-x-2 mb-4">
           <Avatar className="h-7 w-7 ring-2 ring-purple-100">
             <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-pink-500 text-white">
-              {gear.owner.split(' ').map(n => n[0]).join('')}
+              {gear.owner.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm text-gray-600 font-medium">{gear.owner}</span>
+          <span className="text-sm text-gray-600 font-medium">{gear.owner.full_name}</span>
+          {gear.owner.is_verified && (
+            <Badge variant="secondary" className="text-xs">Verificat</Badge>
+          )}
         </div>
 
         <div className="flex items-center space-x-1 mb-4">
           <MapPin className="h-4 w-4 text-gray-400" />
-          <span className="text-sm text-gray-600">{gear.location}</span>
+          <span className="text-sm text-gray-600">{gear.owner.location}</span>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-2xl font-bold text-gray-800">{gear.price} RON</span>
+            <span className="text-2xl font-bold text-gray-800">{price} RON</span>
             <span className="text-sm text-gray-500 ml-1">/zi</span>
           </div>
           <Link to={`/gear/${gear.id}`}>
             <Button 
               size="sm" 
-              disabled={!gear.available}
-              className={gear.available 
+              disabled={!gear.is_available}
+              className={gear.is_available 
                 ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg" 
                 : "bg-gray-200 text-gray-500"
               }
             >
-              {gear.available ? (
+              {gear.is_available ? (
                 <>
                   <Camera className="h-4 w-4 mr-1" />
                   Vezi detalii
@@ -108,7 +116,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
         </div>
 
         <div className="text-xs text-gray-500 mt-3 flex items-center">
-          <span>{gear.reviews} recenzii</span>
+          <span>Recent adăugat</span>
           <span className="mx-2">•</span>
           <span>Verificat</span>
         </div>
