@@ -10,7 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { Star, MapPin, Camera, Calendar, Edit, Shield } from 'lucide-react';
+import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '@/hooks/useUserData';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
 
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
@@ -18,62 +20,34 @@ export const Profile: React.FC = () => {
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     location: profile?.location || '',
-    bio: 'Fotograf profesionist cu peste 5 ani de experiență în fotografia de nuntă și evenimente.'
   });
+
+  const { data: bookings = [], isLoading: bookingsLoading } = useUserBookings();
+  const { data: listings = [], isLoading: listingsLoading } = useUserListings();
+  const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews();
+  const { data: stats, isLoading: statsLoading } = useUserStats();
 
   if (!user || !profile) return null;
 
-  const handleSave = () => {
-    updateProfile(formData);
+  const handleSave = async () => {
+    await updateProfile(formData);
     setIsEditing(false);
   };
 
-  // Mock data pentru demonstrație
-  const userStats = {
-    totalRentals: 12,
-    totalListings: 3,
-    rating: 4.9,
-    reviews: 23,
-    joinDate: '2022'
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge variant="default">Finalizat</Badge>;
+      case 'confirmed':
+        return <Badge variant="secondary">Confirmat</Badge>;
+      case 'pending':
+        return <Badge variant="outline">În așteptare</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Anulat</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
-
-  const recentRentals = [
-    {
-      id: '1',
-      name: 'Canon RF 85mm f/1.2',
-      owner: 'Maria Ionescu',
-      dates: '15-17 Dec 2024',
-      status: 'completed',
-      rating: 5
-    },
-    {
-      id: '2',
-      name: 'DJI Ronin SC',
-      owner: 'Alex Popescu',
-      dates: '8-10 Dec 2024',
-      status: 'completed',
-      rating: 5
-    }
-  ];
-
-  const myListings = [
-    {
-      id: '1',
-      name: 'Sony A7 III',
-      price: 120,
-      bookings: 8,
-      rating: 4.9,
-      image: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=300&h=200&fit=crop'
-    },
-    {
-      id: '2',
-      name: 'Godox AD200 Pro',
-      price: 80,
-      bookings: 5,
-      rating: 4.8,
-      image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=200&fit=crop'
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -116,17 +90,15 @@ export const Profile: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
-                    <span>Membru din {userStats.joinDate}</span>
+                    <span>Membru din {stats?.joinDate || new Date().getFullYear()}</span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span>{userStats.rating} ({userStats.reviews} recenzii)</span>
-                  </div>
+                  {stats && stats.reviews > 0 && (
+                    <div className="flex items-center space-x-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span>{stats.rating} ({stats.reviews} recenzii)</span>
+                    </div>
+                  )}
                 </div>
-
-                <p className="text-muted-foreground">
-                  {formData.bio}
-                </p>
               </div>
             </div>
 
@@ -150,16 +122,6 @@ export const Profile: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="bio">Descriere</Label>
-                  <textarea
-                    id="bio"
-                    className="w-full p-2 border rounded-md"
-                    rows={3}
-                    value={formData.bio}
-                    onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                  />
-                </div>
                 <div className="flex space-x-2">
                   <Button onClick={handleSave}>Salvează</Button>
                   <Button variant="outline" onClick={() => setIsEditing(false)}>
@@ -175,25 +137,33 @@ export const Profile: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{userStats.totalRentals}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {statsLoading ? '...' : stats?.totalRentals || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Închirieri</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{userStats.totalListings}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {statsLoading ? '...' : stats?.totalListings || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Echipamente oferite</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{userStats.rating}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {statsLoading ? '...' : stats?.rating || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Rating mediu</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">{userStats.reviews}</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {statsLoading ? '...' : stats?.reviews || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Recenzii</div>
             </CardContent>
           </Card>
@@ -208,87 +178,148 @@ export const Profile: React.FC = () => {
           </TabsList>
 
           <TabsContent value="rentals" className="space-y-4">
-            {recentRentals.map((rental) => (
-              <Card key={rental.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold">{rental.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        De la {rental.owner} • {rental.dates}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={rental.status === 'completed' ? 'default' : 'secondary'}>
-                        {rental.status === 'completed' ? 'Finalizat' : 'În curs'}
-                      </Badge>
-                      {rental.rating && (
-                        <div className="flex items-center space-x-1 mt-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm">{rental.rating}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            {bookingsLoading ? (
+              <div className="text-center py-8">Se încarcă...</div>
+            ) : bookings.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nu ai încă închirieri</h3>
+                  <p className="text-muted-foreground">
+                    Explorează echipamentele disponibile și fă prima ta rezervare!
+                  </p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              bookings.map((booking) => (
+                <Card key={booking.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold">{booking.gear?.name || 'Echipament necunoscut'}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          De la {booking.owner?.full_name || 'Proprietar necunoscut'} • {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                        </p>
+                        <p className="text-sm font-medium mt-1">
+                          Total: {booking.total_amount ? (booking.total_amount / 100).toFixed(2) : '0'} RON
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        {getStatusBadge(booking.status || 'pending')}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="listings" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myListings.map((listing) => (
-                <Card key={listing.id}>
-                  <div className="relative">
-                    <img
-                      src={listing.image}
-                      alt={listing.name}
-                      className="w-full h-32 object-cover rounded-t-lg"
-                    />
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-2">{listing.name}</h3>
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold">{listing.price} RON/zi</span>
-                      <div className="flex items-center space-x-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm">{listing.rating}</span>
-                      </div>
+            {listingsLoading ? (
+              <div className="text-center py-8">Se încarcă...</div>
+            ) : listings.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nu ai încă echipamente listate</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Adaugă primul tău echipament și începe să câștigi bani!
+                  </p>
+                  <Button>Adaugă echipament</Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {listings.map((listing) => (
+                  <Card key={listing.id}>
+                    <div className="relative">
+                      {listing.images && Array.isArray(listing.images) && listing.images.length > 0 ? (
+                        <img
+                          src={listing.images[0] as string}
+                          alt={listing.name}
+                          className="w-full h-32 object-cover rounded-t-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-muted rounded-t-lg flex items-center justify-center">
+                          <Package className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      {!listing.is_available && (
+                        <div className="absolute top-2 right-2">
+                          <Badge variant="destructive">Indisponibil</Badge>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {listing.bookings} rezervări
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold mb-2">{listing.name}</h3>
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold">
+                          {listing.price_per_day ? (listing.price_per_day / 100).toFixed(2) : '0'} RON/zi
+                        </span>
+                        <Badge variant={listing.is_available ? "default" : "secondary"}>
+                          {listing.is_available ? 'Disponibil' : 'Indisponibil'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Vizualizări: {listing.view_count || 0}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-4">
-            <div className="space-y-4">
-              {[1, 2, 3].map((review) => (
-                <Card key={review}>
+            {reviewsLoading ? (
+              <div className="text-center py-8">Se încarcă...</div>
+            ) : reviews.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nu ai încă recenzii</h3>
+                  <p className="text-muted-foreground">
+                    Recenziile vor apărea aici după ce completezi rezervări.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              reviews.map((review) => (
+                <Card key={review.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-3 mb-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback>M{review}</AvatarFallback>
+                        <AvatarFallback>
+                          {review.reviewer?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">Maria {review}</div>
+                        <div className="font-medium">{review.reviewer?.full_name || 'Utilizator anonim'}</div>
                         <div className="flex items-center space-x-1">
                           {[1, 2, 3, 4, 5].map((star) => (
-                            <Star key={star} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <Star 
+                              key={star} 
+                              className={`h-4 w-4 ${star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+                            />
                           ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(review.created_at), 'dd MMM yyyy')}
                         </div>
                       </div>
                     </div>
-                    <p className="text-muted-foreground">
-                      Echipament de calitate excelentă și proprietar foarte amabil. Totul a decurs perfect!
-                    </p>
+                    {review.comment && (
+                      <p className="text-muted-foreground">{review.comment}</p>
+                    )}
+                    {review.gear && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Pentru: {review.gear.name}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+              ))
+            )}
           </TabsContent>
         </Tabs>
       </div>
