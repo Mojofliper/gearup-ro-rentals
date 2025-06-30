@@ -15,13 +15,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error?: string }>;
   loading: boolean;
-  sessionExpired: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Session timeout (24 hours)
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -36,25 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sessionExpired, setSessionExpired] = useState(false);
-
-  // Session timeout check
-  useEffect(() => {
-    if (!session) return;
-
-    const checkSessionExpiry = () => {
-      const now = new Date().getTime();
-      const sessionTime = new Date(session.expires_at || 0).getTime();
-      
-      if (now > sessionTime) {
-        setSessionExpired(true);
-        logout();
-      }
-    };
-
-    const interval = setInterval(checkSessionExpiry, 60000); // Check every minute
-    return () => clearInterval(interval);
-  }, [session]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -64,10 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          setSessionExpired(false);
-        }
         
         if (session?.user) {
           // Fetch user profile with timeout
@@ -169,7 +142,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setProfile(null);
       setSession(null);
-      setSessionExpired(false);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -204,8 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signup, 
       logout, 
       updateProfile, 
-      loading,
-      sessionExpired
+      loading
     }}>
       {children}
     </AuthContext.Provider>
