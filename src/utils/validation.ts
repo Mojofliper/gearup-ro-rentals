@@ -1,3 +1,6 @@
+
+import { sanitizeText } from './htmlSanitizer';
+
 export const validateGearName = (name: string): string | null => {
   if (!name || name.trim().length < 3) {
     return 'Numele trebuie să aibă cel puțin 3 caractere';
@@ -115,11 +118,86 @@ export const validateSearchQuery = (query: string): string | null => {
   return null;
 };
 
+export const validateEmail = (email: string): string | null => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return 'Adresa de email nu este validă';
+  }
+  
+  if (email.length > 254) {
+    return 'Adresa de email este prea lungă';
+  }
+  
+  return null;
+};
+
+export const validatePassword = (password: string): string | null => {
+  if (password.length < 8) {
+    return 'Parola trebuie să aibă cel puțin 8 caractere';
+  }
+  
+  if (password.length > 128) {
+    return 'Parola este prea lungă';
+  }
+  
+  if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    return 'Parola trebuie să conțină cel puțin o literă mică, o literă mare și o cifră';
+  }
+  
+  return null;
+};
+
+export const validateFullName = (name: string): string | null => {
+  if (!name || name.trim().length < 2) {
+    return 'Numele trebuie să aibă cel puțin 2 caractere';
+  }
+  
+  if (name.length > 100) {
+    return 'Numele nu poate depăși 100 de caractere';
+  }
+  
+  if (!/^[a-zA-ZăîșțâĂÎȘȚÂ\s\-']+$/.test(name)) {
+    return 'Numele poate conține doar litere, spații, cratime și apostrofuri';
+  }
+  
+  return null;
+};
+
+// Enhanced sanitization with more security checks
 export const sanitizeInput = (input: string): string => {
-  return input
-    .replace(/[<>]/g, '') // Remove angle brackets
-    .replace(/script/gi, '') // Remove script tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, '') // Remove event handlers
-    .trim();
+  if (!input) return '';
+  
+  return sanitizeText(input);
+};
+
+// Rate limiting validation
+export const validateRateLimit = (lastAction: Date | null, minInterval: number): boolean => {
+  if (!lastAction) return true;
+  
+  const now = new Date();
+  const timeDiff = now.getTime() - lastAction.getTime();
+  
+  return timeDiff >= minInterval;
+};
+
+// File upload security validation
+export const validateFileUpload = (file: File): { valid: boolean; error?: string } => {
+  // Check file size (5MB limit)
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    return { valid: false, error: 'Fișierul este prea mare (max 5MB)' };
+  }
+  
+  // Check file type
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: 'Tip de fișier neacceptat' };
+  }
+  
+  // Check filename for suspicious content
+  if (/[<>"|*?\\\/:]/.test(file.name)) {
+    return { valid: false, error: 'Numele fișierului conține caractere nepermise' };
+  }
+  
+  return { valid: true };
 };

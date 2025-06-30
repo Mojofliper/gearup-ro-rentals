@@ -15,9 +15,13 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error?: string }>;
   loading: boolean;
+  sessionExpired: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Session timeout (24 hours)
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -32,24 +36,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Session timeout check
+  useEffect(() => {
+    if (!session) return;
+
+    const checkSessionExpiry = () => {
+      const now = new Date().getTime();
+      const sessionTime = new Date(session.created_at).getTime();
+      
+      if (now - sessionTime > SESSION_TIMEOUT) {
+        setSessionExpired(true);
+        logout();
+      }
+    };
+
+    const interval = setInterval(checkSessionExpiry, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [session]);
 
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth event:', event);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          setSessionExpired(false);
+        }
+        
         if (session?.user) {
-          // Fetch user profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          setProfile(profile);
+          // Fetch user profile with timeout
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+              setProfile(profile);
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+            }
+          }, 0);
         } else {
           setProfile(null);
+          // Clear sensitive data on logout
+          localStorage.removeItem('user-preferences');
+          sessionStorage.clear();
         }
         setLoading(false);
       }
@@ -78,49 +116,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    return { error: error?.message };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      
+      if (error) {
+        // Log security event
+        console.warn('Failed login attempt:', { email: email.trim().toLowerCase() });
+      }
+      
+      return { error: error?.message };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { error: 'An unexpected error occurred during login' };
+    }
   };
 
   const signup = async (email: string, password: string, fullName: string, location: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          location: location,
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName.trim(),
+            location: location.trim(),
+          }
         }
-      }
-    });
-    
-    return { error: error?.message };
+      });
+      
+      return { error: error?.message };
+    } catch (error) {
+      console.error('Signup error:', error);
+      return { error: 'An unexpected error occurred during signup' };
+    }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      // Clear local data first
+      localStorage.removeItem('user-preferences');
+      sessionStorage.clear();
+      
+      await supabase.auth.signOut();
+      
+      // Clear state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      setSessionExpired(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: 'Not authenticated' };
     
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
-    
-    if (!error && profile) {
-      setProfile({ ...profile, ...updates });
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+      
+      if (!error && profile) {
+        setProfile({ ...profile, ...updates });
+      }
+      
+      return { error: error?.message };
+    } catch (error) {
+      console.error('Profile update error:', error);
+      return { error: 'Failed to update profile' };
     }
-    
-    return { error: error?.message };
   };
 
   return (
@@ -132,7 +204,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signup, 
       logout, 
       updateProfile, 
-      loading 
+      loading,
+      sessionExpired
     }}>
       {children}
     </AuthContext.Provider>
