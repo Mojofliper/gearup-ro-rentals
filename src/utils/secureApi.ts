@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useRateLimit } from '@/hooks/useRateLimit';
 
 interface SecureApiOptions {
   requireAuth?: boolean;
@@ -23,6 +22,26 @@ export class SecureApiError extends Error {
   }
 }
 
+const checkRateLimit = async (actionType: string, maxActions = 10, windowMinutes = 60): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      action_type: actionType,
+      max_actions: maxActions,
+      window_minutes: windowMinutes
+    });
+
+    if (error) {
+      console.error('Rate limit check error:', error);
+      return false;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Rate limit check failed:', error);
+    return false;
+  }
+};
+
 export const secureApiCall = async <T>(
   operation: () => Promise<T>,
   options: SecureApiOptions = {}
@@ -40,7 +59,6 @@ export const secureApiCall = async <T>(
 
     // Check rate limiting
     if (rateLimit) {
-      const { checkRateLimit } = useRateLimit();
       const allowed = await checkRateLimit(
         rateLimit.action,
         rateLimit.maxActions,
@@ -64,7 +82,7 @@ export const secureApiCall = async <T>(
     console.error('Secure API call failed:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
-      userId: requireAuth ? (await supabase.auth.getUser()).data.user?.id : null
+      requireAuth
     });
 
     // Re-throw SecureApiError as-is

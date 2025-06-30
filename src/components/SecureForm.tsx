@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useSecureAuth } from '@/hooks/useSecureAuth';
 import { useSecureValidation } from '@/hooks/useSecureValidation';
-import { secureApiCall, handleApiError } from '@/utils/secureApi';
+import { handleApiError } from '@/utils/secureApi';
 import { toast } from '@/hooks/use-toast';
 
 interface SecureFormProps {
@@ -10,19 +10,13 @@ interface SecureFormProps {
   onSubmit: (data: Record<string, any>) => Promise<void>;
   initialData?: Record<string, any>;
   requiredFields?: string[];
-  rateLimit?: {
-    action: string;
-    maxActions?: number;
-    windowMinutes?: number;
-  };
 }
 
 export const SecureForm: React.FC<SecureFormProps> = ({
   children,
   onSubmit,
   initialData = {},
-  requiredFields = [],
-  rateLimit
+  requiredFields = []
 }) => {
   const { requireAuth } = useSecureAuth();
   const { errors, validateForm, sanitizeFormData, clearErrors } = useSecureValidation();
@@ -52,14 +46,7 @@ export const SecureForm: React.FC<SecureFormProps> = ({
       
       // Sanitize and submit
       const sanitizedData = sanitizeFormData(formData);
-      
-      await secureApiCall(
-        () => onSubmit(sanitizedData),
-        {
-          requireAuth: true,
-          rateLimit
-        }
-      );
+      await onSubmit(sanitizedData);
       
       toast({
         title: "Succes",
