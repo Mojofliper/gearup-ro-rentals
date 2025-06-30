@@ -13,15 +13,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Star, MapPin, Camera, Calendar, Edit, Shield } from 'lucide-react';
 
 export const Profile: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    location: user?.location || '',
+    full_name: profile?.full_name || '',
+    location: profile?.location || '',
     bio: 'Fotograf profesionist cu peste 5 ani de experiență în fotografia de nuntă și evenimente.'
   });
 
-  if (!user) return null;
+  if (!user || !profile) return null;
 
   const handleSave = () => {
     updateProfile(formData);
@@ -86,14 +86,14 @@ export const Profile: React.FC = () => {
             <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
               <Avatar className="h-24 w-24">
                 <AvatarFallback className="text-2xl">
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                 </AvatarFallback>
               </Avatar>
               
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-2xl font-bold">{user.name}</h1>
-                  {user.isVerified && (
+                  <h1 className="text-2xl font-bold">{profile.full_name || 'Utilizator'}</h1>
+                  {profile.is_verified && (
                     <Badge variant="secondary">
                       <Shield className="h-3 w-3 mr-1" />
                       Verificat
@@ -112,7 +112,7 @@ export const Profile: React.FC = () => {
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center space-x-1">
                     <MapPin className="h-4 w-4" />
-                    <span>{user.location}</span>
+                    <span>{profile.location || 'Locație nedefinită'}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
@@ -134,11 +134,11 @@ export const Profile: React.FC = () => {
               <div className="mt-6 pt-6 border-t space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Nume</Label>
+                    <Label htmlFor="full_name">Nume</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      id="full_name"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({...formData, full_name: e.target.value})}
                     />
                   </div>
                   <div>
