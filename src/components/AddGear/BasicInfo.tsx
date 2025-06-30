@@ -25,9 +25,10 @@ interface BasicInfoProps {
     includedItems: string[];
   };
   updateFormData: (updates: Partial<BasicInfoProps['formData']>) => void;
+  validationErrors: Record<string, string>;
 }
 
-export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData }) => {
+export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, validationErrors }) => {
   const { data: categories = [] } = useCategories();
   const [newSpecification, setNewSpecification] = useState('');
   const [newIncludedItem, setNewIncludedItem] = useState('');
@@ -78,14 +79,17 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData }
                 value={formData.name}
                 onChange={(e) => updateFormData({ name: e.target.value })}
                 placeholder="ex. Sony A7 III"
-                className="mt-1"
+                className={`mt-1 ${validationErrors.name ? 'border-red-500' : ''}`}
               />
+              {validationErrors.name && (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.name}</p>
+              )}
             </div>
 
             <div>
               <Label htmlFor="category">Categoria *</Label>
               <Select value={formData.categoryId} onValueChange={(value) => updateFormData({ categoryId: value })}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className={`mt-1 ${validationErrors.categoryId ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Selectează categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -96,6 +100,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData }
                   ))}
                 </SelectContent>
               </Select>
+              {validationErrors.categoryId && (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.categoryId}</p>
+              )}
             </div>
 
             <div>
@@ -123,7 +130,7 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData }
             <div>
               <Label htmlFor="condition">Starea echipamentului *</Label>
               <Select value={formData.condition} onValueChange={(value) => updateFormData({ condition: value })}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className={`mt-1 ${validationErrors.condition ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Selectează starea" />
                 </SelectTrigger>
                 <SelectContent>
@@ -134,6 +141,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData }
                   <SelectItem value="Acceptabilă">Acceptabilă</SelectItem>
                 </SelectContent>
               </Select>
+              {validationErrors.condition && (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.condition}</p>
+              )}
             </div>
 
             <div>
@@ -156,8 +166,11 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData }
               onChange={(e) => updateFormData({ description: e.target.value })}
               placeholder="Descrie echipamentul tău, pentru ce este potrivit, ce experiență oferă..."
               rows={4}
-              className="mt-1"
+              className={`mt-1 ${validationErrors.description ? 'border-red-500' : ''}`}
             />
+            {validationErrors.description && (
+              <p className="text-sm text-red-500 mt-1">{validationErrors.description}</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -178,8 +191,11 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData }
                 value={formData.pricePerDay}
                 onChange={(e) => updateFormData({ pricePerDay: e.target.value })}
                 placeholder="150"
-                className="mt-1"
+                className={`mt-1 ${validationErrors.pricePerDay ? 'border-red-500' : ''}`}
               />
+              {validationErrors.pricePerDay && (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.pricePerDay}</p>
+              )}
             </div>
 
             <div>
