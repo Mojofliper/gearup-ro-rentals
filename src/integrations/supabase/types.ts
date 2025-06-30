@@ -262,6 +262,41 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action_count: number | null
+          action_type: string
+          created_at: string | null
+          id: string
+          user_id: string | null
+          window_start: string | null
+        }
+        Insert: {
+          action_count?: number | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          action_count?: number | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           booking_id: string
@@ -329,7 +364,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_rate_limit: {
+        Args: {
+          action_type: string
+          max_actions?: number
+          window_minutes?: number
+        }
+        Returns: boolean
+      }
+      validate_gear_input: {
+        Args: {
+          gear_name: string
+          gear_description: string
+          price_per_day: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

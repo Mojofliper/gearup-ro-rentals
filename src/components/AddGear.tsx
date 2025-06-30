@@ -9,12 +9,15 @@ import { BasicInfo } from './AddGear/BasicInfo';
 import { PhotoUpload } from './AddGear/PhotoUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateGear } from '@/hooks/useGear';
+import { useRateLimit } from '@/hooks/useRateLimit';
 import { toast } from '@/hooks/use-toast';
+import { validateGearName, validateGearDescription, validatePrice, sanitizeInput } from '@/utils/validation';
 
 export const AddGear: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const createGear = useCreateGear();
+  const { checkRateLimit } = useRateLimit();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -32,18 +35,49 @@ export const AddGear: React.FC = () => {
   });
   const [images, setImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const updateFormData = (updates: Partial<typeof formData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
+    
+    // Clear validation errors for updated fields
+    const updatedKeys = Object.keys(updates);
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      updatedKeys.forEach(key => delete newErrors[key]);
+      return newErrors;
+    });
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    // Validate name
+    const nameError = validateGearName(formData.name);
+    if (nameError) errors.name = nameError;
+
+    // Validate description
+    const descError = validateGearDescription(formData.description);
+    if (descError) errors.description = descError;
+
+    // Validate price
+    const priceError = validatePrice(formData.pricePerDay);
+    if (priceError) errors.pricePerDay = priceError;
+
+    // Required fields validation
+    if (!formData.categoryId) errors.categoryId = 'Categoria este obligatorie';
+    if (!formData.condition) errors.condition = 'Starea este obligatorie';
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleNext = () => {
     if (currentStep === 1) {
-      // Validate basic info
-      if (!formData.name || !formData.categoryId || !formData.condition || !formData.pricePerDay) {
+      if (!validateForm()) {
         toast({
-          title: 'Informații incomplete',
-          description: 'Te rugăm să completezi toate câmpurile obligatorii.',
+          title: 'Informații incomplete sau invalide',
+          description: 'Te rugăm să corectezi erorile din formular.',
           variant: 'destructive',
         });
         return;
@@ -57,6 +91,16 @@ export const AddGear: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Final validation
+    if (!validateForm()) {
+      toast({
+        title: 'Informații invalide',
+        description: 'Te rugăm să corectezi erorile din formular.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (images.length === 0) {
       toast({
         title: 'Fotografii lipsă',
@@ -75,22 +119,33 @@ export const AddGear: React.FC = () => {
       return;
     }
 
+    // Check rate limit
+    const canProceed = await checkRateLimit('create_gear', 5, 60);
+    if (!canProceed) {
+      toast({
+        title: 'Limită depășită',
+        description: 'Ai depășit limita de adăugare echipamente. Încearcă din nou mai târziu.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const gearData = {
         owner_id: user.id,
-        name: formData.name,
-        description: formData.description || null,
+        name: sanitizeInput(formData.name),
+        description: formData.description ? sanitizeInput(formData.description) : null,
         category_id: formData.categoryId || null,
-        brand: formData.brand || null,
-        model: formData.model || null,
+        brand: formData.brand ? sanitizeInput(formData.brand) : null,
+        model: formData.model ? sanitizeInput(formData.model) : null,
         condition: formData.condition,
-        price_per_day: Math.round(parseFloat(formData.pricePerDay) * 100), // Convert to cents
+        price_per_day: Math.round(parseFloat(formData.pricePerDay) * 100),
         deposit_amount: formData.depositAmount ? Math.round(parseFloat(formData.depositAmount) * 100) : 0,
-        pickup_location: formData.pickupLocation || null,
-        specifications: formData.specifications,
-        included_items: formData.includedItems,
+        pickup_location: formData.pickupLocation ? sanitizeInput(formData.pickupLocation) : null,
+        specifications: formData.specifications.map(spec => sanitizeInput(spec)),
+        included_items: formData.includedItems.map(item => sanitizeInput(item)),
         images: images,
         is_available: true,
       };
@@ -103,13 +158,23 @@ export const AddGear: React.FC = () => {
       });
 
       navigate(`/gear/${result.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating gear:', error);
-      toast({
-        title: 'Eroare',
-        description: 'Nu am putut adăuga echipamentul. Te rugăm să încerci din nou.',
-        variant: 'destructive',
-      });
+      
+      // Handle specific validation errors
+      if (error.message?.includes('Invalid gear data provided')) {
+        toast({
+          title: 'Date invalide',
+          description: 'Datele introduse nu respectă criteriile de siguranță.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Eroare',
+          description: 'Nu am putut adăuga echipamentul. Te rugăm să încerci din nou.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -163,7 +228,11 @@ export const AddGear: React.FC = () => {
 
           {/* Step content */}
           {currentStep === 1 && (
-            <BasicInfo formData={formData} updateFormData={updateFormData} />
+            <BasicInfo 
+              formData={formData} 
+              updateFormData={updateFormData}
+              validationErrors={validationErrors}
+            />
           )}
 
           {currentStep === 2 && (
