@@ -1,29 +1,63 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Custom error class for security-related errors
+export class SecureApiError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public statusCode: number = 500
+  ) {
+    super(message);
+    this.name = 'SecureApiError';
+  }
+}
+
 // Enhanced security helpers
 export const secureApiCall = async <T>(
   apiCall: () => Promise<T>,
-  context?: string
+  options?: {
+    requireAuth?: boolean;
+    rateLimit?: {
+      action: string;
+      maxActions: number;
+      windowMinutes: number;
+    };
+  }
 ): Promise<T> => {
   try {
     // Check if user is authenticated
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      throw new Error('Authentication required');
+    if (options?.requireAuth !== false) {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new SecureApiError('Authentication required', 'AUTH_REQUIRED', 401);
+      }
+    }
+
+    // Check rate limits if specified
+    if (options?.rateLimit) {
+      const canProceed = await checkRateLimit(
+        options.rateLimit.action,
+        options.rateLimit.maxActions,
+        options.rateLimit.windowMinutes
+      );
+      
+      if (!canProceed) {
+        throw new SecureApiError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
+      }
     }
 
     // Execute the API call
     const result = await apiCall();
     
     // Log successful operation (without sensitive data)
-    console.log(`Secure API call successful${context ? ` - ${context}` : ''}`);
+    console.log(`Secure API call successful${options?.rateLimit ? ` - ${options.rateLimit.action}` : ''}`);
     
     return result;
   } catch (error) {
     // Log security event
-    console.error(`Secure API call failed${context ? ` - ${context}` : ''}:`, error);
+    console.error(`Secure API call failed${options?.rateLimit ? ` - ${options.rateLimit.action}` : ''}:`, error);
     throw error;
   }
 };
@@ -51,6 +85,19 @@ export const checkRateLimit = async (
     console.error('Rate limit error:', error);
     return false;
   }
+};
+
+// Error handler for API responses
+export const handleApiError = (error: any): string => {
+  if (error instanceof SecureApiError) {
+    return error.message;
+  }
+  
+  if (error?.message) {
+    return error.message;
+  }
+  
+  return 'An unexpected error occurred';
 };
 
 // Input sanitization
