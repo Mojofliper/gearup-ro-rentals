@@ -6,7 +6,6 @@ export const sanitizeHtml = (dirty: string): string => {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
     ALLOWED_ATTR: [],
     KEEP_CONTENT: true,
-    FORBID_SCRIPT: true,
     FORBID_TAGS: ['script', 'object', 'embed', 'iframe', 'form', 'input']
   });
 };

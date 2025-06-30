@@ -44,9 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const checkSessionExpiry = () => {
       const now = new Date().getTime();
-      const sessionTime = new Date(session.created_at).getTime();
+      const sessionTime = new Date(session.expires_at || 0).getTime();
       
-      if (now - sessionTime > SESSION_TIMEOUT) {
+      if (now > sessionTime) {
         setSessionExpired(true);
         logout();
       }

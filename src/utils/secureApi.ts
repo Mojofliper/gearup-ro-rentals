@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { securityMonitor, logRateLimitExceeded } from './securityMonitor';
 
@@ -57,15 +56,15 @@ export const secureApiCall = async <T>(
         throw new SecureApiError('Authentication required', 'AUTH_REQUIRED', 401);
       }
 
-      // Check if session is still valid
-      const now = new Date().getTime();
-      const sessionTime = new Date(session.created_at).getTime();
-      const sessionAge = now - sessionTime;
-      
-      // Session timeout after 24 hours
-      if (sessionAge > 24 * 60 * 60 * 1000) {
-        await supabase.auth.signOut();
-        throw new SecureApiError('Session expired', 'SESSION_EXPIRED', 401);
+      // Check if session is still valid using expires_at
+      if (session.expires_at) {
+        const now = new Date().getTime() / 1000; // Convert to seconds
+        const expiresAt = new Date(session.expires_at * 1000).getTime() / 1000;
+        
+        if (now > expiresAt) {
+          await supabase.auth.signOut();
+          throw new SecureApiError('Session expired', 'SESSION_EXPIRED', 401);
+        }
       }
     }
 
