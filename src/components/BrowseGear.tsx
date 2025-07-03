@@ -23,34 +23,6 @@ export const BrowseGear: React.FC = () => {
     sortBy,
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
-        <Header />
-        <div className="container mx-auto px-4 py-16">
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-            <span className="ml-2 text-gray-600">Se încarcă echipamentele...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
-        <Header />
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Oops! Ceva nu a mers bine</h2>
-            <p className="text-gray-600">Nu am putut încărca echipamentele. Te rugăm să încerci din nou.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
       <Header />
@@ -79,7 +51,7 @@ export const BrowseGear: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">
-              {gear.length} echipament{gear.length !== 1 ? 'e' : ''} găsit{gear.length !== 1 ? 'e' : ''}
+              {isLoading ? 'Se încarcă...' : `${gear.length} echipament${gear.length !== 1 ? 'e' : ''} găsit${gear.length !== 1 ? 'e' : ''}`}
             </h2>
             <p className="text-gray-600 mt-1">Echipament profesional de la creatori verificați</p>
           </div>
@@ -89,13 +61,22 @@ export const BrowseGear: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {gear.map((item: any) => (
-            <GearCard key={item.id} gear={item} />
-          ))}
-        </div>
-
-        {gear.length === 0 && (
+        {/* Content area with loading state */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="flex items-center space-x-3">
+              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              <span className="text-lg text-gray-600">Se încarcă echipamentele...</span>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md mx-auto">
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Oops! Ceva nu a mers bine</h3>
+              <p className="text-gray-600">Nu am putut încărca echipamentele. Te rugăm să încerci din nou.</p>
+            </div>
+          </div>
+        ) : gear.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <Camera className="h-16 w-16 text-gray-300 mx-auto mb-6" />
@@ -112,6 +93,12 @@ export const BrowseGear: React.FC = () => {
                 Resetează filtrele
               </Button>
             </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {gear.map((item: any) => (
+              <GearCard key={item.id} gear={item} />
+            ))}
           </div>
         )}
       </div>
