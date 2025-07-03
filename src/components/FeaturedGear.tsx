@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, MapPin } from 'lucide-react';
+import { Star, MapPin, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useGearList } from '@/hooks/useGear';
 
@@ -120,8 +120,13 @@ export const FeaturedGear: React.FC = () => {
                       <span className="text-sm text-muted-foreground">/zi</span>
                     </div>
                     <Link to={`/gear/${gear.id}`}>
-                      <Button size="sm" disabled={!gear.is_available}>
-                        {gear.is_available ? 'Vezi detalii' : 'Indisponibil'}
+                      <Button 
+                        size="sm" 
+                        disabled={!gear.is_available}
+                        className={gear.is_available ? "btn-creative shadow-md hover:shadow-lg transition-all duration-300" : ""}
+                        variant={gear.is_available ? "default" : "secondary"}
+                      >
+                        {gear.is_available ? '🚀 Închiriază acum' : '❌ Indisponibil'}
                       </Button>
                     </Link>
                   </div>
@@ -137,8 +142,9 @@ export const FeaturedGear: React.FC = () => {
 
         <div className="text-center mt-12">
           <Link to="/browse">
-            <Button size="lg" variant="outline">
-              Vezi toate echipamentele
+            <Button size="lg" className="btn-creative shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3">
+              <Search className="h-5 w-5 mr-2" />
+              Explorează toate echipamentele
             </Button>
           </Link>
         </div>

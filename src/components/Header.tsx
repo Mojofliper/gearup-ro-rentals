@@ -77,9 +77,9 @@ export const Header: React.FC = () => {
                 </Link>
                 
                 <Link to="/add-gear">
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adaugă
+                  <Button className="btn-creative shadow-lg hover:shadow-xl transition-all duration-300" size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Publică echipament
                   </Button>
                 </Link>
 
@@ -96,17 +96,19 @@ export const Header: React.FC = () => {
                   )}
                 </div>
 
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  Ieși
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-red-50 hover:text-red-600 transition-colors">
+                  <User className="h-4 w-4 mr-2" />
+                  Ieși din cont
                 </Button>
               </>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="sm" onClick={() => handleAuthClick('login')}>
+              <div className="flex items-center space-x-3">
+                <Button variant="ghost" size="sm" onClick={() => handleAuthClick('login')} className="hover:bg-purple-50 hover:text-purple-700 transition-colors">
+                  <User className="h-4 w-4 mr-2" />
                   Conectează-te
                 </Button>
-                <Button size="sm" onClick={() => handleAuthClick('signup')}>
-                  Înregistrează-te
+                <Button className="btn-creative shadow-md hover:shadow-lg transition-all duration-300" size="sm" onClick={() => handleAuthClick('signup')}>
+                  Înregistrează-te gratuit
                 </Button>
               </div>
             )}
@@ -168,16 +170,17 @@ export const Header: React.FC = () => {
                 <div className="space-y-2">
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start" 
+                    className="w-full justify-start hover:bg-purple-50 hover:text-purple-700 transition-colors" 
                     onClick={() => handleAuthClick('login')}
                   >
+                    <User className="h-4 w-4 mr-2" />
                     Conectează-te
                   </Button>
                   <Button 
-                    className="w-full" 
+                    className="w-full btn-creative shadow-md hover:shadow-lg transition-all duration-300" 
                     onClick={() => handleAuthClick('signup')}
                   >
-                    Înregistrează-te
+                    Înregistrează-te gratuit
                   </Button>
                 </div>
               )}
