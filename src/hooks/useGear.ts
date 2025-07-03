@@ -38,6 +38,8 @@ export const useGearList = (filters?: {
   return useQuery({
     queryKey: ['gear', 'list', filters],
     queryFn: async () => {
+      console.log('Fetching gear with filters:', filters);
+      
       let query = supabase
         .from('gear')
         .select(`
@@ -52,11 +54,13 @@ export const useGearList = (filters?: {
       }
 
       if (filters?.category && filters.category !== 'all') {
-        query = query.eq('category.slug', filters.category);
+        // Join with categories table and filter by slug
+        query = query.eq('categories.slug', filters.category);
       }
 
       if (filters?.location && filters.location !== 'all') {
-        query = query.eq('owner.location', filters.location);
+        // Join with profiles table and filter by location
+        query = query.eq('profiles.location', filters.location);
       }
 
       if (filters?.sortBy) {
@@ -78,8 +82,15 @@ export const useGearList = (filters?: {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
-      return data;
+      
+      console.log('Query result:', { data, error });
+      
+      if (error) {
+        console.error('Query error:', error);
+        throw error;
+      }
+      
+      return data || [];
     },
   });
 };

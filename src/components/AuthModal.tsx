@@ -15,6 +15,14 @@ interface AuthModalProps {
   onSwitchMode: (mode: 'login' | 'signup') => void;
 }
 
+const romanianCounties = [
+  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 
+  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 
+  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 
+  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 
+  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'
+];
+
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onSwitchMode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -104,22 +112,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               </div>
 
               <div>
-                <Label htmlFor="location">Orașul tău *</Label>
+                <Label htmlFor="location">Județul tău *</Label>
                 <Select value={location} onValueChange={setLocation} required>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Selectează orașul" />
+                    <SelectValue placeholder="Selectează județul" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="București">București</SelectItem>
-                    <SelectItem value="Cluj-Napoca">Cluj-Napoca</SelectItem>
-                    <SelectItem value="Timișoara">Timișoara</SelectItem>
-                    <SelectItem value="Iași">Iași</SelectItem>
-                    <SelectItem value="Constanța">Constanța</SelectItem>
-                    <SelectItem value="Brașov">Brașov</SelectItem>
-                    <SelectItem value="Craiova">Craiova</SelectItem>
-                    <SelectItem value="Galați">Galați</SelectItem>
-                    <SelectItem value="Ploiești">Ploiești</SelectItem>
-                    <SelectItem value="Oradea">Oradea</SelectItem>
+                    {romanianCounties.map((county) => (
+                      <SelectItem key={county} value={county}>
+                        {county}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

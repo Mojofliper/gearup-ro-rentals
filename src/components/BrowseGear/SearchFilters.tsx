@@ -16,6 +16,14 @@ interface SearchFiltersProps {
   onSortChange: (value: string) => void;
 }
 
+const romanianCounties = [
+  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 
+  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 
+  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 
+  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 
+  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'
+];
+
 export const SearchFilters: React.FC<SearchFiltersProps> = ({
   searchQuery,
   selectedLocation,
@@ -43,17 +51,15 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         
         <Select value={selectedLocation} onValueChange={onLocationChange}>
           <SelectTrigger className="border-gray-200 focus:border-purple-500 bg-white">
-            <SelectValue placeholder="Toate orașele" />
+            <SelectValue placeholder="Toate județele" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
-            <SelectItem value="all">Toate orașele</SelectItem>
-            <SelectItem value="București">București</SelectItem>
-            <SelectItem value="Cluj-Napoca">Cluj-Napoca</SelectItem>
-            <SelectItem value="Timișoara">Timișoara</SelectItem>
-            <SelectItem value="Iași">Iași</SelectItem>
-            <SelectItem value="Constanța">Constanța</SelectItem>
-            <SelectItem value="Brașov">Brașov</SelectItem>
-            <SelectItem value="Craiova">Craiova</SelectItem>
+            <SelectItem value="all">Toate județele</SelectItem>
+            {romanianCounties.map((county) => (
+              <SelectItem key={county} value={county}>
+                {county}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
