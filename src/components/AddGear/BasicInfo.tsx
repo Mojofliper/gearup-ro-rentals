@@ -210,7 +210,7 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
                 className="mt-1"
               />
               <p className="text-sm text-gray-500 mt-1">
-                Suma care va fi blocată ca garanție
+                Suma care va fi blocată ca garanție, dar restituită după
               </p>
             </div>
           </div>
