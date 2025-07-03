@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
@@ -54,13 +53,33 @@ export const useGearList = (filters?: {
       }
 
       if (filters?.category && filters.category !== 'all') {
-        // Join with categories table and filter by slug
-        query = query.eq('categories.slug', filters.category);
+        // Filter by category using category_id directly
+        const { data: categoryData } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', filters.category)
+          .single();
+        
+        if (categoryData) {
+          query = query.eq('category_id', categoryData.id);
+        }
       }
 
       if (filters?.location && filters.location !== 'all') {
-        // Join with profiles table and filter by location
-        query = query.eq('profiles.location', filters.location);
+        // We need to filter by the owner's location
+        // First get profile IDs for the location
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('location', filters.location);
+        
+        if (profileData && profileData.length > 0) {
+          const profileIds = profileData.map(p => p.id);
+          query = query.in('owner_id', profileIds);
+        } else {
+          // If no profiles found for this location, return empty array
+          return [];
+        }
       }
 
       if (filters?.sortBy) {

@@ -6,6 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigate } from 'react-router-dom';
 import { Search, Camera, Users, Shield } from 'lucide-react';
 
+const romanianCounties = [
+  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 
+  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 
+  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 
+  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 
+  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'
+];
+
 export const Hero: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
@@ -40,15 +48,14 @@ export const Hero: React.FC = () => {
               </div>
               <Select value={location} onValueChange={setLocation}>
                 <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="Oraș" />
+                  <SelectValue placeholder="Județ" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bucuresti">București</SelectItem>
-                  <SelectItem value="cluj-napoca">Cluj-Napoca</SelectItem>
-                  <SelectItem value="timisoara">Timișoara</SelectItem>
-                  <SelectItem value="iasi">Iași</SelectItem>
-                  <SelectItem value="constanta">Constanța</SelectItem>
-                  <SelectItem value="brasov">Brașov</SelectItem>
+                  {romanianCounties.map((county) => (
+                    <SelectItem key={county} value={county}>
+                      {county}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button onClick={handleSearch} className="px-8">
