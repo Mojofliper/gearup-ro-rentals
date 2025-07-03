@@ -372,6 +372,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_avatar_url: {
+        Args: { avatar_path: string }
+        Returns: string
+      }
       validate_gear_input: {
         Args: {
           gear_name: string

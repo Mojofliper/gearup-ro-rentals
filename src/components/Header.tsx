@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { AuthModal } from '@/components/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +30,13 @@ export const Header: React.FC = () => {
     await logout();
     setIsMobileMenuOpen(false);
   };
+
+  // Get full avatar URL
+  const avatarUrl = profile?.avatar_url 
+    ? profile.avatar_url.startsWith('http') 
+      ? profile.avatar_url 
+      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
+    : '';
 
   if (loading) {
     return (
@@ -91,6 +98,7 @@ export const Header: React.FC = () => {
 
                 <div className="flex items-center space-x-2">
                   <Avatar className="h-8 w-8 cursor-pointer" onClick={handleProfileClick}>
+                    <AvatarImage src={avatarUrl} />
                     <AvatarFallback className="bg-purple-100 text-purple-600">
                       {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>

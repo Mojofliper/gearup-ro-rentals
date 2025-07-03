@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -8,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AvatarUpload } from '@/components/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '@/hooks/useUserData';
 import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle } from 'lucide-react';
@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile?.avatar_url || '');
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     location: profile?.location || '',
@@ -34,6 +35,10 @@ export const Profile: React.FC = () => {
     setIsEditing(false);
   };
 
+  const handleAvatarUpdate = (newAvatarUrl: string) => {
+    setCurrentAvatarUrl(newAvatarUrl);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
@@ -49,6 +54,13 @@ export const Profile: React.FC = () => {
     }
   };
 
+  // Get the full avatar URL
+  const fullAvatarUrl = currentAvatarUrl 
+    ? currentAvatarUrl.startsWith('http') 
+      ? currentAvatarUrl 
+      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${currentAvatarUrl}`
+    : '';
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -58,11 +70,21 @@ export const Profile: React.FC = () => {
         <Card className="mb-8">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="text-2xl">
-                  {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              <div className="flex flex-col items-center space-y-4">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={fullAvatarUrl} />
+                  <AvatarFallback className="text-2xl">
+                    {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {isEditing && (
+                  <AvatarUpload 
+                    currentAvatarUrl={fullAvatarUrl}
+                    onAvatarUpdate={handleAvatarUpdate}
+                  />
+                )}
+              </div>
               
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
