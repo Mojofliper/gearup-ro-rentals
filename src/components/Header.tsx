@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { AuthModal } from '@/components/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Plus, User, MessageSquare, Camera, Menu, X } from 'lucide-react';
+import { Search, Plus, User, MessageSquare, Camera, Menu, X, ShoppingBag } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -55,13 +55,19 @@ export const Header: React.FC = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/browse" className="text-gray-700 hover:text-purple-600 transition-colors">
-              Închiriază
+          <nav className="hidden md:flex items-center space-x-4">
+            <Link to="/browse">
+              <Button variant="ghost" className="text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors font-medium">
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Închiriază echipament
+              </Button>
             </Link>
             {user && (
-              <Link to="/add-gear" className="text-gray-700 hover:text-purple-600 transition-colors">
-                Oferă spre închiriere
+              <Link to="/add-gear">
+                <Button variant="ghost" className="text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors font-medium">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Oferă spre închiriere
+                </Button>
               </Link>
             )}
           </nav>
@@ -71,7 +77,7 @@ export const Header: React.FC = () => {
             {user ? (
               <>
                 <Link to="/messages">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="hover:bg-purple-50 hover:text-purple-600 transition-colors">
                     <MessageSquare className="h-4 w-4" />
                   </Button>
                 </Link>
@@ -131,39 +137,44 @@ export const Header: React.FC = () => {
             <div className="container mx-auto px-4 py-4 space-y-4">
               <Link 
                 to="/browse" 
-                className="block text-gray-700 hover:text-purple-600 transition-colors"
+                className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Închiriază
+                <ShoppingBag className="h-4 w-4" />
+                <span>Închiriază echipament</span>
               </Link>
               
               {user ? (
                 <>
                   <Link 
                     to="/add-gear" 
-                    className="block text-gray-700 hover:text-purple-600 transition-colors"
+                    className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    Oferă spre închiriere
+                    <Plus className="h-4 w-4" />
+                    <span>Oferă spre închiriere</span>
                   </Link>
                   <Link 
                     to="/messages" 
-                    className="block text-gray-700 hover:text-purple-600 transition-colors"
+                    className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    Mesaje
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Mesaje</span>
                   </Link>
                   <button 
                     onClick={handleProfileClick}
-                    className="block w-full text-left text-gray-700 hover:text-purple-600 transition-colors"
+                    className="flex items-center space-x-2 w-full text-left text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
                   >
-                    Profil
+                    <User className="h-4 w-4" />
+                    <span>Profil</span>
                   </button>
                   <button 
                     onClick={handleLogout}
-                    className="block w-full text-left text-gray-700 hover:text-purple-600 transition-colors"
+                    className="flex items-center space-x-2 w-full text-left text-gray-700 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50"
                   >
-                    Ieși din cont
+                    <User className="h-4 w-4" />
+                    <span>Ieși din cont</span>
                   </button>
                 </>
               ) : (
