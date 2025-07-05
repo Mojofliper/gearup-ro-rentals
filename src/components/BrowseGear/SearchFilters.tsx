@@ -30,26 +30,26 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   const { data: categories = [] } = useCategories();
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-blue-100/60 mb-8 overflow-hidden">
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-blue-50/80 to-blue-100/60 px-6 py-4">
+    <div className="bg-white rounded-xl shadow-lg border border-gray-100 mb-8 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 px-6 py-4 border-b border-gray-100">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-500 rounded-lg shadow-md">
+          <div className="p-2.5 bg-blue-500 rounded-lg shadow-sm">
             <Filter className="h-4 w-4 text-white" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-gray-800">Filtrează echipamentele</h3>
-            <p className="text-xs text-gray-600">Găsește exact ce cauți</p>
+            <h3 className="text-lg font-semibold text-gray-800">Filtrează echipamentele</h3>
+            <p className="text-sm text-gray-600">Găsește exact ce cauți</p>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-6 py-6">
-        {/* Primary Search Bar */}
+      {/* Content */}
+      <div className="p-6">
+        {/* Search Bar */}
         <div className="mb-8">
-          <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
-            <Search className="h-4 w-4 mr-2 text-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            <Search className="h-4 w-4 inline mr-2 text-blue-500" />
             Caută echipament
           </label>
           <div className="relative">
@@ -58,17 +58,17 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               placeholder="Canon EOS R5, Sony A7III, DJI Mavic..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-12 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white rounded-xl shadow-sm text-base"
+              className="pl-12 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white rounded-lg shadow-sm text-base"
             />
           </div>
         </div>
 
         {/* Filters Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Location Filter */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700 flex items-center mb-3">
-              <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              <MapPin className="h-4 w-4 inline mr-2 text-blue-500" />
               Locație
             </label>
             <LocationDetector
@@ -78,20 +78,20 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             />
           </div>
 
-          {/* Category Filter */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700 flex items-center mb-3">
-              <Tag className="h-4 w-4 mr-2 text-blue-500" />
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              <Tag className="h-4 w-4 inline mr-2 text-blue-500" />
               Categorie
             </label>
             <Select value={selectedCategory} onValueChange={onCategoryChange}>
-              <SelectTrigger className="h-11 border-gray-200 focus:border-blue-500 bg-white rounded-lg shadow-sm">
+              <SelectTrigger className="h-11 border-gray-200 focus:border-blue-500 bg-white rounded-lg">
                 <SelectValue placeholder="Toate categoriile" />
               </SelectTrigger>
-              <SelectContent className="bg-white z-50 rounded-xl shadow-xl border border-gray-200">
-                <SelectItem value="all" className="rounded-lg">Toate categoriile</SelectItem>
+              <SelectContent className="bg-white z-50 rounded-lg shadow-xl border border-gray-200">
+                <SelectItem value="all">Toate categoriile</SelectItem>
                 {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.slug} className="rounded-lg">
+                  <SelectItem key={category.id} value={category.slug}>
                     {category.name}
                   </SelectItem>
                 ))}
@@ -99,31 +99,23 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             </Select>
           </div>
 
-          {/* Sort Filter */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700 flex items-center mb-3">
-              <SortAsc className="h-4 w-4 mr-2 text-blue-500" />
+          {/* Sort */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              <SortAsc className="h-4 w-4 inline mr-2 text-blue-500" />
               Sortează după
             </label>
             <Select value={sortBy} onValueChange={onSortChange}>
-              <SelectTrigger className="h-11 border-gray-200 focus:border-blue-500 bg-white rounded-lg shadow-sm">
+              <SelectTrigger className="h-11 border-gray-200 focus:border-blue-500 bg-white rounded-lg">
                 <SelectValue placeholder="Sortează după" />
               </SelectTrigger>
-              <SelectContent className="bg-white z-50 rounded-xl shadow-xl border border-gray-200">
-                <SelectItem value="relevance" className="rounded-lg">Relevanță</SelectItem>
-                <SelectItem value="price-low" className="rounded-lg">Preț: mic la mare</SelectItem>
-                <SelectItem value="price-high" className="rounded-lg">Preț: mare la mic</SelectItem>
-                <SelectItem value="rating" className="rounded-lg">Cel mai recent</SelectItem>
+              <SelectContent className="bg-white z-50 rounded-lg shadow-xl border border-gray-200">
+                <SelectItem value="relevance">Relevanță</SelectItem>
+                <SelectItem value="price-low">Preț: mic la mare</SelectItem>
+                <SelectItem value="price-high">Preț: mare la mic</SelectItem>
+                <SelectItem value="rating">Cel mai recent</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </div>
-
-        {/* Help Text */}
-        <div className="flex justify-center">
-          <div className="inline-flex items-center text-xs text-gray-500 bg-blue-50/70 px-4 py-2 rounded-full">
-            <span className="font-medium text-blue-600">Tip:</span>
-            <span className="ml-1">Folosește filtrele pentru rezultate mai precise</span>
           </div>
         </div>
       </div>
