@@ -1,17 +1,29 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { AuthModal } from '@/components/AuthModal';
+import { Cart } from '@/components/Cart';
+import { Checkout } from '@/components/Checkout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Search, Plus, User, MessageSquare, Camera, Menu, X, ShoppingBag } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 
 export const Header: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [checkoutItems, setCheckoutItems] = useState<any[]>([]);
   const { user, profile, logout, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -29,6 +41,50 @@ export const Header: React.FC = () => {
   const handleLogout = async () => {
     await logout();
     setIsMobileMenuOpen(false);
+    navigate('/');
+  };
+
+  // Load cart item count from localStorage
+  useEffect(() => {
+    const updateCartCount = () => {
+      const savedCart = localStorage.getItem('gearup-cart');
+      if (savedCart) {
+        try {
+          const cartItems = JSON.parse(savedCart);
+          setCartItemCount(cartItems.length);
+        } catch (error) {
+          setCartItemCount(0);
+        }
+      } else {
+        setCartItemCount(0);
+      }
+    };
+
+    updateCartCount();
+    
+    // Listen for storage events (when cart is updated from other tabs)
+    window.addEventListener('storage', updateCartCount);
+    
+    // Listen for custom events (when cart is updated in same tab)
+    const handleCartUpdate = () => updateCartCount();
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, []);
+
+  const handleCheckout = (cartItems: any[]) => {
+    setCheckoutItems(cartItems);
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleCheckoutSuccess = () => {
+    setIsCheckoutOpen(false);
+    setCartItemCount(0);
+    navigate('/profile');
   };
 
   // Get full avatar URL
@@ -54,30 +110,12 @@ export const Header: React.FC = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 font-bold text-xl">
+          <Link to={user ? "/browse" : "/"} className="flex items-center space-x-2 font-bold text-xl">
             <Camera className="h-6 w-6 text-purple-600" />
             <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               GearUp
             </span>
           </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-4">
-            <Link to="/browse">
-              <Button variant="ghost" className="text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors font-medium">
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Închiriază echipament
-              </Button>
-            </Link>
-            {user && (
-              <Link to="/add-gear">
-                <Button variant="ghost" className="text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors font-medium">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Oferă spre închiriere
-                </Button>
-              </Link>
-            )}
-          </nav>
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-3">
@@ -88,32 +126,46 @@ export const Header: React.FC = () => {
                     <MessageSquare className="h-4 w-4" />
                   </Button>
                 </Link>
-                
-                <Link to="/add-gear">
-                  <Button className="btn-creative shadow-lg hover:shadow-xl transition-all duration-300" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Publică echipament
-                  </Button>
-                </Link>
 
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-8 w-8 cursor-pointer" onClick={handleProfileClick}>
-                    <AvatarImage src={avatarUrl} />
-                    <AvatarFallback className="bg-purple-100 text-purple-600">
-                      {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {profile?.is_verified && (
-                    <Badge variant="secondary" className="text-xs">
-                      Verificat
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCartOpen(true)}
+                  className="hover:bg-purple-50 hover:text-purple-600 transition-colors relative"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  {cartItemCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                      {cartItemCount}
                     </Badge>
                   )}
-                </div>
-
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-red-50 hover:text-red-600 transition-colors">
-                  <User className="h-4 w-4 mr-2" />
-                  Ieși din cont
                 </Button>
+
+                {/* Avatar + Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Avatar className="h-8 w-8 cursor-pointer">
+                      <AvatarImage src={avatarUrl} />
+                      <AvatarFallback className="bg-purple-100 text-purple-600">
+                        {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleProfileClick}>
+                      Profil
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-700">
+                      Ieși din cont
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {profile?.is_verified && (
+                  <Badge variant="secondary" className="text-xs">
+                    Verificat
+                  </Badge>
+                )}
               </>
             ) : (
               <div className="flex items-center space-x-3">
@@ -143,25 +195,8 @@ export const Header: React.FC = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t bg-white">
             <div className="container mx-auto px-4 py-4 space-y-4">
-              <Link 
-                to="/browse" 
-                className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                <span>Închiriază echipament</span>
-              </Link>
-              
               {user ? (
                 <>
-                  <Link 
-                    to="/add-gear" 
-                    className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Oferă spre închiriere</span>
-                  </Link>
                   <Link 
                     to="/messages" 
                     className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
@@ -213,6 +248,19 @@ export const Header: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         mode={authMode}
         onSwitchMode={setAuthMode}
+      />
+
+      <Cart
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        onCheckout={handleCheckout}
+      />
+
+      <Checkout
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        cartItems={checkoutItems}
+        onSuccess={handleCheckoutSuccess}
       />
     </>
   );

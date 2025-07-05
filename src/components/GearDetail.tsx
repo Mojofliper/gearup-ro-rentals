@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
-import { Star, MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
+import { Star, MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { useGear } from '@/hooks/useGear';
@@ -95,6 +95,65 @@ export const GearDetail: React.FC = () => {
     toast({
       title: 'Mesaj trimis!',
       description: 'Conversația a fost inițiată cu proprietarul.',
+    });
+  };
+
+  const handleAddToCart = () => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    if (selectedDates.length === 0) {
+      toast({
+        title: 'Selectează datele',
+        description: 'Te rugăm să selectezi perioada de închiriere.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if user is trying to rent their own gear
+    if (user.id === gear.owner_id) {
+      toast({
+        title: 'Nu poți închiria propriul echipament',
+        description: 'Selectează alt echipament pentru închiriere.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Add to cart
+    const cartItem = {
+      id: `${gear.id}-${Date.now()}`,
+      gear: {
+        id: gear.id,
+        name: gear.name,
+        price_per_day: gear.price_per_day,
+        deposit_amount: gear.deposit_amount,
+        images: images,
+        owner: {
+          id: gear.owner_id, // Use owner_id from gear instead of gear.owner.id
+          full_name: gear.owner?.full_name || 'Utilizator',
+          location: gear.owner?.location || 'România',
+          is_verified: gear.owner?.is_verified || false
+        }
+      },
+      selectedDates: selectedDates,
+      notes: ''
+    };
+
+    const existingCart = localStorage.getItem('gearup-cart');
+    const cartItems = existingCart ? JSON.parse(existingCart) : [];
+    cartItems.push(cartItem);
+    localStorage.setItem('gearup-cart', JSON.stringify(cartItems));
+
+    // Dispatch custom event to update cart count in header
+    window.dispatchEvent(new Event('cartUpdated'));
+
+    toast({
+      title: 'Adăugat în coș!',
+      description: 'Echipamentul a fost adăugat în coșul de cumpărături.',
     });
   };
 
@@ -329,13 +388,25 @@ export const GearDetail: React.FC = () => {
                   </div>
                 )}
 
-                <Button 
-                  className="w-full" 
-                  onClick={handleRentRequest}
-                  disabled={!gear.is_available}
-                >
-                  {gear.is_available ? 'Solicită închirierea' : 'Indisponibil'}
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full" 
+                    onClick={handleRentRequest}
+                    disabled={!gear.is_available}
+                  >
+                    {gear.is_available ? 'Solicită închirierea' : 'Indisponibil'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    className="w-full" 
+                    onClick={handleAddToCart}
+                    disabled={!gear.is_available}
+                  >
+                    <ShoppingBag className="h-4 w-4 mr-2" />
+                    Adaugă în coș
+                  </Button>
+                </div>
 
                 <p className="text-xs text-muted-foreground text-center">
                   Nu vei fi taxat încă. Proprietarul trebuie să confirme disponibilitatea.

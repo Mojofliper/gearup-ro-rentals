@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { RentOfferToggle } from '../RentOfferToggle';
 
 export const AddGearHeader: React.FC = () => {
   return (
@@ -10,6 +10,9 @@ export const AddGearHeader: React.FC = () => {
       <p className="text-xl text-gray-600">
         Publică echipamentul tău și câștigă bani din închiriere
       </p>
+      <div className="mt-10">
+        <RentOfferToggle />
+      </div>
     </div>
   );
 };

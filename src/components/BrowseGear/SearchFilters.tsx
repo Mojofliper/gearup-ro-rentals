@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
+import { LocationDetector } from '../LocationDetector';
 
 interface SearchFiltersProps {
   searchQuery: string;
@@ -49,19 +50,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           />
         </div>
         
-        <Select value={selectedLocation} onValueChange={onLocationChange}>
-          <SelectTrigger className="border-gray-200 focus:border-purple-500 bg-white">
-            <SelectValue placeholder="Toate județele" />
-          </SelectTrigger>
-          <SelectContent className="bg-white z-50">
-            <SelectItem value="all">Toate județele</SelectItem>
-            {romanianCounties.map((county) => (
-              <SelectItem key={county} value={county}>
-                {county}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <LocationDetector
+          onLocationChange={onLocationChange}
+          currentLocation={selectedLocation === 'all' ? '' : selectedLocation}
+          className="border-gray-200 focus:border-purple-500 bg-white"
+        />
 
         <Select value={selectedCategory} onValueChange={onCategoryChange}>
           <SelectTrigger className="border-gray-200 focus:border-purple-500 bg-white">

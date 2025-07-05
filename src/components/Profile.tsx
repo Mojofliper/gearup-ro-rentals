@@ -14,7 +14,8 @@ import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '
 import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
-import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings } from 'lucide-react';
+import { ConfirmationSystem } from '@/components/ConfirmationSystem';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -36,6 +37,15 @@ export const Profile: React.FC = () => {
   
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    booking: any;
+    type: 'pickup' | 'return';
+  }>({
+    isOpen: false,
+    booking: null,
+    type: 'pickup'
+  });
 
   if (!user || !profile) return null;
 
@@ -76,6 +86,8 @@ export const Profile: React.FC = () => {
     switch (status) {
       case 'completed':
         return <Badge variant="default">Finalizat</Badge>;
+      case 'active':
+        return <Badge variant="secondary">În curs</Badge>;
       case 'confirmed':
         return <Badge variant="secondary">Confirmat</Badge>;
       case 'pending':
@@ -85,6 +97,14 @@ export const Profile: React.FC = () => {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const handleConfirmation = (booking: any, type: 'pickup' | 'return') => {
+    setConfirmationModal({
+      isOpen: true,
+      booking,
+      type
+    });
   };
 
   // Get the full avatar URL
@@ -262,6 +282,18 @@ export const Profile: React.FC = () => {
                       </div>
                      <div className="text-right space-y-2">
                        {getStatusBadge(booking.status || 'pending')}
+                       {/* Doar închiriatorul poate confirma returnarea */}
+                       {booking.status === 'active' && (
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => handleConfirmation(booking, 'return')}
+                           className="w-full"
+                         >
+                           <CheckCircle className="h-3 w-3 mr-1" />
+                           Confirmă returnarea
+                         </Button>
+                       )}
                        {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
                          <Button
                            variant="outline"
@@ -326,6 +358,18 @@ export const Profile: React.FC = () => {
                               Acceptă
                             </Button>
                           </div>
+                        )}
+                        {/* Doar proprietarul poate confirma ridicarea */}
+                        {booking.status === 'confirmed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleConfirmation(booking, 'pickup')}
+                            className="w-full"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Confirmă ridicarea
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -478,6 +522,13 @@ export const Profile: React.FC = () => {
           booking={reviewingBooking}
         />
       )}
+
+      <ConfirmationSystem
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+        booking={confirmationModal.booking}
+        type={confirmationModal.type}
+      />
     </div>
   );
 };
