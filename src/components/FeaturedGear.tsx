@@ -1,14 +1,121 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ConversationModal } from '@/components/ConversationModal';
-import { MapPin, Search, MessageSquare } from 'lucide-react';
+import { MapPin, Search, MessageSquare, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useGearList } from '@/hooks/useGear';
+import { useGearReviews } from '@/hooks/useReviews';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Component for individual featured gear card
+const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) => void }> = ({ gear, onStartConversation }) => {
+  const { data: reviewsData } = useGearReviews(gear.id);
+  const { user } = useAuth();
+  
+  // Safely parse images from Json type
+  const images = Array.isArray(gear.images) ? (gear.images as unknown as string[]) : [];
+  const firstImage = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
+  const ownerName = gear.owner?.full_name || 'Utilizator';
+  const ownerLocation = gear.owner?.location || 'România';
+  const categoryName = gear.category?.name || 'Echipament';
+  
+  // Convert price from cents to RON
+  const priceInRON = Math.round(gear.price_per_day / 100);
+  
+  // Get full avatar URL
+  const ownerAvatar = gear.owner?.avatar_url 
+    ? gear.owner.avatar_url.startsWith('http') 
+      ? gear.owner.avatar_url 
+      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${gear.owner.avatar_url}`
+    : '';
+
+  return (
+    <Card className="group hover:shadow-lg transition-shadow">
+      <div className="relative">
+        <Link to={`/gear/${gear.id}`}>
+          <img
+            src={firstImage}
+            alt={gear.name}
+            className="w-full h-48 object-cover rounded-t-lg cursor-pointer"
+          />
+        </Link>
+        <div className="absolute top-3 left-3">
+          <Badge variant="secondary">{categoryName}</Badge>
+        </div>
+        {!gear.is_available && (
+          <div className="absolute top-3 right-3">
+            <Badge variant="destructive">Indisponibil</Badge>
+          </div>
+        )}
+      </div>
+
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-lg">{gear.name}</h3>
+          <div className="text-xs text-muted-foreground">
+            {reviewsData?.totalReviews ? (
+              <div className="flex items-center space-x-1">
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews})</span>
+              </div>
+            ) : (
+              'Fără recenzii'
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 mb-3">
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={ownerAvatar} />
+            <AvatarFallback className="text-xs">
+              {ownerName.split(' ').map(n => n[0]).join('')}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm text-muted-foreground">{ownerName}</span>
+        </div>
+
+        <div className="flex items-center space-x-1 mb-3">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{ownerLocation}</span>
+        </div>
+
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <span className="text-2xl font-bold">{priceInRON} RON</span>
+            <span className="text-sm text-muted-foreground">/zi</span>
+          </div>
+        </div>
+
+        <div className="flex space-x-2">
+          <Link to={`/gear/${gear.id}`} className="flex-1">
+            <Button 
+              size="sm" 
+              disabled={!gear.is_available}
+              className={`w-full ${gear.is_available ? "btn-creative shadow-md hover:shadow-lg transition-all duration-300" : ""}`}
+              variant={gear.is_available ? "default" : "secondary"}
+            >
+              {gear.is_available ? '🚀 Închiriază' : '❌ Indisponibil'}
+            </Button>
+          </Link>
+          
+          {user && user.id !== gear.owner_id && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onStartConversation(gear)}
+              className="px-3"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export const FeaturedGear: React.FC = () => {
   const { data: gearList, isLoading, error } = useGearList();
@@ -106,99 +213,9 @@ export const FeaturedGear: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredGear.map((gear) => {
-            // Safely parse images from Json type
-            const images = Array.isArray(gear.images) ? (gear.images as unknown as string[]) : [];
-            const firstImage = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
-            const ownerName = gear.owner?.full_name || 'Utilizator';
-            const ownerLocation = gear.owner?.location || 'România';
-            const categoryName = gear.category?.name || 'Echipament';
-            
-            // Convert price from cents to RON
-            const priceInRON = Math.round(gear.price_per_day / 100);
-            
-            // Get full avatar URL
-            const ownerAvatar = gear.owner?.avatar_url 
-              ? gear.owner.avatar_url.startsWith('http') 
-                ? gear.owner.avatar_url 
-                : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${gear.owner.avatar_url}`
-              : '';
-
-            return (
-              <Card key={gear.id} className="group hover:shadow-lg transition-shadow">
-                <div className="relative">
-                  <img
-                    src={firstImage}
-                    alt={gear.name}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <Badge variant="secondary">{categoryName}</Badge>
-                  </div>
-                  {!gear.is_available && (
-                    <div className="absolute top-3 right-3">
-                      <Badge variant="destructive">Indisponibil</Badge>
-                    </div>
-                  )}
-                </div>
-
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-lg">{gear.name}</h3>
-                    <div className="text-xs text-muted-foreground">
-                      Fără recenzii
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={ownerAvatar} />
-                      <AvatarFallback className="text-xs">
-                        {ownerName.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-muted-foreground">{ownerName}</span>
-                  </div>
-
-                  <div className="flex items-center space-x-1 mb-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">{ownerLocation}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <span className="text-2xl font-bold">{priceInRON} RON</span>
-                      <span className="text-sm text-muted-foreground">/zi</span>
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <Link to={`/gear/${gear.id}`} className="flex-1">
-                      <Button 
-                        size="sm" 
-                        disabled={!gear.is_available}
-                        className={`w-full ${gear.is_available ? "btn-creative shadow-md hover:shadow-lg transition-all duration-300" : ""}`}
-                        variant={gear.is_available ? "default" : "secondary"}
-                      >
-                        {gear.is_available ? '🚀 Închiriază' : '❌ Indisponibil'}
-                      </Button>
-                    </Link>
-                    
-                    {user && user.id !== gear.owner_id && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStartConversation(gear)}
-                        className="px-3"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {featuredGear.map((gear) => (
+            <FeaturedGearCard key={gear.id} gear={gear} onStartConversation={handleStartConversation} />
+          ))}
         </div>
 
         <div className="text-center mt-12">

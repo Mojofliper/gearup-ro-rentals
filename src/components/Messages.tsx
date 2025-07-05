@@ -190,7 +190,7 @@ export const Messages: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
-        <Link to="/">
+        <Link to="/browse">
           <Button variant="ghost" size="sm" className="flex items-center space-x-2">
             <ArrowLeft className="h-4 w-4" />
             <span>Înapoi acasă</span>

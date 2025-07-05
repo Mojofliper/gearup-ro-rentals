@@ -8,10 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
+import { MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera, ShoppingBag, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { useGear } from '@/hooks/useGear';
+import { useGearReviews } from '@/hooks/useReviews';
 import { toast } from '@/hooks/use-toast';
 import { BookingModal } from '@/components/BookingModal';
 
@@ -19,11 +20,17 @@ export const GearDetail: React.FC = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { data: gear, isLoading, error } = useGear(id);
+  const { data: reviewsData } = useGearReviews(id);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  console.log('GearDetail rendered with id:', id);
+  console.log('Gear data:', gear);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
 
   if (isLoading) {
     return (
@@ -56,6 +63,14 @@ export const GearDetail: React.FC = () => {
       </div>
     );
   }
+
+  // Parse JSON fields safely
+  const images = Array.isArray(gear.images) ? gear.images : 
+                 (typeof gear.images === 'string' ? JSON.parse(gear.images || '[]') : []);
+  const specifications = Array.isArray(gear.specifications) ? gear.specifications : 
+                        (typeof gear.specifications === 'string' ? JSON.parse(gear.specifications || '[]') : []);
+  const includedItems = Array.isArray(gear.included_items) ? gear.included_items : 
+                       (typeof gear.included_items === 'string' ? JSON.parse(gear.included_items || '[]') : []);
 
   const handleRentRequest = () => {
     if (!user) {
@@ -130,9 +145,9 @@ export const GearDetail: React.FC = () => {
         name: gear.name,
         price_per_day: gear.price_per_day,
         deposit_amount: gear.deposit_amount,
-        images: images,
+        // Nu salvăm imaginea în localStorage pentru a evita QuotaExceededError
         owner: {
-          id: gear.owner_id, // Use owner_id from gear instead of gear.owner.id
+          id: gear.owner_id,
           full_name: gear.owner?.full_name || 'Utilizator',
           location: gear.owner?.location || 'România',
           is_verified: gear.owner?.is_verified || false
@@ -142,18 +157,53 @@ export const GearDetail: React.FC = () => {
       notes: ''
     };
 
-    const existingCart = localStorage.getItem('gearup-cart');
-    const cartItems = existingCart ? JSON.parse(existingCart) : [];
-    cartItems.push(cartItem);
-    localStorage.setItem('gearup-cart', JSON.stringify(cartItems));
+    try {
+      const existingCart = localStorage.getItem('gearup-cart');
+      const cartItems = existingCart ? JSON.parse(existingCart) : [];
+      cartItems.push(cartItem);
+      localStorage.setItem('gearup-cart', JSON.stringify(cartItems));
 
-    // Dispatch custom event to update cart count in header
-    window.dispatchEvent(new Event('cartUpdated'));
+      // Dispatch custom event to update cart count in header
+      window.dispatchEvent(new Event('cartUpdated'));
 
-    toast({
-      title: 'Adăugat în coș!',
-      description: 'Echipamentul a fost adăugat în coșul de cumpărături.',
-    });
+      toast({
+        title: 'Adăugat în coș!',
+        description: 'Echipamentul a fost adăugat în coșul de cumpărături.',
+      });
+    } catch (error) {
+      console.error('Cart error:', error);
+      console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
+      
+      // If QuotaExceededError, clear cart and try again
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        try {
+          localStorage.removeItem('gearup-cart');
+          localStorage.setItem('gearup-cart', JSON.stringify([cartItem]));
+          
+          // Dispatch custom event to update cart count in header
+          window.dispatchEvent(new Event('cartUpdated'));
+
+          toast({
+            title: 'Adăugat în coș!',
+            description: 'Coșul a fost resetat și echipamentul a fost adăugat.',
+          });
+        } catch (retryError) {
+          console.error('Retry error:', retryError);
+          toast({
+            title: 'Eroare la adăugarea în coș',
+            description: 'Nu s-a putut adăuga în coș. Te rugăm să încerci din nou.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Eroare la adăugarea în coș',
+          description: 'Nu s-a putut adăuga în coș. Te rugăm să încerci din nou.',
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   const calculateTotal = () => {
@@ -163,14 +213,6 @@ export const GearDetail: React.FC = () => {
 
   const depositAmount = gear.deposit_amount ? gear.deposit_amount / 100 : 0;
   const pricePerDay = gear.price_per_day / 100;
-  
-  // Parse JSON fields safely
-  const images = Array.isArray(gear.images) ? gear.images : 
-                 (typeof gear.images === 'string' ? JSON.parse(gear.images || '[]') : []);
-  const specifications = Array.isArray(gear.specifications) ? gear.specifications : 
-                        (typeof gear.specifications === 'string' ? JSON.parse(gear.specifications || '[]') : []);
-  const includedItems = Array.isArray(gear.included_items) ? gear.included_items : 
-                       (typeof gear.included_items === 'string' ? JSON.parse(gear.included_items || '[]') : []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -226,10 +268,24 @@ export const GearDetail: React.FC = () => {
             {/* Title & Rating */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold mb-2">{gear.name}</h1>
-              <div className="flex items-center space-x-4">
-                <div className="text-muted-foreground">
-                  Fără recenzii încă
-                </div>
+                              <div className="flex items-center space-x-4">
+                  <div className="text-muted-foreground">
+                    {reviewsData?.totalReviews ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={`h-4 w-4 ${star <= reviewsData.averageRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+                            />
+                          ))}
+                        </div>
+                        <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews} recenzii)</span>
+                      </div>
+                    ) : (
+                      'Fără recenzii încă'
+                    )}
+                  </div>
                 {gear.owner?.location && (
                   <div className="flex items-center space-x-1">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -313,7 +369,14 @@ export const GearDetail: React.FC = () => {
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Fără recenzii încă
+                        {reviewsData?.totalReviews ? (
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews} recenzii)</span>
+                          </div>
+                        ) : (
+                          'Fără recenzii încă'
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Membru din 2024

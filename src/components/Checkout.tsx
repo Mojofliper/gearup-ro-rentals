@@ -20,7 +20,6 @@ interface CartItem {
     name: string;
     price_per_day: number;
     deposit_amount: number;
-    images: any[];
     owner: {
       id: string;
       full_name: string;
@@ -215,17 +214,9 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                     <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
-                      {item.gear.images && item.gear.images.length > 0 ? (
-                        <img
-                          src={item.gear.images[0]}
-                          alt={item.gear.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <Calendar className="h-6 w-6" />
-                        </div>
-                      )}
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <Calendar className="h-6 w-6" />
+                      </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
