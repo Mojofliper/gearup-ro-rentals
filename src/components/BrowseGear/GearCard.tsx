@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -171,7 +172,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
 
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-3">
-            <h3 className="font-bold text-lg text-gray-800 group-hover:text-purple-600 transition-colors">
+            <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors">
               {gear.name}
             </h3>
             <div className="text-xs text-gray-500">
@@ -187,8 +188,8 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
           </div>
 
           <div className="flex items-center space-x-2 mb-4">
-            <Avatar className="h-7 w-7 ring-2 ring-purple-100">
-              <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+            <Avatar className="h-7 w-7 ring-2 ring-blue-100">
+              <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-blue-600 text-white">
                 {gear.owner.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
@@ -213,7 +214,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
               disabled={!gear.is_available}
               onClick={handleAddToCart}
               className={gear.is_available 
-                ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg" 
+                ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg" 
                 : "bg-gray-200 text-gray-500"
               }
             >
