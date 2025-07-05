@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,13 +41,11 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 300000 // 5 minutes
+          maximumAge: 300000
         });
       });
 
       const { latitude, longitude } = position.coords;
-      
-      // Use a geocoding service to get the county from coordinates
       const county = await reverseGeocode(latitude, longitude);
       
       if (county) {
@@ -186,41 +185,42 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
   };
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      <div className="flex items-center space-x-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={detectLocation}
-          disabled={isDetecting}
-          className="flex items-center space-x-2"
-        >
-          {isDetecting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <MapPin className="h-4 w-4" />
-          )}
-          <span>{isDetecting ? 'Se detectează...' : 'Detectează locația'}</span>
-        </Button>
-      </div>
+    <div className={`space-y-4 ${className}`}>
+      {/* Location Detection Button */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={detectLocation}
+        disabled={isDetecting}
+        className="w-full flex items-center justify-center space-x-2 h-11 border-gray-200 hover:bg-blue-50 hover:border-blue-300"
+      >
+        {isDetecting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <MapPin className="h-4 w-4" />
+        )}
+        <span>{isDetecting ? 'Se detectează...' : 'Detectează locația'}</span>
+      </Button>
 
+      {/* Error Message */}
       {detectionError && (
-        <div className="flex items-center space-x-2 text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-          <AlertCircle className="h-4 w-4" />
+        <div className="flex items-start space-x-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <span>{detectionError}</span>
         </div>
       )}
 
-      <div>
-        <label className="text-sm font-medium mb-2 block">Sau selectează manual:</label>
+      {/* Manual Selection */}
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500">sau selectează manual:</p>
         <Select value={currentLocation} onValueChange={onLocationChange}>
-          <SelectTrigger>
+          <SelectTrigger className="h-11 border-gray-200 focus:border-blue-500 bg-white rounded-lg shadow-sm">
             <SelectValue placeholder="Selectează județul" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white z-50 rounded-xl shadow-xl border border-gray-200">
             {romanianCounties.map((county) => (
-              <SelectItem key={county} value={county}>
+              <SelectItem key={county} value={county} className="rounded-lg">
                 {county}
               </SelectItem>
             ))}
@@ -229,4 +229,108 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
       </div>
     </div>
   );
-}; 
+};
+
+const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=8&accept-language=ro`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Geocoding request failed');
+    }
+    
+    const data = await response.json();
+    const address = data.address;
+    
+    if (address) {
+      const county = address.county || address.state || address.region;
+      
+      if (county) {
+        const countyMapping: { [key: string]: string } = {
+          'București': 'București',
+          'Bucharest': 'București',
+          'Cluj': 'Cluj',
+          'Timiș': 'Timiș',
+          'Brașov': 'Brașov',
+          'Brasov': 'Brașov',
+          'Constanța': 'Constanța',
+          'Constanta': 'Constanța',
+          'Iași': 'Iași',
+          'Iasi': 'Iași',
+          'Sibiu': 'Sibiu',
+          'Arad': 'Arad',
+          'Oradea': 'Bihor',
+          'Bihor': 'Bihor',
+          'Craiova': 'Dolj',
+          'Dolj': 'Dolj',
+          'Galați': 'Galați',
+          'Galati': 'Galați',
+          'Ploiești': 'Prahova',
+          'Prahova': 'Prahova',
+          'Târgu Mureș': 'Mureș',
+          'Targu Mures': 'Mureș',
+          'Mureș': 'Mureș',
+          'Mures': 'Mureș',
+          'Bacău': 'Bacău',
+          'Bacau': 'Bacău',
+          'Pitești': 'Argeș',
+          'Pitesti': 'Argeș',
+          'Argeș': 'Argeș',
+          'Arges': 'Argeș',
+          'Baia Mare': 'Maramureș',
+          'Maramureș': 'Maramureș',
+          'Maramures': 'Maramureș',
+          'Buzău': 'Buzău',
+          'Buzau': 'Buzău',
+          'Botoșani': 'Botoșani',
+          'Botosani': 'Botoșani',
+          'Sălaj': 'Sălaj',
+          'Salaj': 'Sălaj',
+          'Vâlcea': 'Vâlcea',
+          'Valcea': 'Vâlcea',
+          'Suceava': 'Suceava',
+          'Vaslui': 'Vaslui',
+          'Vrancea': 'Vrancea',
+          'Călărași': 'Călărași',
+          'Calarasi': 'Călărași',
+          'Giurgiu': 'Giurgiu',
+          'Ialomița': 'Ialomița',
+          'Ialomita': 'Ialomița',
+          'Ilfov': 'Ilfov',
+          'Mehedinți': 'Mehedinți',
+          'Mehedinti': 'Mehedinți',
+          'Neamț': 'Neamț',
+          'Neamt': 'Neamț',
+          'Olt': 'Olt',
+          'Teleorman': 'Teleorman',
+          'Tulcea': 'Tulcea',
+          'Caraș-Severin': 'Caraș-Severin',
+          'Caras-Severin': 'Caraș-Severin',
+          'Covasna': 'Covasna',
+          'Dâmbovița': 'Dâmbovița',
+          'Dambovita': 'Dâmbovița',
+          'Gorj': 'Gorj',
+          'Harghita': 'Harghita',
+          'Hunedoara': 'Hunedoara',
+          'Satu Mare': 'Satu Mare'
+        };
+        
+        const mappedCounty = countyMapping[county];
+        if (mappedCounty) {
+          return mappedCounty;
+        }
+        
+        if (romanianCounties.includes(county)) {
+          return county;
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    return null;
+  }
+};

@@ -17,14 +17,6 @@ interface SearchFiltersProps {
   onSortChange: (value: string) => void;
 }
 
-const romanianCounties = [
-  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 
-  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 
-  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 
-  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 
-  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'
-];
-
 export const SearchFilters: React.FC<SearchFiltersProps> = ({
   searchQuery,
   selectedLocation,
@@ -52,10 +44,10 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         </div>
       </div>
 
-      {/* Main Search Section */}
+      {/* Main Content */}
       <div className="px-6 py-6">
         {/* Primary Search Bar */}
-        <div className="mb-6">
+        <div className="mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
             <Search className="h-4 w-4 mr-2 text-blue-500" />
             Caută echipament
@@ -66,29 +58,29 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               placeholder="Canon EOS R5, Sony A7III, DJI Mavic..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-12 h-14 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white rounded-xl shadow-sm text-base"
+              className="pl-12 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white rounded-xl shadow-sm text-base"
             />
           </div>
         </div>
 
-        {/* Secondary Filters Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+        {/* Filters Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Location Filter */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 flex items-center">
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 flex items-center mb-3">
               <MapPin className="h-4 w-4 mr-2 text-blue-500" />
               Locație
             </label>
             <LocationDetector
               onLocationChange={onLocationChange}
               currentLocation={selectedLocation === 'all' ? '' : selectedLocation}
-              className="h-11 border-gray-200 focus:border-blue-500 bg-white rounded-lg shadow-sm"
+              className="w-full"
             />
           </div>
 
           {/* Category Filter */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 flex items-center">
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 flex items-center mb-3">
               <Tag className="h-4 w-4 mr-2 text-blue-500" />
               Categorie
             </label>
@@ -108,8 +100,8 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           </div>
 
           {/* Sort Filter */}
-          <div className="space-y-2 md:col-span-2 xl:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 flex items-center">
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 flex items-center mb-3">
               <SortAsc className="h-4 w-4 mr-2 text-blue-500" />
               Sortează după
             </label>
