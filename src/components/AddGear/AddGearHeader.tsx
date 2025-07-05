@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { RentOfferToggle } from '../RentOfferToggle';
+import { RentOfferToggle } from '@/components/RentOfferToggle';
 
 export const AddGearHeader: React.FC = () => {
   return (
