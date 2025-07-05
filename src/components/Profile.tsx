@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -107,19 +106,10 @@ export const Profile: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
               <div className="flex flex-col items-center space-y-4">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={fullAvatarUrl} />
-                  <AvatarFallback className="text-2xl">
-                    {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                
-                {isEditing && (
-                  <AvatarUpload 
-                    currentAvatarUrl={fullAvatarUrl}
-                    onAvatarUpdate={handleAvatarUpdate}
-                  />
-                )}
+                <AvatarUpload 
+                  currentAvatarUrl={fullAvatarUrl}
+                  onAvatarUpdate={handleAvatarUpdate}
+                />
               </div>
               
               <div className="flex-1">
