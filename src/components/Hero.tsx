@@ -13,7 +13,7 @@ export const Hero: React.FC = () => {
     navigate(`/browse?search=${searchQuery}&location=${location}`);
   };
   return <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto px-4 py-20">
+      <div className="container mx-auto px-5 py-20">
         <div className="max-w-4xl mx-auto text-center">
           {/* Hero Title */}
           <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent md:text-6xl">Închiriază echipamente foto-video
