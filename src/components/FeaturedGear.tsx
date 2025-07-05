@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -113,6 +114,9 @@ export const FeaturedGear: React.FC = () => {
             const ownerLocation = gear.owner?.location || 'România';
             const categoryName = gear.category?.name || 'Echipament';
             
+            // Convert price from cents to RON
+            const priceInRON = Math.round(gear.price_per_day / 100);
+            
             // Get full avatar URL
             const ownerAvatar = gear.owner?.avatar_url 
               ? gear.owner.avatar_url.startsWith('http') 
@@ -164,7 +168,7 @@ export const FeaturedGear: React.FC = () => {
 
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <span className="text-2xl font-bold">{gear.price_per_day} RON</span>
+                      <span className="text-2xl font-bold">{priceInRON} RON</span>
                       <span className="text-sm text-muted-foreground">/zi</span>
                     </div>
                   </div>
@@ -191,10 +195,6 @@ export const FeaturedGear: React.FC = () => {
                         <MessageSquare className="h-4 w-4" />
                       </Button>
                     )}
-                  </div>
-
-                  <div className="text-xs text-muted-foreground mt-2">
-                    {gear.view_count || 0} vizualizări
                   </div>
                 </CardContent>
               </Card>

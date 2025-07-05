@@ -27,7 +27,8 @@ interface GearCardProps {
 }
 
 export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
-  const price = Math.round(gear.price_per_day / 100); // Convert from cents
+  // Convert price from cents to RON
+  const price = Math.round(gear.price_per_day / 100);
   const imageUrl = gear.images?.[0] || 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
 
   return (
