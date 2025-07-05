@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -24,12 +25,12 @@ export const BrowseGear: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-4">
             Descoperă echipamentul perfect
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -68,7 +69,7 @@ export const BrowseGear: React.FC = () => {
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <div className="flex items-center space-x-3">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               <span className="text-lg text-gray-600">Se încarcă echipamentele...</span>
             </div>
           </div>
@@ -91,7 +92,7 @@ export const BrowseGear: React.FC = () => {
                   setSelectedLocation('all');
                   setSelectedCategory('all');
                 }}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
               >
                 Resetează filtrele
               </Button>
