@@ -1,3 +1,4 @@
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PaymentService } from '@/services/paymentService';
 import { CreatePaymentIntentParams } from '@/integrations/stripe/client';
@@ -10,7 +11,6 @@ export const useCreatePaymentIntent = () => {
     mutationFn: (params: CreatePaymentIntentParams) => 
       PaymentService.createPaymentIntent(params),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
     },
   });
@@ -23,7 +23,6 @@ export const useConfirmPayment = () => {
     mutationFn: (paymentIntentId: string) => 
       PaymentService.confirmPayment(paymentIntentId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['owner-bookings'] });
     },
@@ -35,36 +34,35 @@ export const useProcessRefund = () => {
   
   return useMutation({
     mutationFn: ({ 
-      transactionId, 
+      bookingId, 
       amount, 
       reason 
     }: { 
-      transactionId: string; 
+      bookingId: string; 
       amount: number; 
       reason: string; 
-    }) => PaymentService.processRefund(transactionId, amount, reason),
+    }) => PaymentService.processRefund(bookingId, amount, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['owner-bookings'] });
     },
   });
 };
 
-export const useTransactionByBookingId = (bookingId: string) => {
+export const useBookingById = (bookingId: string) => {
   return useQuery({
-    queryKey: ['transaction', bookingId],
-    queryFn: () => PaymentService.getTransactionByBookingId(bookingId),
+    queryKey: ['booking', bookingId],
+    queryFn: () => PaymentService.getBookingById(bookingId),
     enabled: !!bookingId,
   });
 };
 
-export const useUserTransactions = () => {
+export const useUserBookings = () => {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['user-transactions', user?.id],
-    queryFn: () => PaymentService.getUserTransactions(user!.id),
+    queryKey: ['user-bookings', user?.id],
+    queryFn: () => PaymentService.getUserBookings(user!.id),
     enabled: !!user,
   });
 };
@@ -75,4 +73,4 @@ export const usePaymentBreakdown = (rentalAmount: number, depositAmount: number)
     queryFn: () => PaymentService.calculatePaymentBreakdown(rentalAmount, depositAmount),
     enabled: rentalAmount > 0,
   });
-}; 
+};

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -14,10 +15,7 @@ import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '
 import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
-import { ConfirmationSystem } from '@/components/ConfirmationSystem';
 import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle } from 'lucide-react';
-import { PaymentModal } from '@/components/PaymentModal';
-import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -39,7 +37,6 @@ export const Profile: React.FC = () => {
   
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
-  const [paymentBooking, setPaymentBooking] = useState<any>(null);
 
   if (!user || !profile) return null;
 
@@ -88,25 +85,8 @@ export const Profile: React.FC = () => {
         return <Badge variant="outline">În așteptare</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Anulat</Badge>;
-      case 'active':
-        return <Badge variant="default">Activ</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getPaymentStatusBadge = (paymentStatus: string) => {
-    switch (paymentStatus) {
-      case 'paid':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Plătit</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="text-yellow-600">În așteptare</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">Eșuat</Badge>;
-      case 'refunded':
-        return <Badge variant="secondary">Rambursat</Badge>;
-      default:
-        return <Badge variant="outline">Necunoscut</Badge>;
     }
   };
 
@@ -283,31 +263,20 @@ export const Profile: React.FC = () => {
                           Total: {booking.total_amount ? (booking.total_amount / 100).toFixed(2) : '0'} RON
                         </p>
                       </div>
-                     <div className="text-right space-y-2">
-                       {getStatusBadge(booking.status || 'pending')}
-                       {getPaymentStatusBadge(booking.payment_status || 'pending')}
-                       {booking.status === 'confirmed' && booking.payment_status === 'pending' && (
-                         <Button
-                           size="sm"
-                           onClick={() => setPaymentBooking(booking)}
-                           className="w-full"
-                         >
-                           <CreditCard className="h-3 w-3 mr-1" />
-                           Plătește
-                         </Button>
-                       )}
-                       {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => setReviewingBooking(booking)}
-                           className="w-full"
-                         >
-                           <Star className="h-3 w-3 mr-1" />
-                           Lasă recenzie
-                         </Button>
-                       )}
-                     </div>
+                      <div className="text-right space-y-2">
+                        {getStatusBadge(booking.status || 'pending')}
+                        {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setReviewingBooking(booking)}
+                            className="w-full"
+                          >
+                            <Star className="h-3 w-3 mr-1" />
+                            Lasă recenzie
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -344,7 +313,6 @@ export const Profile: React.FC = () => {
                       </div>
                       <div className="text-right space-y-2">
                         {getStatusBadge(booking.status || 'pending')}
-                        {getPaymentStatusBadge(booking.payment_status || 'pending')}
                         {booking.status === 'pending' && (
                           <div className="space-y-2">
                             <Button 
@@ -361,18 +329,6 @@ export const Profile: React.FC = () => {
                               Acceptă
                             </Button>
                           </div>
-                        )}
-                        {/* Doar proprietarul poate confirma ridicarea */}
-                        {booking.status === 'confirmed' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleConfirmation(booking, 'pickup')}
-                            className="w-full"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Confirmă ridicarea
-                          </Button>
                         )}
                       </div>
                     </div>
@@ -523,19 +479,6 @@ export const Profile: React.FC = () => {
           isOpen={!!reviewingBooking}
           onClose={() => setReviewingBooking(null)}
           booking={reviewingBooking}
-        />
-      )}
-
-      {paymentBooking && (
-        <PaymentModal
-          isOpen={!!paymentBooking}
-          onClose={() => setPaymentBooking(null)}
-          booking={paymentBooking}
-          onPaymentSuccess={() => {
-            setPaymentBooking(null);
-            // Refresh the page or invalidate queries
-            window.location.reload();
-          }}
         />
       )}
     </div>
