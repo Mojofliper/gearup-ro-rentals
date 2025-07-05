@@ -44,7 +44,6 @@ export const Header: React.FC = () => {
     navigate('/');
   };
 
-  // Load cart item count from localStorage
   useEffect(() => {
     const updateCartCount = () => {
       const savedCart = localStorage.getItem('gearup-cart');
@@ -62,10 +61,7 @@ export const Header: React.FC = () => {
 
     updateCartCount();
     
-    // Listen for storage events (when cart is updated from other tabs)
     window.addEventListener('storage', updateCartCount);
-    
-    // Listen for custom events (when cart is updated in same tab)
     const handleCartUpdate = () => updateCartCount();
     window.addEventListener('cartUpdated', handleCartUpdate);
     
@@ -87,7 +83,6 @@ export const Header: React.FC = () => {
     navigate('/profile');
   };
 
-  // Get full avatar URL
   const avatarUrl = profile?.avatar_url 
     ? profile.avatar_url.startsWith('http') 
       ? profile.avatar_url 
@@ -110,11 +105,12 @@ export const Header: React.FC = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to={user ? "/browse" : "/"} className="flex items-center space-x-2 font-bold text-xl">
-            <Camera className="h-6 w-6 text-blue-600" />
-            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-              GearUp
-            </span>
+          <Link to={user ? "/browse" : "/"} className="flex items-center">
+            <img 
+              src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png" 
+              alt="GearUp" 
+              className="h-8 w-auto"
+            />
           </Link>
 
           {/* Desktop Actions */}
