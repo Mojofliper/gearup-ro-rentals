@@ -67,9 +67,8 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
           <h3 className="font-bold text-lg text-gray-800 group-hover:text-purple-600 transition-colors">
             {gear.name}
           </h3>
-          <div className="flex items-center space-x-1 bg-yellow-50 px-2 py-1 rounded-full">
-            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            <span className="text-xs font-medium text-yellow-700">5.0</span>
+          <div className="text-xs text-gray-500">
+            Fără recenzii
           </div>
         </div>
 

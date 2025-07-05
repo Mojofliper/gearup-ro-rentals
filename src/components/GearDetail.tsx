@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -9,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
-import { Star, MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
+import { MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { useGear } from '@/hooks/useGear';
@@ -169,10 +168,8 @@ export const GearDetail: React.FC = () => {
             <div className="mb-6">
               <h1 className="text-3xl font-bold mb-2">{gear.name}</h1>
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1">
-                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">4.9</span>
-                  <span className="text-muted-foreground">(0 recenzii)</span>
+                <div className="text-muted-foreground">
+                  Fără recenzii încă
                 </div>
                 {gear.owner?.location && (
                   <div className="flex items-center space-x-1">
@@ -256,9 +253,8 @@ export const GearDetail: React.FC = () => {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span>4.9 (0 recenzii)</span>
+                      <div className="text-sm text-muted-foreground">
+                        Fără recenzii încă
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Membru din 2024

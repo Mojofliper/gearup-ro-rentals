@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ConversationModal } from '@/components/ConversationModal';
-import { Star, MapPin, Search, MessageSquare } from 'lucide-react';
+import { MapPin, Search, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useGearList } from '@/hooks/useGear';
 import { useAuth } from '@/contexts/AuthContext';
@@ -145,9 +145,8 @@ export const FeaturedGear: React.FC = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-lg">{gear.name}</h3>
-                    <div className="flex items-center space-x-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium">4.8</span>
+                    <div className="text-xs text-muted-foreground">
+                      Fără recenzii
                     </div>
                   </div>
 
