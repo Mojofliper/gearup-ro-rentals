@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design system optimized for creatives with modern gradients and clean aesthetics */
+/* Design system optimized for creatives with trustworthy blue palette */
 
 @layer base {
   :root {
@@ -16,16 +16,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 27%;
 
-    --primary: 273 91% 60%;
+    --primary: 214 84% 56%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 40% 96%;
+    --secondary: 214 32% 91%;
     --secondary-foreground: 215 25% 27%;
 
-    --muted: 270 40% 96%;
+    --muted: 214 32% 91%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 270 40% 96%;
+    --accent: 214 32% 91%;
     --accent-foreground: 215 25% 27%;
 
     --destructive: 0 84% 60%;
@@ -33,7 +33,7 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 273 91% 60%;
+    --ring: 214 84% 56%;
 
     --radius: 0.75rem;
 
@@ -44,7 +44,7 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 273 91% 60%;
+    --sidebar-ring: 214 84% 56%;
   }
 }
 
@@ -63,9 +63,9 @@
     scroll-behavior: smooth;
   }
   
-  /* Custom gradient backgrounds for creative feel */
+  /* Custom gradient backgrounds for trustworthy blue feel */
   .gradient-bg {
-    background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
   }
   
   /* Glass morphism effects */
@@ -77,14 +77,14 @@
   
   /* Enhanced focus states for accessibility */
   .focus-enhanced:focus-visible {
-    @apply ring-2 ring-purple-500 ring-offset-2 outline-none;
+    @apply ring-2 ring-blue-500 ring-offset-2 outline-none;
   }
 }
 
 @layer components {
-  /* Custom button styles for creative industry */
+  /* Custom button styles for trustworthy blue industry */
   .btn-creative {
-    @apply bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium shadow-lg transition-all duration-200;
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium shadow-lg transition-all duration-200;
   }
   
   /* Card hover effects */
@@ -94,7 +94,7 @@
   
   /* Text gradient for headlines */
   .text-gradient {
-    @apply bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent;
   }
 
   /* Ensure dropdowns have proper background and z-index */
@@ -110,8 +110,8 @@
 }
 
 @keyframes glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(168, 85, 247, 0.5); }
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.5); }
 }
 
 .animate-float {

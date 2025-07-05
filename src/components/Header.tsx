@@ -111,8 +111,8 @@ export const Header: React.FC = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link to={user ? "/browse" : "/"} className="flex items-center space-x-2 font-bold text-xl">
-            <Camera className="h-6 w-6 text-purple-600" />
-            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <Camera className="h-6 w-6 text-blue-600" />
+            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               GearUp
             </span>
           </Link>
@@ -122,7 +122,7 @@ export const Header: React.FC = () => {
             {user ? (
               <>
                 <Link to="/messages">
-                  <Button variant="ghost" size="sm" className="hover:bg-purple-50 hover:text-purple-600 transition-colors">
+                  <Button variant="ghost" size="sm" className="hover:bg-blue-50 hover:text-blue-600 transition-colors">
                     <MessageSquare className="h-4 w-4" />
                   </Button>
                 </Link>
@@ -131,7 +131,7 @@ export const Header: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsCartOpen(true)}
-                  className="hover:bg-purple-50 hover:text-purple-600 transition-colors relative"
+                  className="hover:bg-blue-50 hover:text-blue-600 transition-colors relative"
                 >
                   <ShoppingBag className="h-4 w-4" />
                   {cartItemCount > 0 && (
@@ -146,7 +146,7 @@ export const Header: React.FC = () => {
                   <DropdownMenuTrigger asChild>
                     <Avatar className="h-8 w-8 cursor-pointer">
                       <AvatarImage src={avatarUrl} />
-                      <AvatarFallback className="bg-purple-100 text-purple-600">
+                      <AvatarFallback className="bg-blue-100 text-blue-600">
                         {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -169,7 +169,7 @@ export const Header: React.FC = () => {
               </>
             ) : (
               <div className="flex items-center space-x-3">
-                <Button variant="ghost" size="sm" onClick={() => handleAuthClick('login')} className="hover:bg-purple-50 hover:text-purple-700 transition-colors">
+                <Button variant="ghost" size="sm" onClick={() => handleAuthClick('login')} className="hover:bg-blue-50 hover:text-blue-700 transition-colors">
                   <User className="h-4 w-4 mr-2" />
                   Conectează-te
                 </Button>
@@ -199,7 +199,7 @@ export const Header: React.FC = () => {
                 <>
                   <Link 
                     to="/messages" 
-                    className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
+                    className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <MessageSquare className="h-4 w-4" />
@@ -207,7 +207,7 @@ export const Header: React.FC = () => {
                   </Link>
                   <button 
                     onClick={handleProfileClick}
-                    className="flex items-center space-x-2 w-full text-left text-gray-700 hover:text-purple-600 transition-colors p-2 rounded-lg hover:bg-purple-50"
+                    className="flex items-center space-x-2 w-full text-left text-gray-700 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50"
                   >
                     <User className="h-4 w-4" />
                     <span>Profil</span>
@@ -224,7 +224,7 @@ export const Header: React.FC = () => {
                 <div className="space-y-2">
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start hover:bg-purple-50 hover:text-purple-700 transition-colors" 
+                    className="w-full justify-start hover:bg-blue-50 hover:text-blue-700 transition-colors" 
                     onClick={() => handleAuthClick('login')}
                   >
                     <User className="h-4 w-4 mr-2" />

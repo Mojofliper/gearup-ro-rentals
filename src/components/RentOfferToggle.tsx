@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -21,7 +22,7 @@ export const RentOfferToggle: React.FC = () => {
           aria-label="Închiriază echipament"
           className={`rounded-full px-6 py-2 text-base font-semibold transition-all duration-300
             ${active === 'rent'
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 !text-white shadow-md'
+              ? 'bg-gradient-to-r from-blue-600 to-blue-700 !text-white shadow-md'
               : 'text-black bg-transparent'}
           `}
           style={{ minWidth: 170 }}
@@ -34,7 +35,7 @@ export const RentOfferToggle: React.FC = () => {
           aria-label="Oferă spre închiriere"
           className={`rounded-full px-6 py-2 text-base font-semibold transition-all duration-300
             ${active === 'offer'
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 !text-white shadow-md'
+              ? 'bg-gradient-to-r from-blue-600 to-blue-700 !text-white shadow-md'
               : 'text-black bg-transparent'}
           `}
           style={{ minWidth: 170 }}
@@ -45,4 +46,4 @@ export const RentOfferToggle: React.FC = () => {
       </ToggleGroup>
     </div>
   );
-}; 
+};

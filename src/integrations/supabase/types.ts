@@ -18,7 +18,6 @@ export type Database = {
           id: string
           notes: string | null
           owner_id: string
-          payment_status: string | null
           renter_id: string
           start_date: string
           status: string | null
@@ -34,7 +33,6 @@ export type Database = {
           id?: string
           notes?: string | null
           owner_id: string
-          payment_status?: string | null
           renter_id: string
           start_date: string
           status?: string | null
@@ -50,7 +48,6 @@ export type Database = {
           id?: string
           notes?: string | null
           owner_id?: string
-          payment_status?: string | null
           renter_id?: string
           start_date?: string
           status?: string | null
@@ -78,65 +75,6 @@ export type Database = {
             columns: ["renter_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      transactions: {
-        Row: {
-          amount: number
-          booking_id: string
-          created_at: string | null
-          deposit_amount: number
-          id: string
-          payment_method: string | null
-          platform_fee: number
-          refund_amount: number | null
-          refund_reason: string | null
-          rental_amount: number
-          status: string | null
-          stripe_charge_id: string | null
-          stripe_payment_intent_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          amount: number
-          booking_id: string
-          created_at?: string | null
-          deposit_amount: number
-          id?: string
-          payment_method?: string | null
-          platform_fee: number
-          refund_amount?: number | null
-          refund_reason?: string | null
-          rental_amount: number
-          status?: string | null
-          stripe_charge_id?: string | null
-          stripe_payment_intent_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number
-          booking_id?: string
-          created_at?: string | null
-          deposit_amount?: number
-          id?: string
-          payment_method?: string | null
-          platform_fee?: number
-          refund_amount?: number | null
-          refund_reason?: string | null
-          rental_amount?: number
-          status?: string | null
-          stripe_charge_id?: string | null
-          stripe_payment_intent_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transactions_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -426,10 +364,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calculate_platform_fee: {
-        Args: { rental_amount: number }
-        Returns: number
-      }
       check_rate_limit: {
         Args: {
           action_type: string
@@ -447,14 +381,6 @@ export type Database = {
           gear_name: string
           gear_description: string
           price_per_day: number
-        }
-        Returns: boolean
-      }
-      validate_payment_amounts: {
-        Args: {
-          rental_amount: number
-          deposit_amount: number
-          platform_fee: number
         }
         Returns: boolean
       }
