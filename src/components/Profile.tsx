@@ -11,8 +11,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '@/hooks/useUserData';
-import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle } from 'lucide-react';
+import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
+import { EditGearModal } from '@/components/EditGearModal';
+import { ReviewModal } from '@/components/ReviewModal';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
@@ -27,6 +31,11 @@ export const Profile: React.FC = () => {
   const { data: listings = [], isLoading: listingsLoading } = useUserListings();
   const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews();
   const { data: stats, isLoading: statsLoading } = useUserStats();
+  const { data: ownerBookings = [], isLoading: ownerBookingsLoading } = useOwnerBookings();
+  const { mutate: updateBooking } = useUpdateBooking();
+  
+  const [editingGear, setEditingGear] = useState<any>(null);
+  const [reviewingBooking, setReviewingBooking] = useState<any>(null);
 
   if (!user || !profile) return null;
 
@@ -37,6 +46,30 @@ export const Profile: React.FC = () => {
 
   const handleAvatarUpdate = (newAvatarUrl: string) => {
     setCurrentAvatarUrl(newAvatarUrl);
+  };
+
+  const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
+    updateBooking({
+      id: bookingId,
+      updates: { status }
+    }, {
+      onSuccess: () => {
+        toast({
+          title: status === 'confirmed' ? 'Rezervare acceptată!' : 'Rezervare respinsă',
+          description: status === 'confirmed' 
+            ? 'Închiriatorul a fost notificat despre acceptarea rezervării.'
+            : 'Închiriatorul a fost notificat despre respingerea rezervării.',
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: 'Eroare',
+          description: 'Nu s-a putut actualiza starea rezervării.',
+          variant: 'destructive',
+        });
+        console.error('Booking update error:', error);
+      }
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -195,6 +228,7 @@ export const Profile: React.FC = () => {
         <Tabs defaultValue="rentals" className="space-y-4">
           <TabsList>
             <TabsTrigger value="rentals">Închirierile mele</TabsTrigger>
+            <TabsTrigger value="bookings">Rezervări primite</TabsTrigger>
             <TabsTrigger value="listings">Echipamentele mele</TabsTrigger>
             <TabsTrigger value="reviews">Recenzii</TabsTrigger>
           </TabsList>
@@ -226,8 +260,73 @@ export const Profile: React.FC = () => {
                           Total: {booking.total_amount ? (booking.total_amount / 100).toFixed(2) : '0'} RON
                         </p>
                       </div>
-                      <div className="text-right">
+                     <div className="text-right space-y-2">
+                       {getStatusBadge(booking.status || 'pending')}
+                       {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setReviewingBooking(booking)}
+                           className="w-full"
+                         >
+                           <Star className="h-3 w-3 mr-1" />
+                           Lasă recenzie
+                         </Button>
+                       )}
+                     </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="bookings" className="space-y-4">
+            {ownerBookingsLoading ? (
+              <div className="text-center py-8">Se încarcă...</div>
+            ) : ownerBookings.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nu ai încă rezervări</h3>
+                  <p className="text-muted-foreground">
+                    Rezervările pentru echipamentele tale vor apărea aici.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              ownerBookings.map((booking) => (
+                <Card key={booking.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold">{booking.gear?.name || 'Echipament necunoscut'}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Închiriat de {booking.renter?.full_name || 'Utilizator necunoscut'} • {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                        </p>
+                        <p className="text-sm font-medium mt-1">
+                          Total: {booking.total_amount ? (booking.total_amount / 100).toFixed(2) : '0'} RON
+                        </p>
+                      </div>
+                      <div className="text-right space-y-2">
                         {getStatusBadge(booking.status || 'pending')}
+                        {booking.status === 'pending' && (
+                          <div className="space-y-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleBookingAction(booking.id, 'rejected')}
+                            >
+                              Respinge
+                            </Button>
+                            <Button 
+                              size="sm"
+                              onClick={() => handleBookingAction(booking.id, 'confirmed')}
+                            >
+                              Acceptă
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -274,17 +373,32 @@ export const Profile: React.FC = () => {
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-2">{listing.name}</h3>
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center mb-2">
                         <span className="font-bold">
                           {listing.price_per_day ? (listing.price_per_day / 100).toFixed(2) : '0'} RON/zi
                         </span>
-                        <Badge variant={listing.is_available ? "default" : "secondary"}>
-                          {listing.is_available ? 'Disponibil' : 'Indisponibil'}
-                        </Badge>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingGear(listing)}
+                          >
+                            <Settings className="h-3 w-3 mr-1" />
+                            Editează
+                          </Button>
+                          <Badge variant={listing.is_available ? "default" : "secondary"}>
+                            {listing.is_available ? 'Disponibil' : 'Indisponibil'}
+                          </Badge>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Vizualizări: {listing.view_count || 0}
-                      </p>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-1">
+                            <Eye className="h-3 w-3" />
+                            <span>{listing.view_count || 0}</span>
+                          </div>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -347,6 +461,23 @@ export const Profile: React.FC = () => {
       </div>
 
       <Footer />
+
+      {/* Modals */}
+      {editingGear && (
+        <EditGearModal
+          isOpen={!!editingGear}
+          onClose={() => setEditingGear(null)}
+          gear={editingGear}
+        />
+      )}
+
+      {reviewingBooking && (
+        <ReviewModal
+          isOpen={!!reviewingBooking}
+          onClose={() => setReviewingBooking(null)}
+          booking={reviewingBooking}
+        />
+      )}
     </div>
   );
 };

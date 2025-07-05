@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { useGear } from '@/hooks/useGear';
 import { toast } from '@/hooks/use-toast';
+import { BookingModal } from '@/components/BookingModal';
 
 export const GearDetail: React.FC = () => {
   const { id } = useParams();
@@ -23,6 +24,7 @@ export const GearDetail: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -71,10 +73,17 @@ export const GearDetail: React.FC = () => {
       return;
     }
 
-    toast({
-      title: 'Cerere de închiriere trimisă!',
-      description: 'Proprietarul va fi notificat și îți va răspunde în curând.',
-    });
+    // Check if user is trying to rent their own gear
+    if (user.id === gear.owner_id) {
+      toast({
+        title: 'Nu poți închiria propriul echipament',
+        description: 'Selectează alt echipament pentru închiriere.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsBookingModalOpen(true);
   };
 
   const handleMessage = () => {
@@ -360,6 +369,15 @@ export const GearDetail: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         mode={authMode}
         onSwitchMode={setAuthMode}
+      />
+
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        gear={gear}
+        selectedDates={selectedDates}
+        pricePerDay={pricePerDay}
+        depositAmount={depositAmount}
       />
     </div>
   );
