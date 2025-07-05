@@ -14,6 +14,8 @@ import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '
 import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
+import { ConfirmationSystem } from '@/components/ConfirmationSystem';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle } from 'lucide-react';
 import { PaymentModal } from '@/components/PaymentModal';
 import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
@@ -78,6 +80,8 @@ export const Profile: React.FC = () => {
     switch (status) {
       case 'completed':
         return <Badge variant="default">Finalizat</Badge>;
+      case 'active':
+        return <Badge variant="secondary">În curs</Badge>;
       case 'confirmed':
         return <Badge variant="secondary">Confirmat</Badge>;
       case 'pending':
@@ -357,6 +361,18 @@ export const Profile: React.FC = () => {
                               Acceptă
                             </Button>
                           </div>
+                        )}
+                        {/* Doar proprietarul poate confirma ridicarea */}
+                        {booking.status === 'confirmed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleConfirmation(booking, 'pickup')}
+                            className="w-full"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Confirmă ridicarea
+                          </Button>
                         )}
                       </div>
                     </div>

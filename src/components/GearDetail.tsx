@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -9,10 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
-import { Star, MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
+import { MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera, ShoppingBag, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { useGear } from '@/hooks/useGear';
+import { useGearReviews } from '@/hooks/useReviews';
 import { toast } from '@/hooks/use-toast';
 import { BookingModal } from '@/components/BookingModal';
 
@@ -20,11 +20,17 @@ export const GearDetail: React.FC = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { data: gear, isLoading, error } = useGear(id);
+  const { data: reviewsData } = useGearReviews(id);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  console.log('GearDetail rendered with id:', id);
+  console.log('Gear data:', gear);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
 
   if (isLoading) {
     return (
@@ -57,6 +63,14 @@ export const GearDetail: React.FC = () => {
       </div>
     );
   }
+
+  // Parse JSON fields safely
+  const images = Array.isArray(gear.images) ? gear.images : 
+                 (typeof gear.images === 'string' ? JSON.parse(gear.images || '[]') : []);
+  const specifications = Array.isArray(gear.specifications) ? gear.specifications : 
+                        (typeof gear.specifications === 'string' ? JSON.parse(gear.specifications || '[]') : []);
+  const includedItems = Array.isArray(gear.included_items) ? gear.included_items : 
+                       (typeof gear.included_items === 'string' ? JSON.parse(gear.included_items || '[]') : []);
 
   const handleRentRequest = () => {
     if (!user) {
@@ -98,6 +112,100 @@ export const GearDetail: React.FC = () => {
     });
   };
 
+  const handleAddToCart = () => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    if (selectedDates.length === 0) {
+      toast({
+        title: 'Selectează datele',
+        description: 'Te rugăm să selectezi perioada de închiriere.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if user is trying to rent their own gear
+    if (user.id === gear.owner_id) {
+      toast({
+        title: 'Nu poți închiria propriul echipament',
+        description: 'Selectează alt echipament pentru închiriere.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Add to cart
+    const cartItem = {
+      id: `${gear.id}-${Date.now()}`,
+      gear: {
+        id: gear.id,
+        name: gear.name,
+        price_per_day: gear.price_per_day,
+        deposit_amount: gear.deposit_amount,
+        // Nu salvăm imaginea în localStorage pentru a evita QuotaExceededError
+        owner: {
+          id: gear.owner_id,
+          full_name: gear.owner?.full_name || 'Utilizator',
+          location: gear.owner?.location || 'România',
+          is_verified: gear.owner?.is_verified || false
+        }
+      },
+      selectedDates: selectedDates,
+      notes: ''
+    };
+
+    try {
+      const existingCart = localStorage.getItem('gearup-cart');
+      const cartItems = existingCart ? JSON.parse(existingCart) : [];
+      cartItems.push(cartItem);
+      localStorage.setItem('gearup-cart', JSON.stringify(cartItems));
+
+      // Dispatch custom event to update cart count in header
+      window.dispatchEvent(new Event('cartUpdated'));
+
+      toast({
+        title: 'Adăugat în coș!',
+        description: 'Echipamentul a fost adăugat în coșul de cumpărături.',
+      });
+    } catch (error) {
+      console.error('Cart error:', error);
+      console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
+      
+      // If QuotaExceededError, clear cart and try again
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        try {
+          localStorage.removeItem('gearup-cart');
+          localStorage.setItem('gearup-cart', JSON.stringify([cartItem]));
+          
+          // Dispatch custom event to update cart count in header
+          window.dispatchEvent(new Event('cartUpdated'));
+
+          toast({
+            title: 'Adăugat în coș!',
+            description: 'Coșul a fost resetat și echipamentul a fost adăugat.',
+          });
+        } catch (retryError) {
+          console.error('Retry error:', retryError);
+          toast({
+            title: 'Eroare la adăugarea în coș',
+            description: 'Nu s-a putut adăuga în coș. Te rugăm să încerci din nou.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Eroare la adăugarea în coș',
+          description: 'Nu s-a putut adăuga în coș. Te rugăm să încerci din nou.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
   const calculateTotal = () => {
     const pricePerDay = gear.price_per_day / 100; // Convert from cents
     return selectedDates.length * pricePerDay;
@@ -105,14 +213,6 @@ export const GearDetail: React.FC = () => {
 
   const depositAmount = gear.deposit_amount ? gear.deposit_amount / 100 : 0;
   const pricePerDay = gear.price_per_day / 100;
-  
-  // Parse JSON fields safely
-  const images = Array.isArray(gear.images) ? gear.images : 
-                 (typeof gear.images === 'string' ? JSON.parse(gear.images || '[]') : []);
-  const specifications = Array.isArray(gear.specifications) ? gear.specifications : 
-                        (typeof gear.specifications === 'string' ? JSON.parse(gear.specifications || '[]') : []);
-  const includedItems = Array.isArray(gear.included_items) ? gear.included_items : 
-                       (typeof gear.included_items === 'string' ? JSON.parse(gear.included_items || '[]') : []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,12 +268,24 @@ export const GearDetail: React.FC = () => {
             {/* Title & Rating */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold mb-2">{gear.name}</h1>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1">
-                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">4.9</span>
-                  <span className="text-muted-foreground">(0 recenzii)</span>
-                </div>
+                              <div className="flex items-center space-x-4">
+                  <div className="text-muted-foreground">
+                    {reviewsData?.totalReviews ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={`h-4 w-4 ${star <= reviewsData.averageRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+                            />
+                          ))}
+                        </div>
+                        <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews} recenzii)</span>
+                      </div>
+                    ) : (
+                      'Fără recenzii încă'
+                    )}
+                  </div>
                 {gear.owner?.location && (
                   <div className="flex items-center space-x-1">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -256,9 +368,15 @@ export const GearDetail: React.FC = () => {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span>4.9 (0 recenzii)</span>
+                      <div className="text-sm text-muted-foreground">
+                        {reviewsData?.totalReviews ? (
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews} recenzii)</span>
+                          </div>
+                        ) : (
+                          'Fără recenzii încă'
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Membru din 2024
@@ -329,13 +447,25 @@ export const GearDetail: React.FC = () => {
                   </div>
                 )}
 
-                <Button 
-                  className="w-full" 
-                  onClick={handleRentRequest}
-                  disabled={!gear.is_available}
-                >
-                  {gear.is_available ? 'Solicită închirierea' : 'Indisponibil'}
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full" 
+                    onClick={handleRentRequest}
+                    disabled={!gear.is_available}
+                  >
+                    {gear.is_available ? 'Solicită închirierea' : 'Indisponibil'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    className="w-full" 
+                    onClick={handleAddToCart}
+                    disabled={!gear.is_available}
+                  >
+                    <ShoppingBag className="h-4 w-4 mr-2" />
+                    Adaugă în coș
+                  </Button>
+                </div>
 
                 <p className="text-xs text-muted-foreground text-center">
                   Nu vei fi taxat încă. Proprietarul trebuie să confirme disponibilitatea.

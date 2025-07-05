@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, ArrowLeft } from 'lucide-react';
 import { sanitizeHtml, sanitizeText } from '@/utils/htmlSanitizer';
 import { toast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -189,9 +189,17 @@ export const Messages: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Mesaje</h2>
-        <p className="text-gray-600">Comunică cu proprietarii și chiriașii</p>
+      <div className="flex items-center space-x-4">
+        <Link to="/browse">
+          <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Înapoi acasă</span>
+          </Button>
+        </Link>
+        <div className="text-center flex-1">
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">Mesaje</h2>
+          <p className="text-gray-600">Comunică cu proprietarii și chiriașii</p>
+        </div>
       </div>
 
       {bookings.length === 0 ? (

@@ -49,7 +49,9 @@ export const useGearList = (filters?: {
         .eq('is_available', true);
 
       if (filters?.search) {
-        query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+        // Escape special characters for LIKE queries
+        const safeSearch = filters.search.replace(/[%_]/g, '\\$&');
+        query = query.or(`name.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
       }
 
       if (filters?.category && filters.category !== 'all') {

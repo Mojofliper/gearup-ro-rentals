@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -8,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { SearchFilters } from './BrowseGear/SearchFilters';
 import { GearCard } from './BrowseGear/GearCard';
 import { useGearList } from '@/hooks/useGear';
+import { RentOfferToggle } from './RentOfferToggle';
 
 export const BrowseGear: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -35,6 +35,9 @@ export const BrowseGear: React.FC = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Găsește echipamentul de care ai nevoie pentru următorul tău proiect creativ
           </p>
+          <div className="mt-10">
+            <RentOfferToggle />
+          </div>
         </div>
 
         <SearchFilters
