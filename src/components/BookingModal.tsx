@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, MapPin, Shield } from 'lucide-react';
+import { Calendar, MapPin, Shield, Info } from 'lucide-react';
 import { useCreateBooking } from '@/hooks/useBookings';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { calculatePlatformFee, formatAmountForDisplay } from '@/integrations/stripe/client';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -75,7 +76,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const totalDays = selectedDates.length;
   const rentalTotal = totalDays * pricePerDay;
-  const finalTotal = rentalTotal + depositAmount;
+  const platformFee = calculatePlatformFee(rentalTotal * 100) / 100; // Convert back from cents
+  const finalTotal = rentalTotal + depositAmount + platformFee;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -108,6 +110,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <span>{pricePerDay} RON × {totalDays} {totalDays === 1 ? 'zi' : 'zile'}</span>
               <span>{rentalTotal} RON</span>
             </div>
+            <div className="flex justify-between text-sm">
+              <span>Taxă platformă (13%)</span>
+              <span>{platformFee.toFixed(2)} RON</span>
+            </div>
             {depositAmount > 0 && (
               <div className="flex justify-between text-sm">
                 <span>Garanție (returabilă)</span>
@@ -117,13 +123,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <Separator />
             <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span>{finalTotal} RON</span>
+              <span>{finalTotal.toFixed(2)} RON</span>
             </div>
-            {depositAmount > 0 && (
-              <p className="text-xs text-muted-foreground">
-                * Garanția se returnează la finalul închirierii
-              </p>
-            )}
+            <div className="text-xs text-muted-foreground space-y-1">
+              {depositAmount > 0 && (
+                <p>* Garanția se returnează la finalul închirierii</p>
+              )}
+              <p>* Taxa platformă se aplică doar la suma de închiriere</p>
+            </div>
           </div>
 
           {/* Notes */}
@@ -144,7 +151,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <div className="text-sm">
               <p className="font-medium text-blue-800 dark:text-blue-200">Protecție GearUp</p>
               <p className="text-blue-700 dark:text-blue-300">
-                Nu vei fi taxat până când proprietarul confirmă cererea.
+                Nu vei fi taxat până când proprietarul confirmă cererea. După confirmare, vei fi redirecționat către o plată securizată prin Stripe.
               </p>
             </div>
           </div>
