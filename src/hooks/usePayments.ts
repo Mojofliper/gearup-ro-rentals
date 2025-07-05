@@ -1,4 +1,3 @@
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PaymentService } from '@/services/paymentService';
 import { CreatePaymentIntentParams } from '@/integrations/stripe/client';

@@ -14,9 +14,11 @@ import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '
 import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
-import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle } from 'lucide-react';
+import { PaymentModal } from '@/components/PaymentModal';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { PaymentService } from '@/services/paymentService';
 
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
@@ -36,6 +38,7 @@ export const Profile: React.FC = () => {
   
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
+  const [payingTransaction, setPayingTransaction] = useState<any>(null);
 
   if (!user || !profile) return null;
 
@@ -70,6 +73,12 @@ export const Profile: React.FC = () => {
         console.error('Booking update error:', error);
       }
     });
+  };
+
+  const handlePayClick = async (booking: any) => {
+    // Create or get the transaction for this booking
+    const transaction = await PaymentService.getOrCreateTransactionForBooking(booking);
+    setPayingTransaction({ booking, transaction });
   };
 
   const getStatusBadge = (status: string) => {
@@ -255,6 +264,16 @@ export const Profile: React.FC = () => {
                       </div>
                       <div className="text-right space-y-2">
                         {getStatusBadge(booking.status || 'pending')}
+                        {booking.status === 'confirmed' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handlePayClick(booking)}
+                            className="w-full"
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            Plătește
+                          </Button>
+                        )}
                         {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
                           <Button
                             variant="outline"
@@ -469,6 +488,19 @@ export const Profile: React.FC = () => {
           isOpen={!!reviewingBooking}
           onClose={() => setReviewingBooking(null)}
           booking={reviewingBooking}
+        />
+      )}
+
+      {payingTransaction && (
+        <PaymentModal
+          isOpen={!!payingTransaction}
+          onClose={() => setPayingTransaction(null)}
+          booking={payingTransaction.booking}
+          transaction={payingTransaction.transaction}
+          onPaymentSuccess={() => {
+            setPayingTransaction(null);
+            window.location.reload();
+          }}
         />
       )}
     </div>
