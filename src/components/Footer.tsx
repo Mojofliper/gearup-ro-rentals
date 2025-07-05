@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Facebook, Instagram, Mail } from 'lucide-react';
+import { Facebook, Instagram, Mail } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -11,11 +11,14 @@ export const Footer: React.FC = () => {
           {/* Logo & Description */}
           <div>
             <Link to="/" className="flex items-center space-x-2 font-bold text-xl mb-4">
-              <Camera className="h-6 w-6" />
-              <span>GearUp</span>
+              <img 
+                src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png" 
+                alt="GearUp" 
+                className="h-8 w-auto"
+              />
             </Link>
             <p className="text-gray-400 text-sm">
-              Platforma care conectează creatorii români. Închiriază sau oferă spre închiriere echipament profesional în siguranță.
+              Platforma care conectează creatorii romani. Închiriază sau oferă spre închiriere echipament profesional în siguranță.
             </p>
           </div>
 
