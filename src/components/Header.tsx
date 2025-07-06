@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AuthModal } from './AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, User, LogOut, MessageCircle, Settings, Heart, ShoppingCart } from 'lucide-react';
+import { Menu, User, LogOut, MessageCircle, ShoppingCart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -30,12 +30,22 @@ export const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <img
-            src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=32&h=32&fit=crop&crop=center"
+            src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png"
             alt="GearUp Logo"
-            className="w-8 h-8 rounded-lg"
+            className="h-8 w-auto"
           />
-          <span className="font-bold text-xl">GearUp</span>
         </Link>
+
+        {/* Center - Add Gear Button (visible when user is logged in) */}
+        {user && (
+          <div className="hidden md:flex">
+            <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
+              <Link to="/add-gear">
+                Adaugă echipamentul tău
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {/* Right side - Auth/User Menu */}
         <div className="flex items-center space-x-4">
@@ -109,7 +119,13 @@ export const Header = () => {
             <SheetContent side="right">
               {/* Mobile menu content */}
               <nav className="flex flex-col space-y-4">
-                {!user && (
+                {user ? (
+                  <Button asChild className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
+                    <Link to="/add-gear" onClick={() => setMobileMenuOpen(false)}>
+                      Adaugă echipamentul tău
+                    </Link>
+                  </Button>
+                ) : (
                   <Button 
                     onClick={() => {
                       setIsAuthModalOpen(true);
