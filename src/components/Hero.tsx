@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +13,18 @@ export const Hero: React.FC = () => {
   const navigate = useNavigate();
 
   const handleSearch = () => {
-    navigate(`/browse?search=${searchQuery}&location=${location}`);
+    // Only navigate if there's something to search for
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+    if (location) {
+      params.set('location', location);
+    }
+    
+    // Navigate to browse page with search parameters
+    const searchParams = params.toString();
+    navigate(`/browse${searchParams ? `?${searchParams}` : ''}`);
   };
 
   return (
@@ -38,6 +48,11 @@ export const Hero: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
                 />
               </div>
               <Select value={location} onValueChange={setLocation}>
