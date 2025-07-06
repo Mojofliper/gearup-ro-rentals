@@ -14,15 +14,11 @@ import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '
 import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
-<<<<<<< Updated upstream
 import { useSecureGear } from '@/hooks/useSecureGear';
 import { useQueryClient } from '@tanstack/react-query';
-import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, Trash2 } from 'lucide-react';
-=======
 import { ConfirmationSystem } from '@/components/ConfirmationSystem';
-import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, CreditCard } from 'lucide-react';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, CreditCard, Trash2 } from 'lucide-react';
 import { PaymentModal } from '@/components/PaymentModal';
->>>>>>> Stashed changes
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { PaymentService } from '@/services/paymentService';
@@ -47,8 +43,11 @@ export const Profile: React.FC = () => {
   
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
-<<<<<<< Updated upstream
   const [deletingGearId, setDeletingGearId] = useState<string | null>(null);
+  const [paymentBooking, setPaymentBooking] = useState<any>(null);
+  const [paymentTransaction, setPaymentTransaction] = useState<any>(null);
+  const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
+  const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
 
   // Sync local state with profile data
   useEffect(() => {
@@ -60,11 +59,6 @@ export const Profile: React.FC = () => {
       });
     }
   }, [profile]);
-=======
-  const [paymentBooking, setPaymentBooking] = useState<any>(null);
-  const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
-  const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
->>>>>>> Stashed changes
 
   if (!user || !profile) return null;
 
@@ -110,7 +104,6 @@ export const Profile: React.FC = () => {
     });
   };
 
-<<<<<<< Updated upstream
   const handleDeleteGear = async (gearId: string) => {
     if (!confirm('Ești sigur că vrei să ștergi acest echipament? Această acțiune nu poate fi anulată.')) {
       return;
@@ -142,11 +135,27 @@ export const Profile: React.FC = () => {
     } finally {
       setDeletingGearId(null);
     }
-=======
+  };
+
   const handleConfirmation = (booking: any, type: 'pickup' | 'return') => {
     setConfirmationBooking(booking);
     setConfirmationType(type);
->>>>>>> Stashed changes
+  };
+
+  const handlePaymentClick = async (booking: any) => {
+    try {
+      // Create or get transaction for this booking
+      const transaction = await PaymentService.getOrCreateTransactionForBooking(booking);
+      setPaymentTransaction(transaction);
+      setPaymentBooking(booking);
+    } catch (error: any) {
+      console.error('Error creating transaction:', error);
+      toast({
+        title: 'Eroare',
+        description: 'Nu s-a putut inițializa plata. Te rugăm să încerci din nou.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -166,21 +175,11 @@ export const Profile: React.FC = () => {
     }
   };
 
-<<<<<<< Updated upstream
   // Get the full avatar URL - use profile.avatar_url as the source of truth
   const fullAvatarUrl = profile?.avatar_url 
     ? profile.avatar_url.startsWith('http') 
       ? profile.avatar_url 
       : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
-=======
-
-
-  // Get the full avatar URL
-  const fullAvatarUrl = currentAvatarUrl 
-    ? currentAvatarUrl.startsWith('http') 
-      ? currentAvatarUrl 
-      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${currentAvatarUrl}`
->>>>>>> Stashed changes
     : '';
 
   return (
@@ -240,28 +239,28 @@ export const Profile: React.FC = () => {
             {isEditing && (
               <div className="mt-6 pt-6 border-t space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="full_name">Nume</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="full_name">Nume complet</Label>
                     <Input
                       id="full_name"
                       value={formData.full_name}
-                      onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      placeholder="Numele tău complet"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="location">Locație</Label>
                     <Input
                       id="location"
                       value={formData.location}
-                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="Orașul tău"
                     />
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <Button onClick={handleSave}>Salvează</Button>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
-                    Anulează
-                  </Button>
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>Anulează</Button>
                 </div>
               </div>
             )}
@@ -269,428 +268,331 @@ export const Profile: React.FC = () => {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {statsLoading ? '...' : stats?.totalRentals || 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Închirieri</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {statsLoading ? '...' : stats?.totalListings || 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Echipamente oferite</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">
-                {statsLoading ? '...' : stats?.rating || 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Rating mediu</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {statsLoading ? '...' : stats?.reviews || 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Recenzii</div>
-            </CardContent>
-          </Card>
-        </div>
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Package className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Echipamente</p>
+                                         <p className="text-2xl font-bold">{stats.totalListings}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Rezervări</p>
+                                         <p className="text-2xl font-bold">{stats.totalRentals}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Rating</p>
+                    <p className="text-2xl font-bold">{stats.rating || 'N/A'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Eye className="h-5 w-5 text-purple-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Vizualizări</p>
+                                         <p className="text-2xl font-bold">{stats.reviews}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Tabs */}
-        <Tabs defaultValue="rentals" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="rentals">Închirierile mele</TabsTrigger>
-            <TabsTrigger value="bookings">Rezervări primite</TabsTrigger>
+        <Tabs defaultValue="bookings" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="bookings">Rezervările mele</TabsTrigger>
             <TabsTrigger value="listings">Echipamentele mele</TabsTrigger>
-            <TabsTrigger value="reviews">Recenzii</TabsTrigger>
+            <TabsTrigger value="reviews">Recenziile mele</TabsTrigger>
+            <TabsTrigger value="owner">Ca proprietar</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="rentals" className="space-y-4">
-            {bookingsLoading ? (
-              <div className="text-center py-8">Se încarcă...</div>
-            ) : bookings.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nu ai încă închirieri</h3>
-                  <p className="text-muted-foreground">
-                    Explorează echipamentele disponibile și fă prima ta rezervare!
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              bookings.map((booking) => (
-                <Card key={booking.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold">{booking.gear?.name || 'Echipament necunoscut'}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          De la {booking.owner?.full_name || 'Proprietar necunoscut'} • {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                        </p>
-                        <p className="text-sm font-medium mt-1">
-                          Total: {booking.total_amount ? (booking.total_amount / 100).toFixed(2) : '0'} RON
-                        </p>
-                        {/* Debug info - remove this later */}
-                        <p className="text-xs text-gray-400 mt-1">
-                          Debug: Status={booking.status}, Payment={booking.payment_status || 'null'}
-                        </p>
-                      </div>
-<<<<<<< Updated upstream
-                      <div className="text-right space-y-2">
-                        {getStatusBadge(booking.status || 'pending')}
-                        {booking.status === 'confirmed' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handlePayClick(booking)}
-                            className="w-full"
-                          >
-                            <CreditCard className="h-3 w-3 mr-1" />
-                            Plătește
-                          </Button>
-                        )}
-                        {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setReviewingBooking(booking)}
-                            className="w-full"
-                          >
-                            <Star className="h-3 w-3 mr-1" />
-                            Lasă recenzie
-                          </Button>
-                        )}
-                      </div>
-=======
-                     <div className="text-right space-y-2">
-                                               {/* Show combined status for better UX */}
-                        <div className="flex flex-col items-end space-y-1">
-                       {getStatusBadge(booking.status || 'pending')}
-                          {booking.payment_status !== 'paid' && (
-                            <Badge variant="outline" className="text-xs">
-                              {booking.payment_status === 'pending' || !booking.payment_status ? 'Plată în așteptare' : 
-                               booking.payment_status === 'failed' ? 'Plată eșuată' : 
-                               booking.payment_status === 'refunded' ? 'Rambursat' : 'Plată necunoscută'}
-                            </Badge>
+          {/* My Bookings Tab */}
+          <TabsContent value="bookings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rezervările mele</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {bookingsLoading ? (
+                  <div className="text-center py-8">Se încarcă...</div>
+                ) : bookings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nu ai încă nicio rezervare.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookings.map((booking) => (
+                      <div key={booking.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{booking.gear?.title}</h3>
+                          {getStatusBadge(booking.status)}
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p>De la: {format(new Date(booking.start_date), 'dd/MM/yyyy')}</p>
+                          <p>Până la: {format(new Date(booking.end_date), 'dd/MM/yyyy')}</p>
+                          <p>Total: {booking.total_amount} RON</p>
+                          <p>Proprietar: {booking.owner?.full_name}</p>
+                        </div>
+                        <div className="flex space-x-2 mt-3">
+                          {booking.status === 'confirmed' && booking.payment_status === 'pending' && (
+                            <Button
+                              size="sm"
+                              onClick={() => handlePaymentClick(booking)}
+                            >
+                              <CreditCard className="h-4 w-4 mr-1" />
+                              Plătește
+                            </Button>
+                          )}
+                          {booking.status === 'active' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleConfirmation(booking, 'pickup')}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Confirmă ridicare
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleConfirmation(booking, 'return')}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Confirmă returnare
+                              </Button>
+                            </>
+                          )}
+                          {booking.status === 'completed' && !booking.review_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setReviewingBooking(booking)}
+                            >
+                              <Star className="h-4 w-4 mr-1" />
+                              Lasă o recenzie
+                            </Button>
                           )}
                         </div>
-                        
-                        {/* Payment button for confirmed bookings - show if payment is not paid */}
-                        {booking.status === 'confirmed' && (booking.payment_status === 'pending' || !booking.payment_status || booking.payment_status !== 'paid') && (
-                          <Button
-                            size="sm"
-                            onClick={() => setPaymentBooking(booking)}
-                            className="w-full"
-                          >
-                            <CreditCard className="h-3 w-3 mr-1" />
-                            Plătește
-                          </Button>
-                        )}
-                       
-                       {/* Return confirmation for active bookings */}
-                       {booking.status === 'active' && (
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => handleConfirmation(booking, 'return')}
-                           className="w-full"
-                         >
-                           <CheckCircle className="h-3 w-3 mr-1" />
-                           Confirmă returnarea
-                         </Button>
-                       )}
-                       
-                       {/* Review button for completed bookings */}
-                       {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => setReviewingBooking(booking)}
-                           className="w-full"
-                         >
-                           <Star className="h-3 w-3 mr-1" />
-                           Lasă recenzie
-                         </Button>
-                       )}
-                     </div>
->>>>>>> Stashed changes
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="bookings" className="space-y-4">
-            {ownerBookingsLoading ? (
-              <div className="text-center py-8">Se încarcă...</div>
-            ) : ownerBookings.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nu ai încă rezervări</h3>
-                  <p className="text-muted-foreground">
-                    Rezervările pentru echipamentele tale vor apărea aici.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              ownerBookings.map((booking) => (
-                <Card key={booking.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold">{booking.gear?.name || 'Echipament necunoscut'}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Închiriat de {booking.renter?.full_name || 'Utilizator necunoscut'} • {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                        </p>
-                        <p className="text-sm font-medium mt-1">
-                          Total: {booking.total_amount ? (booking.total_amount / 100).toFixed(2) : '0'} RON
+          {/* My Listings Tab */}
+          <TabsContent value="listings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Echipamentele mele</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {listingsLoading ? (
+                  <div className="text-center py-8">Se încarcă...</div>
+                ) : listings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nu ai încă niciun echipament listat.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {listings.map((gear) => (
+                      <div key={gear.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{gear.title}</h3>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={gear.is_available ? 'default' : 'secondary'}>
+                              {gear.is_available ? 'Disponibil' : 'Indisponibil'}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingGear(gear)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteGear(gear.id)}
+                              disabled={deleteLoading && deletingGearId === gear.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p>Preț: {gear.price_per_day} RON/zi</p>
+                          <p>Categorie: {gear.category}</p>
+                          <p>Locație: {gear.location}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* My Reviews Tab */}
+          <TabsContent value="reviews" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recenziile mele</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reviewsLoading ? (
+                  <div className="text-center py-8">Se încarcă...</div>
+                ) : reviews.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nu ai încă nicio recenzie.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < review.rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            pentru {review.gear?.title}
+                          </span>
+                        </div>
+                        <p className="text-sm">{review.comment}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {format(new Date(review.created_at), 'dd/MM/yyyy')}
                         </p>
                       </div>
-                      <div className="text-right space-y-2">
-                        {/* Show combined status for better UX */}
-                        <div className="flex flex-col items-end space-y-1">
-                        {getStatusBadge(booking.status || 'pending')}
-<<<<<<< Updated upstream
-=======
-                          {booking.payment_status !== 'paid' && (
-                            <Badge variant="outline" className="text-xs">
-                              {booking.payment_status === 'pending' ? 'Plată în așteptare' : 
-                               booking.payment_status === 'failed' ? 'Plată eșuată' : 
-                               booking.payment_status === 'refunded' ? 'Rambursat' : 'Plată necunoscută'}
-                            </Badge>
-                          )}
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Owner Tab */}
+          <TabsContent value="owner" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rezervări pentru echipamentele mele</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {ownerBookingsLoading ? (
+                  <div className="text-center py-8">Se încarcă...</div>
+                ) : ownerBookings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nu ai încă nicio rezervare pentru echipamentele tale.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {ownerBookings.map((booking) => (
+                      <div key={booking.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{booking.gear?.title}</h3>
+                          {getStatusBadge(booking.status)}
                         </div>
-                        
-                        {/* Action buttons for pending bookings */}
->>>>>>> Stashed changes
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p>De la: {format(new Date(booking.start_date), 'dd/MM/yyyy')}</p>
+                          <p>Până la: {format(new Date(booking.end_date), 'dd/MM/yyyy')}</p>
+                          <p>Total: {booking.total_amount} RON</p>
+                          <p>Închiriator: {booking.renter?.full_name}</p>
+                        </div>
                         {booking.status === 'pending' && (
-                          <div className="space-y-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleBookingAction(booking.id, 'rejected')}
-                            >
-                              Respinge
-                            </Button>
-                            <Button 
+                          <div className="flex space-x-2 mt-3">
+                            <Button
                               size="sm"
                               onClick={() => handleBookingAction(booking.id, 'confirmed')}
                             >
+                              <CheckCircle className="h-4 w-4 mr-1" />
                               Acceptă
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleBookingAction(booking.id, 'rejected')}
+                            >
+                              <AlertCircle className="h-4 w-4 mr-1" />
+                              Respinge
                             </Button>
                           </div>
                         )}
-<<<<<<< Updated upstream
-=======
-                        
-                        {/* Pickup confirmation for confirmed bookings */}
-                        {booking.status === 'confirmed' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleConfirmation(booking, 'pickup')}
-                            className="w-full"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Confirmă ridicarea
-                          </Button>
-                        )}
->>>>>>> Stashed changes
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="listings" className="space-y-4">
-            {listingsLoading ? (
-              <div className="text-center py-8">Se încarcă...</div>
-            ) : listings.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nu ai încă echipamente listate</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Adaugă primul tău echipament și începe să câștigi bani!
-                  </p>
-                  <Button>Adaugă echipament</Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {listings.map((listing) => (
-                  <Card key={listing.id}>
-                    <div className="relative">
-                      {listing.images && Array.isArray(listing.images) && listing.images.length > 0 ? (
-                        <img
-                          src={listing.images[0] as string}
-                          alt={listing.name}
-                          className="w-full h-32 object-cover rounded-t-lg"
-                        />
-                      ) : (
-                        <div className="w-full h-32 bg-muted rounded-t-lg flex items-center justify-center">
-                          <Package className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      {!listing.is_available && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="destructive">Indisponibil</Badge>
-                        </div>
-                      )}
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2">{listing.name}</h3>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-bold">
-                          {listing.price_per_day ? (listing.price_per_day / 100).toFixed(2) : '0'} RON/zi
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingGear(listing)}
-                          >
-                            <Settings className="h-3 w-3 mr-1" />
-                            Editează
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteGear(listing.id)}
-                            disabled={deleteLoading && deletingGearId === listing.id}
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            {deleteLoading && deletingGearId === listing.id ? 'Se șterge...' : 'Șterge'}
-                          </Button>
-                          <Badge variant={listing.is_available ? "default" : "secondary"}>
-                            {listing.is_available ? 'Disponibil' : 'Indisponibil'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex items-center space-x-1">
-                            <Eye className="h-3 w-3" />
-                            <span>{listing.view_count || 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="reviews" className="space-y-4">
-            {reviewsLoading ? (
-              <div className="text-center py-8">Se încarcă...</div>
-            ) : reviews.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nu ai încă recenzii</h3>
-                  <p className="text-muted-foreground">
-                    Recenziile vor apărea aici după ce completezi rezervări.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              reviews.map((review) => (
-                <Card key={review.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {review.reviewer?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{review.reviewer?.full_name || 'Utilizator anonim'}</div>
-                        <div className="flex items-center space-x-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star 
-                              key={star} 
-                              className={`h-4 w-4 ${star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                            />
-                          ))}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(review.created_at), 'dd MMM yyyy')}
-                        </div>
-                      </div>
-                    </div>
-                    {review.comment && (
-                      <p className="text-muted-foreground">{review.comment}</p>
-                    )}
-                    {review.gear && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Pentru: {review.gear.name}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
 
-      <Footer />
-
       {/* Modals */}
       {editingGear && (
         <EditGearModal
-          isOpen={!!editingGear}
-          onClose={() => setEditingGear(null)}
           gear={editingGear}
+          onClose={() => setEditingGear(null)}
         />
       )}
 
       {reviewingBooking && (
         <ReviewModal
-          isOpen={!!reviewingBooking}
-          onClose={() => setReviewingBooking(null)}
           booking={reviewingBooking}
+          onClose={() => setReviewingBooking(null)}
         />
       )}
-<<<<<<< Updated upstream
-=======
 
       {paymentBooking && (
         <PaymentModal
           isOpen={!!paymentBooking}
-          onClose={() => setPaymentBooking(null)}
           booking={paymentBooking}
-          onPaymentSuccess={() => {
+          transaction={paymentTransaction}
+          onClose={() => {
             setPaymentBooking(null);
-            // Refresh the page or invalidate queries
-            window.location.reload();
+            setPaymentTransaction(null);
           }}
         />
       )}
 
       {confirmationBooking && (
         <ConfirmationSystem
-          isOpen={!!confirmationBooking}
-          onClose={() => setConfirmationBooking(null)}
           booking={confirmationBooking}
           type={confirmationType}
+          onClose={() => setConfirmationBooking(null)}
         />
       )}
->>>>>>> Stashed changes
+
+      <Footer />
     </div>
   );
 };

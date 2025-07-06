@@ -13,6 +13,7 @@ import {
   calculatePlatformFee,
   StripeError 
 } from '@/integrations/stripe/client';
+import { PaymentService } from '@/services/paymentService';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -66,12 +67,25 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   const handleCheckoutRedirect = async () => {
-    if (!user || !booking || !transaction) return;
+    if (!user || !booking) return;
+    
+    // If no transaction is provided, we need to create one
+    let transactionToUse = transaction;
+    if (!transactionToUse) {
+      try {
+        transactionToUse = await PaymentService.getOrCreateTransactionForBooking(booking);
+      } catch (error: any) {
+        console.error('Error creating transaction:', error);
+        setPaymentStatus('error');
+        setErrorMessage('Failed to create transaction');
+        return;
+      }
+    }
     setPaymentStatus('processing');
     setErrorMessage('');
     createPaymentIntent({
       bookingId: booking.id,
-      transactionId: transaction?.id,
+      transactionId: transactionToUse?.id,
       amount: totalAmount,
       rentalAmount,
       depositAmount,

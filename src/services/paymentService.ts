@@ -21,28 +21,6 @@ export class PaymentService {
         throw new StripeError('Invalid payment amounts');
       }
 
-<<<<<<< Updated upstream
-=======
-      // Create transaction record in database
-      const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          booking_id: params.bookingId,
-          amount: params.amount,
-          rental_amount: params.rentalAmount,
-          deposit_amount: params.depositAmount,
-          platform_fee: params.platformFee,
-          status: 'pending',
-        } as TransactionInsert)
-        .select()
-        .single();
-
-      if (transactionError) {
-        console.error('Transaction creation error:', transactionError);
-        throw new StripeError('Failed to create transaction record');
-      }
-
->>>>>>> Stashed changes
       // Call Supabase Edge Function to create Stripe payment intent
       const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-create-payment-intent`, {
         method: 'POST',
