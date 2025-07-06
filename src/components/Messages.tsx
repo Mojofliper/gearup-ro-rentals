@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,12 @@ export const Messages: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [unreadConversations, setUnreadConversations] = useState<{[bookingId: string]: boolean}>({});
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (user) {
@@ -49,6 +55,49 @@ export const Messages: React.FC = () => {
   useEffect(() => {
     if (selectedBooking) {
       fetchMessages();
+    }
+  }, [selectedBooking]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Subscription realtime pentru toate booking-urile
+  useEffect(() => {
+    if (!user || bookings.length === 0) return;
+    const channels = bookings.map((booking) =>
+      supabase
+        .channel('messages-realtime-listen-' + booking.id)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `booking_id=eq.${booking.id}`,
+          },
+          (payload) => {
+            // Dacă nu e conversația deschisă și mesajul nu e de la userul curent
+            if (booking.id !== selectedBooking && payload.new.sender_id !== user.id) {
+              setUnreadConversations((prev) => ({ ...prev, [booking.id]: true }));
+              toast({
+                title: 'Mesaj nou',
+                description: `Ai un mesaj nou la rezervarea "${sanitizeText(booking.gear?.name || 'Echipament')}"!`,
+              });
+            }
+          }
+        )
+        .subscribe()
+    );
+    return () => {
+      channels.forEach((ch) => supabase.removeChannel(ch));
+    };
+  }, [user, bookings, selectedBooking]);
+
+  // Reset badge când deschizi conversația
+  useEffect(() => {
+    if (selectedBooking) {
+      setUnreadConversations((prev) => ({ ...prev, [selectedBooking]: false }));
     }
   }, [selectedBooking]);
 
@@ -212,47 +261,52 @@ export const Messages: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Bookings list */}
-          <Card>
+          <Card className="h-[600px] flex flex-col">
             <CardHeader>
               <CardTitle>Rezervările tale</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {bookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedBooking === booking.id
-                      ? 'bg-purple-100 border-purple-300'
-                      : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
-                  onClick={() => setSelectedBooking(booking.id)}
-                >
-                  <p className="font-medium text-sm">{sanitizeText(booking.gear?.name || 'Echipament')}</p>
-                  <p className="text-xs text-gray-600">
-                    {new Date(booking.start_date).toLocaleDateString()} - 
-                    {new Date(booking.end_date).toLocaleDateString()}
-                  </p>
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                    booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {booking.status}
-                  </span>
-                </div>
-              ))}
+            <CardContent className="flex-1 flex flex-col h-full p-0">
+              <div className="flex-1 overflow-y-auto space-y-2 px-4 py-4">
+                {bookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className={`relative p-3 rounded-lg cursor-pointer transition-colors ${
+                      selectedBooking === booking.id
+                        ? 'bg-purple-100 border-purple-300'
+                        : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setSelectedBooking(booking.id)}
+                  >
+                    <p className="font-medium text-sm">{sanitizeText(booking.gear?.name || 'Echipament')}</p>
+                    <p className="text-xs text-gray-600">
+                      {new Date(booking.start_date).toLocaleDateString()} - 
+                      {new Date(booking.end_date).toLocaleDateString()}
+                    </p>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                      booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                      booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {booking.status}
+                    </span>
+                    {unreadConversations[booking.id] && (
+                      <span className="absolute top-2 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white" title="Mesaj nou"></span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
           {/* Messages */}
           <div className="lg:col-span-2">
             {selectedBooking ? (
-              <Card className="h-96 flex flex-col">
+              <Card className="h-[600px] flex flex-col">
                 <CardHeader>
                   <CardTitle>Conversație</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+                <CardContent className="flex-1 flex flex-col h-full p-0">
+                  <div className="flex-1 overflow-y-auto space-y-3 px-6 py-4">
                     {messages.length === 0 ? (
                       <p className="text-gray-500 text-center">Nu există mesaje încă.</p>
                     ) : (
@@ -270,7 +324,7 @@ export const Messages: React.FC = () => {
                                 : 'bg-gray-200 text-gray-800'
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">
+                            <p className="text-sm whitespace-pre-wrap break-words">
                               {sanitizeText(message.content)}
                             </p>
                             <p className="text-xs opacity-75 mt-1">
@@ -280,9 +334,9 @@ export const Messages: React.FC = () => {
                         </div>
                       ))
                     )}
+                    <div ref={messagesEndRef} />
                   </div>
-
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 px-6 pb-6 pt-2">
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
@@ -302,7 +356,7 @@ export const Messages: React.FC = () => {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="h-96 flex items-center justify-center">
+              <Card className="h-[600px] flex items-center justify-center">
                 <CardContent className="text-center">
                   <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600">Selectează o rezervare pentru a vedea mesajele.</p>

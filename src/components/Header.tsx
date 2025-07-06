@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 
-export const Header: React.FC = () => {
+export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -118,8 +118,11 @@ export const Header: React.FC = () => {
             {user ? (
               <>
                 <Link to="/messages">
-                  <Button variant="ghost" size="sm" className="hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Button variant="ghost" size="sm" className="hover:bg-blue-50 hover:text-blue-600 transition-colors relative">
                     <MessageSquare className="h-4 w-4" />
+                    {unreadCount && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">{unreadCount}</span>
+                    )}
                   </Button>
                 </Link>
 
