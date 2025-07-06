@@ -1,20 +1,57 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AuthModal } from './AuthModal';
+import { Cart } from './Cart';
 import { useAuth } from '@/contexts/AuthContext';
 import { Menu, User, LogOut, MessageCircle, ShoppingCart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationDropdown } from './NotificationDropdown';
+import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
 
 export const Header = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const { user, logout } = useAuth();
+
+  // Load cart count on component mount and listen for cart updates
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const savedCart = localStorage.getItem('gearup-cart');
+        if (savedCart) {
+          const cartItems = JSON.parse(savedCart);
+          setCartItemCount(cartItems.length);
+        } else {
+          setCartItemCount(0);
+        }
+      } catch (error) {
+        console.error('Error reading cart:', error);
+        setCartItemCount(0);
+      }
+    };
+
+    // Update count on mount
+    updateCartCount();
+
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      updateCartCount();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -24,13 +61,27 @@ export const Header = () => {
     }
   };
 
+  const handleCheckout = (cartItems: any[]) => {
+    // Handle checkout logic here
+    toast({
+      title: 'Comanda finalizată!',
+      description: 'Rezervările au fost procesate cu succes.',
+    });
+    
+    // Clear cart after successful checkout
+    localStorage.removeItem('gearup-cart');
+    setCartItemCount(0);
+    window.dispatchEvent(new Event('cartUpdated'));
+    setIsCartOpen(false);
+  };
+
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <img
-            src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png"
+            src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=40&h=40&fit=crop&crop=center"
             alt="GearUp Logo"
             className="h-8 w-auto"
           />
@@ -50,8 +101,21 @@ export const Header = () => {
               </Button>
               
               {/* Cart Button */}
-              <Button variant="ghost" size="icon">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative"
+                onClick={() => setIsCartOpen(true)}
+              >
                 <ShoppingCart className="h-5 w-5" />
+                {cartItemCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    {cartItemCount}
+                  </Badge>
+                )}
               </Button>
               
               {/* Messages Button */}
@@ -143,6 +207,12 @@ export const Header = () => {
         onClose={() => setIsAuthModalOpen(false)}
         mode={authMode}
         onSwitchMode={setAuthMode}
+      />
+
+      <Cart
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        onCheckout={handleCheckout}
       />
     </header>
   );
