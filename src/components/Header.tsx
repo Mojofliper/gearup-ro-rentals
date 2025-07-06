@@ -81,7 +81,7 @@ export const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <img
-            src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=40&h=40&fit=crop&crop=center"
+            src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png"
             alt="GearUp Logo"
             className="h-8 w-auto"
           />
