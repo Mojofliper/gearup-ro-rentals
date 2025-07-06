@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { 
@@ -71,9 +72,25 @@ export class PaymentService {
    */
   static async confirmPayment(paymentIntentId: string): Promise<void> {
     try {
-      // For now, we'll just log the confirmation
-      // In a real implementation, you'd update the booking status
-      console.log('Payment confirmed for intent:', paymentIntentId);
+      // Update booking payment status to 'paid'
+      const { data: transaction } = await supabase
+        .from('transactions')
+        .select('booking_id')
+        .eq('stripe_payment_intent_id', paymentIntentId)
+        .single();
+
+      if (transaction) {
+        // Update booking payment status and completion phase
+        await supabase
+          .from('bookings')
+          .update({ 
+            payment_status: 'paid',
+            completion_phase: 'paid'
+          })
+          .eq('id', transaction.booking_id);
+
+        console.log('Payment confirmed and booking updated for:', paymentIntentId);
+      }
     } catch (error) {
       console.error('Payment confirmation error:', error);
       throw error instanceof StripeError ? error : new StripeError('Failed to confirm payment');
@@ -113,9 +130,6 @@ export class PaymentService {
     }
   }
 
-  /**
-   * Get booking details by ID
-   */
   static async getBookingById(bookingId: string) {
     try {
       const { data, error } = await supabase
@@ -135,9 +149,6 @@ export class PaymentService {
     }
   }
 
-  /**
-   * Get all bookings for a user
-   */
   static async getUserBookings(userId: string) {
     try {
       const { data, error } = await supabase
@@ -162,9 +173,6 @@ export class PaymentService {
     }
   }
 
-  /**
-   * Calculate payment breakdown
-   */
   static calculatePaymentBreakdown(rentalAmount: number, depositAmount: number) {
     const platformFee = calculatePlatformFee(rentalAmount);
     const totalAmount = rentalAmount + depositAmount + platformFee;
@@ -177,9 +185,6 @@ export class PaymentService {
     };
   }
 
-  /**
-   * Create a transaction for a booking if one does not exist
-   */
   static async getOrCreateTransactionForBooking(booking: Database['public']['Tables']['bookings']['Row']): Promise<Database['public']['Tables']['transactions']['Row']> {
     console.log('Creating transaction for booking:', booking.id);
     console.log('Booking data:', booking);
