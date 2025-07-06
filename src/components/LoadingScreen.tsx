@@ -8,7 +8,7 @@ export const LoadingScreen: React.FC = () => {
       <div className="text-center">
         <div className="flex items-center justify-center mb-6">
           <img 
-            src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png" 
+            src="/lovable-uploads/406e4a74-137e-4264-b297-135705a49e5c.png" 
             alt="GearUp" 
             className="h-12 w-auto"
           />
