@@ -77,8 +77,12 @@ export const Messages: React.FC = () => {
             filter: `booking_id=eq.${booking.id}`,
           },
           (payload) => {
-            // Dacă nu e conversația deschisă și mesajul nu e de la userul curent
-            if (booking.id !== selectedBooking && payload.new.sender_id !== user.id) {
+            if (booking.id === selectedBooking) {
+              setMessages((prev) => {
+                if (prev.some((msg) => msg.id === payload.new.id)) return prev;
+                return [...prev, payload.new as Message];
+              });
+            } else if (payload.new.sender_id !== user.id) {
               setUnreadConversations((prev) => ({ ...prev, [booking.id]: true }));
               toast({
                 title: 'Mesaj nou',
