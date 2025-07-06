@@ -125,7 +125,7 @@ Yes, you can temporarily pause your listing without deleting it. This is useful 
 
 ### How does pricing work?
 - **Daily Rate**: Set by equipment owner
-- **Platform Fee**: 10% of rental price (charged to renter)
+- **Platform Fee**: 13% of rental price (charged to renter)
 - **Deposit**: Set by equipment owner (held securely)
 - **Payment Processing**: Stripe fees apply
 

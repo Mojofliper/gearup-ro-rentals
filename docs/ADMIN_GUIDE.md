@@ -4,6 +4,8 @@
 
 This guide provides comprehensive instructions for administrators managing the GearUp platform. Admin functions include user management, content moderation, dispute resolution, analytics, and platform maintenance.
 
+**⚠️ IMPORTANT NOTE**: This admin guide describes planned features and functionality. The admin dashboard and most admin features are not yet implemented and are planned for Phase 3 of development (Weeks 5-6). The current implementation focuses on core user features and payment system completion.
+
 ---
 
 ## 🔐 Admin Authentication

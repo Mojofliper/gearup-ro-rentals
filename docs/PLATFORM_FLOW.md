@@ -24,6 +24,8 @@ GearUp is a peer-to-peer rental platform for photo-video gear in Romania, design
 - Location (Romanian counties dropdown)
 - Phone Number (optional, for future SMS verification)
 
+**Note**: SMS verification is planned for future implementation. Currently, only email verification is required.
+
 **Role Selection:**
 - `renter` - Can only rent gear
 - `lender` - Can only list gear
@@ -63,6 +65,7 @@ profiles {
 - Profile management with avatar upload
 - Input validation and sanitization
 - Rate limiting implemented
+- **Note**: SMS verification not yet implemented (planned for future)
 
 ---
 
@@ -78,6 +81,8 @@ profiles {
 - Pickup location (text field)
 - Condition (Nou/Ca nou/Foarte bună/Bună/Acceptabilă)
 - Minimum 1 photo (stored as JSONB array)
+
+**Note**: While the original specification required minimum 3 photos, the current implementation requires minimum 1 photo. This will be enhanced in future updates.
 
 **Optional Fields:**
 - Brand and Model
@@ -122,6 +127,7 @@ gear {
 - Category system with predefined categories
 - Input validation and sanitization
 - Availability toggle functionality
+- **Note**: Currently requires minimum 1 photo (original spec required 3)
 
 ---
 
@@ -172,9 +178,9 @@ Total: 369.50 RON
 ## ✅ 4. BOOKING APPROVAL (OWNER)
 
 ### Owner Notification
-- **Real-time notification** via Supabase realtime subscriptions
-- **Email notification** (future enhancement)
-- **In-app notification** in profile dashboard
+- **Email notification** sent immediately to owner
+- **In-app notification** appears in profile dashboard
+- **Notification redirects to Profile → "Ca Proprietar" tab → Rental Requests**
 
 ### Approval Decision
 **Owner receives booking details:**
@@ -185,13 +191,16 @@ Total: 369.50 RON
 - Any notes from renter
 
 **Owner Actions:**
-- **Accept**: Changes status to `confirmed`
-- **Reject**: Changes status to `cancelled`
+- **Accept**: 
+  - Status changes to `confirmed`
+  - **Popup appears to set pickup location** (exact address required)
+  - Renter receives email notification
+- **Reject**: Status changes to `cancelled`
 - **Message**: Can communicate before deciding
 
 ### Status Flow
 ```
-pending → confirmed (owner accepts)
+pending → confirmed (owner accepts + sets pickup location)
 pending → cancelled (owner rejects)
 ```
 
@@ -206,12 +215,23 @@ pending → cancelled (owner rejects)
 ## 💳 5. PAYMENT (RENTER)
 
 ### Payment Flow
-1. **Booking Confirmed**: Owner accepts booking
-2. **Payment Required**: Renter must pay within time limit
-3. **Stripe Integration**: Secure payment processing
-4. **Fund Distribution**:
+1. **Booking Confirmed**: Owner accepts booking and sets pickup location
+2. **Renter Notification**: Email notification directs to Profile → "Rezervările Mele" tab
+3. **Payment Button**: Renter clicks "Plătește" button
+4. **Rental Dashboard**: Opens special thread/dashboard for this rental
+5. **Payment Processing**: Stripe integration for secure payment
+6. **Fund Distribution**:
    - Platform Fee → Goes to platform immediately
    - Rental Fee + Deposit → Held in escrow
+
+### Rental Dashboard Features
+**Both parties see in the rental thread:**
+- **Pickup Location**: Exact address set by owner
+- **Direct Messaging**: Thread-specific communication
+- **Escrow Status**: Deposit amount held by platform
+- **Rental Payment**: Rental fee held by platform
+- **Dispute Button**: For reporting issues
+- **Payment Status**: Real-time payment tracking
 
 ### Payment Security
 - **Stripe Checkout**: PCI-compliant payment processing
@@ -248,8 +268,8 @@ transactions {
 - ✅ Payment modal UI
 - 🔄 Payment UI needs refinement and testing
 - 🔄 Error handling needs improvement
-- ❌ **Escrow System**: Stripe Connect not implemented
-- ❌ **Automatic Fund Distribution**: Not implemented
+- ❌ **Escrow System**: Stripe Connect not implemented (planned for Phase 2)
+- ❌ **Automatic Fund Distribution**: Not implemented (planned for Phase 2)
 - ❌ **Payment Method Selection**: Limited options
 
 ---
@@ -352,6 +372,7 @@ photo_uploads {
 - 🔄 Handover photo system partially implemented
 - ❌ Timestamped photos not fully implemented
 - ❌ Photo validation needs enhancement
+- **Note**: Photo documentation system is planned for Phase 4 of development
 
 ---
 
@@ -361,12 +382,20 @@ photo_uploads {
 **Renter Actions:**
 1. **Prepare Return**: Clean and pack equipment
 2. **Upload Photos**: 1-2 timestamped photos before return
-3. **Mark Returned**: Changes status to `completed`
+3. **Click "Returned"**: Button in rental dashboard/thread
 
 **Owner Actions:**
 1. **Inspect Equipment**: Check condition and completeness
 2. **Upload Photos**: 1-2 timestamped photos after return
-3. **Confirm Return**: Acknowledge completion
+3. **Click "Received"**: Button in rental dashboard/thread
+4. **Both confirm**: Transaction completes automatically
+
+### Completion Flow
+- **Both parties must confirm** return in the rental dashboard
+- **Escrow funds released** automatically after confirmation
+- **Rental fee** → Released to owner
+- **Deposit** → Returned to renter
+- **Transaction complete** → Status changes to `completed`
 
 ### Fund Release
 **Successful Return:**
@@ -389,6 +418,7 @@ active → completed (renter marks returned, owner confirms)
 - Status flow management
 - Confirmation permissions
 - Audit trail logging
+- **Note**: Escrow fund release not yet implemented (planned for Phase 2)
 
 ---
 
@@ -446,16 +476,59 @@ claims {
 - **Full Penalty**: Significant damage/misuse
 - **Additional Charges**: Beyond deposit amount
 
-**Implementation Status: ❌ NOT IMPLEMENTED**
-- ✅ Claims database structure
+**Implementation Status: 🔄 PARTIALLY IMPLEMENTED**
+- ✅ Claims database structure implemented
 - ✅ Photo evidence upload structure
-- ❌ Admin interface not implemented
-- ❌ Dispute workflow not implemented
-- ❌ Deposit penalty system not implemented
+- ❌ Admin interface not implemented (planned for Phase 3)
+- ❌ Dispute workflow not implemented (planned for Phase 3)
+- ❌ Deposit penalty system not implemented (planned for Phase 3)
 
 ---
 
-## 📊 10. REVIEWS & FEEDBACK
+## 📊 10. OWNER ANALYTICS DASHBOARD
+
+### Analytics Dashboard Features
+**For equipment owners (sellers):**
+
+**Financial Analytics:**
+- **Total Earnings**: All-time revenue from rentals
+- **Monthly Revenue**: Monthly earnings breakdown
+- **Platform Fees**: Total fees paid to platform
+- **Pending Payments**: Amounts held in escrow
+- **Stripe Connect Status**: Account verification status
+
+**Equipment Analytics:**
+- **Most Rented Gear**: Top performing equipment
+- **Rental Frequency**: How often each item is rented
+- **Average Rental Duration**: Typical rental periods
+- **Equipment Utilization**: Percentage of time rented vs. available
+
+**User Analytics:**
+- **Customer Reviews**: Average ratings and feedback
+- **Repeat Customers**: Users who rent multiple times
+- **Customer Demographics**: Location and usage patterns
+- **Response Time**: Average time to respond to requests
+
+**Business Intelligence:**
+- **Revenue Trends**: Growth over time
+- **Seasonal Patterns**: Peak rental periods
+- **Pricing Optimization**: Suggested price adjustments
+- **Market Analysis**: Competition and demand
+
+### Dashboard Access
+- **Profile → "Ca Proprietar" tab → Analytics**
+- **Real-time updates** via Supabase realtime
+- **Export functionality** for financial records
+- **Mobile responsive** design for on-the-go access
+
+**Implementation Status: ❌ NOT IMPLEMENTED**
+- ❌ Analytics dashboard not implemented (planned for Phase 3)
+- ❌ Financial reporting not implemented (planned for Phase 3)
+- ❌ Stripe Connect integration not implemented (planned for Phase 2)
+
+---
+
+## ⭐ 11. REVIEWS & FEEDBACK
 
 ### Review System
 **When Reviews Can Be Left:**

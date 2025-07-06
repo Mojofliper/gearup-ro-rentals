@@ -32,32 +32,59 @@ This roadmap outlines the complete development plan for finishing the GearUp pla
 
 ---
 
-## 🚀 Phase 1: Payment System Completion (Weeks 1-2)
+## 🚀 Phase 1: Database Redesign & Core API (Weeks 1-2)
 
-### Week 1: Payment UI & Testing
+### Week 1: Complete Database Redesign
 
-#### Day 1-2: Payment Modal Refinement
-- [ ] **Refine PaymentModal.tsx**
-  - Improve error handling and user feedback
-  - Add loading states and progress indicators
-  - Enhance payment breakdown display
-  - Add payment method selection UI
-  - Implement better validation
+#### Day 1-2: Database Migration
+- [ ] **Apply Complete Database Redesign**
+  - Run the new migration: `20250101000000_complete_redesign.sql`
+  - Verify all tables, indexes, and constraints
+  - Test Row Level Security policies
+  - Validate foreign key relationships
+  - Test database functions and triggers
 
-#### Day 3-4: Payment Flow Testing
+#### Day 3-4: Core API Implementation
+- [ ] **Implement Core API Endpoints**
+  - User management API (profiles, verification)
+  - Gear management API (listings, images)
+  - Booking management API (create, update, status)
+  - Basic messaging API (conversations, messages)
+  - Review system API
+
+#### Day 5: API Testing & Documentation
+- [ ] **API Testing & Validation**
+  - Test all API endpoints with Postman/Thunder Client
+  - Validate error handling and responses
+  - Test authentication and authorization
+  - Create API integration tests
+  - Update API documentation
+
+### Week 2: Payment System Integration
+
+#### Day 1-2: Enhanced Payment API
+- [ ] **Payment System Enhancement**
+  - Integrate with new database schema
+  - Implement Stripe Connect setup API
+  - Create escrow transaction API
+  - Add payment webhook handlers
+  - Implement refund processing API
+
+#### Day 3-4: Payment UI Integration
+- [ ] **Frontend Payment Integration**
+  - Update PaymentModal.tsx for new API
+  - Implement escrow status display
+  - Add payment method selection
+  - Create payment confirmation flow
+  - Add payment error handling
+
+#### Day 5: Payment Testing & Monitoring
 - [ ] **Comprehensive Payment Testing**
-  - Test all payment scenarios (success, failure, cancellation)
+  - Test all payment scenarios
+  - Test escrow fund holding
   - Test webhook processing
-  - Test refund functionality
-  - Test error handling
-  - Test mobile payment experience
-
-#### Day 5: Payment Analytics
-- [ ] **Payment Monitoring**
-  - Add payment success rate tracking
-  - Implement payment error logging
-  - Add payment performance metrics
-  - Create payment dashboard for monitoring
+  - Implement payment analytics
+  - Create payment monitoring dashboard
 
 ### Week 2: Webhook & Error Handling
 
@@ -86,59 +113,59 @@ This roadmap outlines the complete development plan for finishing the GearUp pla
 
 ---
 
-## 🔐 Phase 2: Escrow System Implementation (Weeks 3-4)
+## 🔐 Phase 2: Advanced Features Implementation (Weeks 3-4)
 
-### Week 3: Stripe Connect Setup
+### Week 3: Dispute Resolution & Photo Documentation
 
-#### Day 1-2: Stripe Connect Configuration
-- [ ] **Stripe Connect Setup**
-  - Configure Stripe Connect for marketplace
-  - Set up connected accounts for owners
-  - Implement account creation flow
-  - Add account verification process
-  - Test connected account creation
+#### Day 1-2: Claims System Implementation
+- [ ] **Claims Management System**
+  - Implement claims creation API
+  - Create claim evidence upload system
+  - Add claim status management
+  - Implement claim notification system
+  - Test claims workflow
 
-#### Day 3-4: Database Schema Updates
-- [ ] **Escrow Database Schema**
-  - Create connected_accounts table
-  - Create escrow_transactions table
-  - Add escrow-related fields to existing tables
-  - Implement database migrations
-  - Add escrow status tracking
+#### Day 3-4: Photo Documentation System
+- [ ] **Enhanced Photo Documentation**
+  - Implement handover photo upload API
+  - Create photo validation system
+  - Add photo metadata extraction
+  - Implement photo comparison tools
+  - Test photo documentation workflow
 
-#### Day 5: Escrow Logic Implementation
-- [ ] **Escrow Business Logic**
-  - Implement escrow fund holding
-  - Add escrow release logic
-  - Create escrow status management
-  - Add escrow validation rules
-  - Test escrow flows
+#### Day 5: Dispute Resolution Testing
+- [ ] **Claims & Photo System Testing**
+  - Test complete claims workflow
+  - Test photo upload and validation
+  - Test evidence management
+  - Create dispute resolution guidelines
+  - Implement claim analytics
 
-### Week 4: Escrow Integration & Testing
+### Week 4: Notification System & Rental Dashboard
 
-#### Day 1-2: Payment Intent with Escrow
-- [ ] **Escrow Payment Integration**
-  - Modify payment intent creation for escrow
-  - Add application fees and transfers
-  - Implement escrow fund distribution
-  - Add escrow metadata handling
-  - Test escrow payment flows
+#### Day 1-2: Email Notification System
+- [ ] **Email Notification Implementation**
+  - Set up email service (SendGrid/Resend)
+  - Create email templates for all notifications
+  - Implement booking request notifications
+  - Add payment confirmation emails
+  - Create notification queue system
 
-#### Day 3-4: Escrow Release System
-- [ ] **Automatic Fund Release**
-  - Implement automatic fund release after rental completion
-  - Add manual fund release for disputes
-  - Create fund release notifications
-  - Add escrow release validation
-  - Test fund release scenarios
+#### Day 3-4: Rental Dashboard & Thread System
+- [ ] **Rental Dashboard Implementation**
+  - Create rental thread/dashboard component
+  - Implement pickup location setting popup
+  - Add escrow status display
+  - Create dispute button functionality
+  - Implement return confirmation buttons
 
-#### Day 5: Escrow Testing & Documentation
-- [ ] **Escrow Testing & Docs**
-  - Comprehensive escrow testing
-  - Create escrow troubleshooting guide
-  - Document escrow flows and processes
-  - Add escrow monitoring and alerts
-  - Create escrow user documentation
+#### Day 5: Owner Analytics Dashboard
+- [ ] **Owner Analytics Implementation**
+  - Create financial analytics dashboard
+  - Implement Stripe Connect integration
+  - Add equipment performance metrics
+  - Create revenue reporting system
+  - Implement export functionality
 
 ---
 
