@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -276,7 +277,7 @@ export const Profile: React.FC = () => {
                   <Package className="h-5 w-5 text-blue-500" />
                   <div>
                     <p className="text-sm text-muted-foreground">Echipamente</p>
-                                         <p className="text-2xl font-bold">{stats.totalListings}</p>
+                    <p className="text-2xl font-bold">{stats.totalListings}</p>
                   </div>
                 </div>
               </CardContent>
@@ -287,7 +288,7 @@ export const Profile: React.FC = () => {
                   <Calendar className="h-5 w-5 text-green-500" />
                   <div>
                     <p className="text-sm text-muted-foreground">Rezervări</p>
-                                         <p className="text-2xl font-bold">{stats.totalRentals}</p>
+                    <p className="text-2xl font-bold">{stats.totalRentals}</p>
                   </div>
                 </div>
               </CardContent>
@@ -309,7 +310,7 @@ export const Profile: React.FC = () => {
                   <Eye className="h-5 w-5 text-purple-500" />
                   <div>
                     <p className="text-sm text-muted-foreground">Vizualizări</p>
-                                         <p className="text-2xl font-bold">{stats.reviews}</p>
+                    <p className="text-2xl font-bold">{stats.reviews}</p>
                   </div>
                 </div>
               </CardContent>
@@ -344,7 +345,7 @@ export const Profile: React.FC = () => {
                     {bookings.map((booking) => (
                       <div key={booking.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{booking.gear?.title}</h3>
+                          <h3 className="font-semibold">{booking.gear?.name}</h3>
                           {getStatusBadge(booking.status)}
                         </div>
                         <div className="text-sm text-muted-foreground space-y-1">
@@ -383,7 +384,7 @@ export const Profile: React.FC = () => {
                               </Button>
                             </>
                           )}
-                          {booking.status === 'completed' && !booking.review_id && (
+                          {booking.status === 'completed' && !booking.reviews?.length && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -420,7 +421,7 @@ export const Profile: React.FC = () => {
                     {listings.map((gear) => (
                       <div key={gear.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{gear.title}</h3>
+                          <h3 className="font-semibold">{gear.name}</h3>
                           <div className="flex items-center space-x-2">
                             <Badge variant={gear.is_available ? 'default' : 'secondary'}>
                               {gear.is_available ? 'Disponibil' : 'Indisponibil'}
@@ -444,8 +445,8 @@ export const Profile: React.FC = () => {
                         </div>
                         <div className="text-sm text-muted-foreground space-y-1">
                           <p>Preț: {gear.price_per_day} RON/zi</p>
-                          <p>Categorie: {gear.category}</p>
-                          <p>Locație: {gear.location}</p>
+                          <p>Brand: {gear.brand}</p>
+                          <p>Locație: {gear.pickup_location}</p>
                         </div>
                       </div>
                     ))}
@@ -486,7 +487,7 @@ export const Profile: React.FC = () => {
                             ))}
                           </div>
                           <span className="text-sm text-muted-foreground">
-                            pentru {review.gear?.title}
+                            pentru {review.gear?.name}
                           </span>
                         </div>
                         <p className="text-sm">{review.comment}</p>
@@ -519,7 +520,7 @@ export const Profile: React.FC = () => {
                     {ownerBookings.map((booking) => (
                       <div key={booking.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{booking.gear?.title}</h3>
+                          <h3 className="font-semibold">{booking.gear?.name}</h3>
                           {getStatusBadge(booking.status)}
                         </div>
                         <div className="text-sm text-muted-foreground space-y-1">
@@ -560,6 +561,7 @@ export const Profile: React.FC = () => {
       {/* Modals */}
       {editingGear && (
         <EditGearModal
+          isOpen={!!editingGear}
           gear={editingGear}
           onClose={() => setEditingGear(null)}
         />
@@ -567,6 +569,7 @@ export const Profile: React.FC = () => {
 
       {reviewingBooking && (
         <ReviewModal
+          isOpen={!!reviewingBooking}
           booking={reviewingBooking}
           onClose={() => setReviewingBooking(null)}
         />
@@ -586,6 +589,7 @@ export const Profile: React.FC = () => {
 
       {confirmationBooking && (
         <ConfirmationSystem
+          isOpen={!!confirmationBooking}
           booking={confirmationBooking}
           type={confirmationType}
           onClose={() => setConfirmationBooking(null)}

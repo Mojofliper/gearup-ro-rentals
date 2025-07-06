@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,12 +20,13 @@ import { NotificationDropdown } from './NotificationDropdown';
 
 export const Header = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await logout();
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -166,7 +168,9 @@ export const Header = () => {
 
       <AuthModal 
         isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+        onClose={() => setIsAuthModalOpen(false)}
+        mode={authMode}
+        onSwitchMode={setAuthMode}
       />
     </header>
   );
