@@ -77,7 +77,8 @@ export const Messages: React.FC = () => {
             filter: `booking_id=eq.${booking.id}`,
           },
           (payload) => {
-            if (booking.id === selectedBooking) {
+            console.log('Realtime payload', payload, 'booking.id', booking.id, 'selectedBooking', selectedBooking);
+            if (String(booking.id) === String(selectedBooking)) {
               setMessages((prev) => {
                 if (prev.some((msg) => msg.id === payload.new.id)) return prev;
                 return [...prev, payload.new as Message];

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -20,6 +19,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 }) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -74,6 +74,10 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
     }
   };
 
+  const handleButtonClick = () => {
+    inputRef.current?.click();
+  };
+
   return (
     <div className="flex items-center space-x-4">
       <Avatar className="h-20 w-20">
@@ -84,26 +88,24 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       </Avatar>
       
       <div className="space-y-2">
-        <Label htmlFor="avatar-upload" className="cursor-pointer">
-          <div className="flex items-center space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={uploading}
-              className="cursor-pointer"
-            >
-              {uploading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Upload className="h-4 w-4 mr-2" />
-              )}
-              {uploading ? 'Se încarcă...' : 'Schimbă avatar'}
-            </Button>
-          </div>
-        </Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={uploading}
+          className="cursor-pointer"
+          onClick={handleButtonClick}
+        >
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Upload className="h-4 w-4 mr-2" />
+          )}
+          {uploading ? 'Se încarcă...' : 'Schimbă avatar'}
+        </Button>
         <Input
           id="avatar-upload"
+          ref={inputRef}
           type="file"
           accept="image/*"
           className="hidden"

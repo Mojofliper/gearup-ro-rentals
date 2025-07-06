@@ -46,6 +46,15 @@ export const Profile: React.FC = () => {
 
   const handleAvatarUpdate = (newAvatarUrl: string) => {
     setCurrentAvatarUrl(newAvatarUrl);
+    // Extrage doar path-ul relativ dacă e URL complet
+    let avatarPath = newAvatarUrl;
+    if (newAvatarUrl.startsWith('http')) {
+      const idx = newAvatarUrl.indexOf('/avatars/');
+      if (idx !== -1) {
+        avatarPath = newAvatarUrl.substring(idx + 9); // 9 = length of '/avatars/'
+      }
+    }
+    updateProfile({ avatar_url: avatarPath });
   };
 
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
