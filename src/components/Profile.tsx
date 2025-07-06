@@ -14,9 +14,15 @@ import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '
 import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
+<<<<<<< Updated upstream
 import { useSecureGear } from '@/hooks/useSecureGear';
 import { useQueryClient } from '@tanstack/react-query';
 import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, Trash2 } from 'lucide-react';
+=======
+import { ConfirmationSystem } from '@/components/ConfirmationSystem';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, CreditCard } from 'lucide-react';
+import { PaymentModal } from '@/components/PaymentModal';
+>>>>>>> Stashed changes
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -40,6 +46,7 @@ export const Profile: React.FC = () => {
   
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
+<<<<<<< Updated upstream
   const [deletingGearId, setDeletingGearId] = useState<string | null>(null);
 
   // Sync local state with profile data
@@ -52,6 +59,11 @@ export const Profile: React.FC = () => {
       });
     }
   }, [profile]);
+=======
+  const [paymentBooking, setPaymentBooking] = useState<any>(null);
+  const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
+  const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
+>>>>>>> Stashed changes
 
   if (!user || !profile) return null;
 
@@ -97,6 +109,7 @@ export const Profile: React.FC = () => {
     });
   };
 
+<<<<<<< Updated upstream
   const handleDeleteGear = async (gearId: string) => {
     if (!confirm('Ești sigur că vrei să ștergi acest echipament? Această acțiune nu poate fi anulată.')) {
       return;
@@ -128,6 +141,11 @@ export const Profile: React.FC = () => {
     } finally {
       setDeletingGearId(null);
     }
+=======
+  const handleConfirmation = (booking: any, type: 'pickup' | 'return') => {
+    setConfirmationBooking(booking);
+    setConfirmationType(type);
+>>>>>>> Stashed changes
   };
 
   const getStatusBadge = (status: string) => {
@@ -147,11 +165,21 @@ export const Profile: React.FC = () => {
     }
   };
 
+<<<<<<< Updated upstream
   // Get the full avatar URL - use profile.avatar_url as the source of truth
   const fullAvatarUrl = profile?.avatar_url 
     ? profile.avatar_url.startsWith('http') 
       ? profile.avatar_url 
       : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
+=======
+
+
+  // Get the full avatar URL
+  const fullAvatarUrl = currentAvatarUrl 
+    ? currentAvatarUrl.startsWith('http') 
+      ? currentAvatarUrl 
+      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${currentAvatarUrl}`
+>>>>>>> Stashed changes
     : '';
 
   return (
@@ -310,7 +338,12 @@ export const Profile: React.FC = () => {
                         <p className="text-sm font-medium mt-1">
                           Total: {booking.total_amount ? (booking.total_amount / 100).toFixed(2) : '0'} RON
                         </p>
+                        {/* Debug info - remove this later */}
+                        <p className="text-xs text-gray-400 mt-1">
+                          Debug: Status={booking.status}, Payment={booking.payment_status || 'null'}
+                        </p>
                       </div>
+<<<<<<< Updated upstream
                       <div className="text-right space-y-2">
                         {getStatusBadge(booking.status || 'pending')}
                         {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
@@ -325,6 +358,59 @@ export const Profile: React.FC = () => {
                           </Button>
                         )}
                       </div>
+=======
+                     <div className="text-right space-y-2">
+                                               {/* Show combined status for better UX */}
+                        <div className="flex flex-col items-end space-y-1">
+                       {getStatusBadge(booking.status || 'pending')}
+                          {booking.payment_status !== 'paid' && (
+                            <Badge variant="outline" className="text-xs">
+                              {booking.payment_status === 'pending' || !booking.payment_status ? 'Plată în așteptare' : 
+                               booking.payment_status === 'failed' ? 'Plată eșuată' : 
+                               booking.payment_status === 'refunded' ? 'Rambursat' : 'Plată necunoscută'}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Payment button for confirmed bookings - show if payment is not paid */}
+                        {booking.status === 'confirmed' && (booking.payment_status === 'pending' || !booking.payment_status || booking.payment_status !== 'paid') && (
+                          <Button
+                            size="sm"
+                            onClick={() => setPaymentBooking(booking)}
+                            className="w-full"
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            Plătește
+                          </Button>
+                        )}
+                       
+                       {/* Return confirmation for active bookings */}
+                       {booking.status === 'active' && (
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => handleConfirmation(booking, 'return')}
+                           className="w-full"
+                         >
+                           <CheckCircle className="h-3 w-3 mr-1" />
+                           Confirmă returnarea
+                         </Button>
+                       )}
+                       
+                       {/* Review button for completed bookings */}
+                       {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setReviewingBooking(booking)}
+                           className="w-full"
+                         >
+                           <Star className="h-3 w-3 mr-1" />
+                           Lasă recenzie
+                         </Button>
+                       )}
+                     </div>
+>>>>>>> Stashed changes
                     </div>
                   </CardContent>
                 </Card>
@@ -360,7 +446,22 @@ export const Profile: React.FC = () => {
                         </p>
                       </div>
                       <div className="text-right space-y-2">
+                        {/* Show combined status for better UX */}
+                        <div className="flex flex-col items-end space-y-1">
                         {getStatusBadge(booking.status || 'pending')}
+<<<<<<< Updated upstream
+=======
+                          {booking.payment_status !== 'paid' && (
+                            <Badge variant="outline" className="text-xs">
+                              {booking.payment_status === 'pending' ? 'Plată în așteptare' : 
+                               booking.payment_status === 'failed' ? 'Plată eșuată' : 
+                               booking.payment_status === 'refunded' ? 'Rambursat' : 'Plată necunoscută'}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Action buttons for pending bookings */}
+>>>>>>> Stashed changes
                         {booking.status === 'pending' && (
                           <div className="space-y-2">
                             <Button 
@@ -378,6 +479,22 @@ export const Profile: React.FC = () => {
                             </Button>
                           </div>
                         )}
+<<<<<<< Updated upstream
+=======
+                        
+                        {/* Pickup confirmation for confirmed bookings */}
+                        {booking.status === 'confirmed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleConfirmation(booking, 'pickup')}
+                            className="w-full"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Confirmă ridicarea
+                          </Button>
+                        )}
+>>>>>>> Stashed changes
                       </div>
                     </div>
                   </CardContent>
@@ -538,6 +655,31 @@ export const Profile: React.FC = () => {
           booking={reviewingBooking}
         />
       )}
+<<<<<<< Updated upstream
+=======
+
+      {paymentBooking && (
+        <PaymentModal
+          isOpen={!!paymentBooking}
+          onClose={() => setPaymentBooking(null)}
+          booking={paymentBooking}
+          onPaymentSuccess={() => {
+            setPaymentBooking(null);
+            // Refresh the page or invalidate queries
+            window.location.reload();
+          }}
+        />
+      )}
+
+      {confirmationBooking && (
+        <ConfirmationSystem
+          isOpen={!!confirmationBooking}
+          onClose={() => setConfirmationBooking(null)}
+          booking={confirmationBooking}
+          type={confirmationType}
+        />
+      )}
+>>>>>>> Stashed changes
     </div>
   );
 };

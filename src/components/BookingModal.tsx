@@ -126,9 +126,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <span>{finalTotal.toFixed(2)} RON</span>
             </div>
             <div className="text-xs text-muted-foreground space-y-1">
-              {depositAmount > 0 && (
+            {depositAmount > 0 && (
                 <p>* Garanția se returnează la finalul închirierii</p>
-              )}
+            )}
               <p>* Taxa platformă se aplică doar la suma de închiriere</p>
             </div>
           </div>
