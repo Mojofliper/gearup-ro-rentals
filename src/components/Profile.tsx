@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,17 @@ export const Profile: React.FC = () => {
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [deletingGearId, setDeletingGearId] = useState<string | null>(null);
+
+  // Sync local state with profile data
+  useEffect(() => {
+    if (profile) {
+      setCurrentAvatarUrl(profile.avatar_url || '');
+      setFormData({
+        full_name: profile.full_name || '',
+        location: profile.location || '',
+      });
+    }
+  }, [profile]);
 
   if (!user || !profile) return null;
 
@@ -136,11 +147,11 @@ export const Profile: React.FC = () => {
     }
   };
 
-  // Get the full avatar URL
-  const fullAvatarUrl = currentAvatarUrl 
-    ? currentAvatarUrl.startsWith('http') 
-      ? currentAvatarUrl 
-      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${currentAvatarUrl}`
+  // Get the full avatar URL - use profile.avatar_url as the source of truth
+  const fullAvatarUrl = profile?.avatar_url 
+    ? profile.avatar_url.startsWith('http') 
+      ? profile.avatar_url 
+      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
     : '';
 
   return (
