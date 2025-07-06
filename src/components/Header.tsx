@@ -36,22 +36,18 @@ export const Header = () => {
           />
         </Link>
 
-        {/* Center - Add Gear Button (visible when user is logged in) */}
-        {user && (
-          <div className="hidden md:flex">
-            <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
-              <Link to="/add-gear">
-                Adaugă echipamentul tău
-              </Link>
-            </Button>
-          </div>
-        )}
-
         {/* Right side - Auth/User Menu */}
         <div className="flex items-center space-x-4">
           {user ? (
             <>
               <NotificationDropdown />
+              
+              {/* Add Gear Button */}
+              <Button asChild className="hidden md:flex bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
+                <Link to="/add-gear">
+                  Adaugă echipamentul tău
+                </Link>
+              </Button>
               
               {/* Cart Button */}
               <Button variant="ghost" size="icon">
