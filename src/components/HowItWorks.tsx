@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, Calendar, MessageSquare, Camera } from 'lucide-react';
@@ -7,7 +6,7 @@ const steps = [
   {
     icon: Search,
     title: 'Caută echipamentul',
-    description: 'Browsează prin sute de echipamente foto, video și audio din orașul tău',
+    description: 'Alege din sute de echipamente foto, video și audio din orașul tău',
     color: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
   },
   {
