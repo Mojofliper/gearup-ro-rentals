@@ -14,12 +14,15 @@ import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '
 import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
-import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle } from 'lucide-react';
+import { useSecureGear } from '@/hooks/useSecureGear';
+import { useQueryClient } from '@tanstack/react-query';
+import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile?.avatar_url || '');
   const [formData, setFormData] = useState({
@@ -33,9 +36,11 @@ export const Profile: React.FC = () => {
   const { data: stats, isLoading: statsLoading } = useUserStats();
   const { data: ownerBookings = [], isLoading: ownerBookingsLoading } = useOwnerBookings();
   const { mutate: updateBooking } = useUpdateBooking();
+  const { deleteGear, loading: deleteLoading } = useSecureGear();
   
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
+  const [deletingGearId, setDeletingGearId] = useState<string | null>(null);
 
   if (!user || !profile) return null;
 
@@ -79,6 +84,39 @@ export const Profile: React.FC = () => {
         console.error('Booking update error:', error);
       }
     });
+  };
+
+  const handleDeleteGear = async (gearId: string) => {
+    if (!confirm('Ești sigur că vrei să ștergi acest echipament? Această acțiune nu poate fi anulată.')) {
+      return;
+    }
+
+    setDeletingGearId(gearId);
+    
+    try {
+      await deleteGear(gearId);
+      
+      // Invalidate and refetch all gear-related queries to update the UI instantly
+      // This will automatically remove the deleted item from all lists
+      queryClient.invalidateQueries({ queryKey: ['user-listings', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['gear', 'list'] }); // Main gear list
+      queryClient.invalidateQueries({ queryKey: ['gear'] }); // Individual gear queries
+      
+      toast({
+        title: 'Echipament șters!',
+        description: 'Echipamentul a fost șters cu succes din profilul tău.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Eroare',
+        description: 'Nu s-a putut șterge echipamentul. Te rugăm să încerci din nou.',
+        variant: 'destructive',
+      });
+      console.error('Delete gear error:', error);
+    } finally {
+      setDeletingGearId(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -387,6 +425,15 @@ export const Profile: React.FC = () => {
                           >
                             <Settings className="h-3 w-3 mr-1" />
                             Editează
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteGear(listing.id)}
+                            disabled={deleteLoading && deletingGearId === listing.id}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            {deleteLoading && deletingGearId === listing.id ? 'Se șterge...' : 'Șterge'}
                           </Button>
                           <Badge variant={listing.is_available ? "default" : "secondary"}>
                             {listing.is_available ? 'Disponibil' : 'Indisponibil'}
