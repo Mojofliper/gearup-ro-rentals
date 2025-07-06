@@ -2,18 +2,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { 
-  NavigationMenu, 
-  NavigationMenuContent, 
-  NavigationMenuItem, 
-  NavigationMenuLink, 
-  NavigationMenuList, 
-  NavigationMenuTrigger 
-} from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AuthModal } from './AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, User, LogOut, MessageCircle, Settings, Heart } from 'lucide-react';
+import { Menu, User, LogOut, MessageCircle, Settings, Heart, ShoppingCart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -37,45 +29,33 @@ export const Header = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">G</span>
-          </div>
+          <img
+            src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=32&h=32&fit=crop&crop=center"
+            alt="GearUp Logo"
+            className="w-8 h-8 rounded-lg"
+          />
           <span className="font-bold text-xl">GearUp</span>
         </Link>
-
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-6">
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link 
-                    to="/browse" 
-                    className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
-                  >
-                    Echipamente
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link 
-                    to="/add-gear" 
-                    className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
-                  >
-                    Adaugă echipament
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
-        </div>
 
         {/* Right side - Auth/User Menu */}
         <div className="flex items-center space-x-4">
           {user ? (
             <>
               <NotificationDropdown />
+              
+              {/* Cart Button */}
+              <Button variant="ghost" size="icon">
+                <ShoppingCart className="h-5 w-5" />
+              </Button>
+              
+              {/* Messages Button */}
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/messages">
+                  <MessageCircle className="h-5 w-5" />
+                </Link>
+              </Button>
+              
+              {/* Profile Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -105,12 +85,6 @@ export const Header = () => {
                       <span>Profilul meu</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/messages" className="cursor-pointer">
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      <span>Mesaje</span>
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -135,20 +109,6 @@ export const Header = () => {
             <SheetContent side="right">
               {/* Mobile menu content */}
               <nav className="flex flex-col space-y-4">
-                <Link 
-                  to="/browse" 
-                  className="text-lg font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Echipamente
-                </Link>
-                <Link 
-                  to="/add-gear" 
-                  className="text-lg font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Adaugă echipament
-                </Link>
                 {!user && (
                   <Button 
                     onClick={() => {
