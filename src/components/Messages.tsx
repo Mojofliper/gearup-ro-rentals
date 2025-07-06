@@ -8,6 +8,8 @@ import { Send, MessageSquare, ArrowLeft } from 'lucide-react';
 import { sanitizeHtml, sanitizeText } from '@/utils/htmlSanitizer';
 import { toast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
   id: string;
@@ -41,6 +43,8 @@ export const Messages: React.FC = () => {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [unreadConversations, setUnreadConversations] = useState<{[bookingId: string]: boolean}>({});
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -264,112 +268,228 @@ export const Messages: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Bookings list */}
-          <Card className="h-[600px] flex flex-col">
-            <CardHeader>
-              <CardTitle>Rezervările tale</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col h-full p-0">
-              <div className="flex-1 overflow-y-auto space-y-2 px-4 py-4">
-                {bookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className={`relative p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedBooking === booking.id
-                        ? 'bg-purple-100 border-purple-300'
-                        : 'bg-gray-50 hover:bg-gray-100'
-                    }`}
-                    onClick={() => setSelectedBooking(booking.id)}
-                  >
-                    <p className="font-medium text-sm">{sanitizeText(booking.gear?.name || 'Echipament')}</p>
-                    <p className="text-xs text-gray-600">
-                      {new Date(booking.start_date).toLocaleDateString()} - 
-                      {new Date(booking.end_date).toLocaleDateString()}
-                    </p>
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                      booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                      booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {booking.status}
-                    </span>
-                    {unreadConversations[booking.id] && (
-                      <span className="absolute top-2 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white" title="Mesaj nou"></span>
-                    )}
+        isMobile ? (
+          <>
+            <div className="mb-4">
+              <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full" onClick={() => setDrawerOpen(true)}>
+                    Conversațiile tale
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="max-w-xs w-full p-0">
+                  <SheetHeader>
+                    <SheetTitle>Conversațiile tale</SheetTitle>
+                  </SheetHeader>
+                  <div className="overflow-y-auto h-full">
+                    {bookings.map((booking) => (
+                      <div
+                        key={booking.id}
+                        className={`relative p-3 border-b cursor-pointer transition-colors ${
+                          selectedBooking === booking.id
+                            ? 'bg-purple-100 border-purple-300'
+                            : 'hover:bg-gray-100'
+                        }`}
+                        onClick={() => {
+                          setSelectedBooking(booking.id);
+                          setDrawerOpen(false);
+                        }}
+                      >
+                        <p className="font-medium text-sm">{sanitizeText(booking.gear?.name || 'Echipament')}</p>
+                        <p className="text-xs text-gray-600">
+                          {new Date(booking.start_date).toLocaleDateString()} - 
+                          {new Date(booking.end_date).toLocaleDateString()}
+                        </p>
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                          booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {booking.status}
+                        </span>
+                        {unreadConversations[booking.id] && (
+                          <span className="absolute top-2 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white" title="Mesaj nou"></span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Messages */}
-          <div className="lg:col-span-2">
-            {selectedBooking ? (
-              <Card className="h-[600px] flex flex-col">
-                <CardHeader>
-                  <CardTitle>Conversație</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col h-full p-0">
-                  <div className="flex-1 overflow-y-auto space-y-3 px-6 py-4">
-                    {messages.length === 0 ? (
-                      <p className="text-gray-500 text-center">Nu există mesaje încă.</p>
-                    ) : (
-                      messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${
-                            message.sender_id === user?.id ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
+                </SheetContent>
+              </Sheet>
+            </div>
+            {/* Conversația selectată */}
+            <div>
+              {selectedBooking ? (
+                <Card className="flex flex-col">
+                  <CardHeader>
+                    <CardTitle>Conversație</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col p-0">
+                    <div className="flex-1 overflow-y-auto space-y-3 px-4 py-4">
+                      {messages.length === 0 ? (
+                        <p className="text-gray-500 text-center">Nu există mesaje încă.</p>
+                      ) : (
+                        messages.map((message) => (
                           <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                              message.sender_id === user?.id
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-gray-200 text-gray-800'
+                            key={message.id}
+                            className={`flex ${
+                              message.sender_id === user?.id ? 'justify-end' : 'justify-start'
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap break-words">
-                              {sanitizeText(message.content)}
-                            </p>
-                            <p className="text-xs opacity-75 mt-1">
-                              {new Date(message.created_at).toLocaleString()}
-                            </p>
+                            <div
+                              className={`max-w-xs px-4 py-2 rounded-lg ${
+                                message.sender_id === user?.id
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-gray-200 text-gray-800'
+                              }`}
+                            >
+                              <p className="text-sm whitespace-pre-wrap break-words">
+                                {sanitizeText(message.content)}
+                              </p>
+                              <p className="text-xs opacity-75 mt-1">
+                                {new Date(message.created_at).toLocaleString()}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                  <div className="flex space-x-2 px-6 pb-6 pt-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Scrie un mesaj..."
-                      maxLength={1000}
-                      disabled={sending}
-                    />
-                    <Button 
-                      onClick={sendMessage}
-                      disabled={!newMessage.trim() || sending}
-                      size="sm"
+                        ))
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+                    <div className="flex space-x-2 px-4 pb-4 pt-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Scrie un mesaj..."
+                        maxLength={1000}
+                        disabled={sending}
+                      />
+                      <Button 
+                        onClick={sendMessage}
+                        disabled={!newMessage.trim() || sending}
+                        size="sm"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="flex items-center justify-center">
+                  <CardContent className="text-center">
+                    <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Selectează o rezervare pentru a vedea mesajele.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Bookings list */}
+            <Card className="h-[600px] flex flex-col">
+              <CardHeader>
+                <CardTitle>Rezervările tale</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col h-full p-0">
+                <div className="flex-1 overflow-y-auto space-y-2 px-4 py-4">
+                  {bookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className={`relative p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedBooking === booking.id
+                          ? 'bg-purple-100 border-purple-300'
+                          : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                      onClick={() => setSelectedBooking(booking.id)}
                     >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="h-[600px] flex items-center justify-center">
-                <CardContent className="text-center">
-                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Selectează o rezervare pentru a vedea mesajele.</p>
-                </CardContent>
-              </Card>
-            )}
+                      <p className="font-medium text-sm">{sanitizeText(booking.gear?.name || 'Echipament')}</p>
+                      <p className="text-xs text-gray-600">
+                        {new Date(booking.start_date).toLocaleDateString()} - 
+                        {new Date(booking.end_date).toLocaleDateString()}
+                      </p>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                        booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {booking.status}
+                      </span>
+                      {unreadConversations[booking.id] && (
+                        <span className="absolute top-2 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white" title="Mesaj nou"></span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            {/* Messages */}
+            <div className="lg:col-span-2">
+              {selectedBooking ? (
+                <Card className="h-[600px] flex flex-col">
+                  <CardHeader>
+                    <CardTitle>Conversație</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col h-full p-0">
+                    <div className="flex-1 overflow-y-auto space-y-3 px-6 py-4">
+                      {messages.length === 0 ? (
+                        <p className="text-gray-500 text-center">Nu există mesaje încă.</p>
+                      ) : (
+                        messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${
+                              message.sender_id === user?.id ? 'justify-end' : 'justify-start'
+                            }`}
+                          >
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                message.sender_id === user?.id
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-gray-200 text-gray-800'
+                              }`}
+                            >
+                              <p className="text-sm whitespace-pre-wrap break-words">
+                                {sanitizeText(message.content)}
+                              </p>
+                              <p className="text-xs opacity-75 mt-1">
+                                {new Date(message.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+                    <div className="flex space-x-2 px-6 pb-6 pt-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Scrie un mesaj..."
+                        maxLength={1000}
+                        disabled={sending}
+                      />
+                      <Button 
+                        onClick={sendMessage}
+                        disabled={!newMessage.trim() || sending}
+                        size="sm"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="h-[600px] flex items-center justify-center">
+                  <CardContent className="text-center">
+                    <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Selectează o rezervare pentru a vedea mesajele.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
-        </div>
+        )
       )}
     </div>
   );
