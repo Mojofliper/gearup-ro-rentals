@@ -16,13 +16,14 @@ import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
 import { useSecureGear } from '@/hooks/useSecureGear';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConfirmationSystem } from '@/components/ConfirmationSystem';
 import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, CreditCard, Trash2 } from 'lucide-react';
 import { PaymentModal } from '@/components/PaymentModal';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { PaymentService } from '@/services/paymentService';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
@@ -49,6 +50,23 @@ export const Profile: React.FC = () => {
   const [paymentTransaction, setPaymentTransaction] = useState<any>(null);
   const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
   const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
+
+  // Query to check if user has already reviewed a booking
+  const { data: bookingReviews = [] } = useQuery({
+    queryKey: ['booking-reviews', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('booking_id')
+        .eq('reviewer_id', user.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
 
   // Sync local state with profile data
   useEffect(() => {
@@ -174,6 +192,11 @@ export const Profile: React.FC = () => {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  // Check if user has already reviewed a specific booking
+  const hasReviewedBooking = (bookingId: string) => {
+    return bookingReviews.some(review => review.booking_id === bookingId);
   };
 
   // Get the full avatar URL - use profile.avatar_url as the source of truth
@@ -384,7 +407,7 @@ export const Profile: React.FC = () => {
                               </Button>
                             </>
                           )}
-                          {booking.status === 'completed' && !booking.reviews?.length && (
+                          {booking.status === 'completed' && !hasReviewedBooking(booking.id) && (
                             <Button
                               size="sm"
                               variant="outline"
