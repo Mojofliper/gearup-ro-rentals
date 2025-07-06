@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
@@ -21,7 +22,10 @@ export const useCreateBooking = () => {
         `)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Create booking error:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -36,6 +40,8 @@ export const useUpdateBooking = () => {
   
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: BookingUpdate }) => {
+      console.log('Updating booking:', id, 'with updates:', updates);
+      
       const { data, error } = await supabase
         .from('bookings')
         .update(updates)
@@ -48,12 +54,23 @@ export const useUpdateBooking = () => {
         `)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Update booking error:', error);
+        throw error;
+      }
+      
+      console.log('Booking updated successfully:', data);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Booking update success, invalidating queries');
+      // Invalidate all related queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['owner-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['booking', data.id] });
+    },
+    onError: (error) => {
+      console.error('Booking update failed:', error);
     },
   });
 };
@@ -72,6 +89,8 @@ export const useOwnerBookings = () => {
     queryFn: async () => {
       if (!userData) return [];
       
+      console.log('Fetching owner bookings for user:', userData.id);
+      
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -82,9 +101,15 @@ export const useOwnerBookings = () => {
         .eq('owner_id', userData.id)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching owner bookings:', error);
+        throw error;
+      }
+      
+      console.log('Owner bookings fetched:', data);
       return data || [];
     },
     enabled: !!userData,
+    refetchOnWindowFocus: true,
   });
 };

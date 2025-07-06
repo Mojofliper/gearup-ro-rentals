@@ -40,7 +40,7 @@ export const Profile: React.FC = () => {
   const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews();
   const { data: stats, isLoading: statsLoading } = useUserStats();
   const { data: ownerBookings = [], isLoading: ownerBookingsLoading } = useOwnerBookings();
-  const { mutate: updateBooking } = useUpdateBooking();
+  const { mutate: updateBooking, isPending: isUpdatingBooking } = useUpdateBooking();
   const { deleteGear, loading: deleteLoading } = useSecureGear();
   
   const [editingGear, setEditingGear] = useState<any>(null);
@@ -100,11 +100,14 @@ export const Profile: React.FC = () => {
   };
 
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
+    console.log('Handling booking action:', bookingId, status);
+    
     updateBooking({
       id: bookingId,
       updates: { status }
     }, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Booking action success:', data);
         toast({
           title: status === 'confirmed' ? 'Rezervare acceptată!' : 'Rezervare respinsă',
           description: status === 'confirmed' 
@@ -113,12 +116,12 @@ export const Profile: React.FC = () => {
         });
       },
       onError: (error: any) => {
+        console.error('Booking action error:', error);
         toast({
           title: 'Eroare',
-          description: 'Nu s-a putut actualiza starea rezervării.',
+          description: 'Nu s-a putut actualiza starea rezervării. Te rugăm să încerci din nou.',
           variant: 'destructive',
         });
-        console.error('Booking update error:', error);
       }
     });
   };
@@ -189,6 +192,8 @@ export const Profile: React.FC = () => {
         return <Badge variant="outline">În așteptare</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Anulat</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Respins</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -557,14 +562,16 @@ export const Profile: React.FC = () => {
                             <Button
                               size="sm"
                               onClick={() => handleBookingAction(booking.id, 'confirmed')}
+                              disabled={isUpdatingBooking}
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
-                              Acceptă
+                              {isUpdatingBooking ? 'Se procesează...' : 'Acceptă'}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleBookingAction(booking.id, 'rejected')}
+                              disabled={isUpdatingBooking}
                             >
                               <AlertCircle className="h-4 w-4 mr-1" />
                               Respinge
