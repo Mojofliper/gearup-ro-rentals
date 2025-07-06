@@ -379,7 +379,7 @@ export const GearDetail: React.FC = () => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Membru din 2024
+                        Membru din 2025
                       </p>
                     </div>
                   </div>
