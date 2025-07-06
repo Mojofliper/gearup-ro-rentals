@@ -25,22 +25,19 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
   const { data: categories = [] } = useCategories();
 
   const [formData, setFormData] = useState({
-    name: gear?.name || '',
+    title: gear?.title || '',
     description: gear?.description || '',
-    brand: gear?.brand || '',
-    model: gear?.model || '',
     category_id: gear?.category_id || '',
-    price_per_day: gear?.price_per_day ? (gear.price_per_day / 100).toString() : '',
-    deposit_amount: gear?.deposit_amount ? (gear.deposit_amount / 100).toString() : '',
-    condition: gear?.condition || '',
-    pickup_location: gear?.pickup_location || '',
-    is_available: gear?.is_available ?? true
+    daily_rate: gear?.daily_rate || 0,
+    deposit_amount: gear?.deposit_amount || 0,
+    location: gear?.location || '',
+    status: gear?.status || 'available'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.price_per_day) {
+    if (!formData.title || !formData.daily_rate) {
       toast({
         title: 'Câmpuri obligatorii',
         description: 'Te rugăm să completezi numele și prețul pe zi.',
@@ -51,8 +48,8 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
 
     const updates = {
       ...formData,
-      price_per_day: Math.round(parseFloat(formData.price_per_day) * 100),
-      deposit_amount: formData.deposit_amount ? Math.round(parseFloat(formData.deposit_amount) * 100) : 0,
+      daily_rate: Math.round(formData.daily_rate),
+      deposit_amount: Math.round(formData.deposit_amount),
     };
 
     updateGear({
@@ -92,11 +89,11 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">Nume echipament *</Label>
+              <Label htmlFor="title">Nume echipament *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
                 placeholder="ex. Sony A7 III"
               />
             </div>
@@ -119,21 +116,12 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="brand">Marcă</Label>
+              <Label htmlFor="location">Locație</Label>
               <Input
-                id="brand"
-                value={formData.brand}
-                onChange={(e) => handleInputChange('brand', e.target.value)}
-                placeholder="ex. Sony"
-              />
-            </div>
-            <div>
-              <Label htmlFor="model">Model</Label>
-              <Input
-                id="model"
-                value={formData.model}
-                onChange={(e) => handleInputChange('model', e.target.value)}
-                placeholder="ex. A7 III"
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="ex. București, Piața Unirii"
               />
             </div>
           </div>
@@ -152,14 +140,14 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
           {/* Pricing */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="price_per_day">Preț pe zi (RON) *</Label>
+              <Label htmlFor="daily_rate">Preț pe zi (RON) *</Label>
               <Input
-                id="price_per_day"
+                id="daily_rate"
                 type="number"
                 step="0.01"
                 min="0"
-                value={formData.price_per_day}
-                onChange={(e) => handleInputChange('price_per_day', e.target.value)}
+                value={formData.daily_rate}
+                onChange={(e) => handleInputChange('daily_rate', e.target.value)}
                 placeholder="ex. 50"
               />
             </div>
@@ -177,42 +165,14 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
             </div>
           </div>
 
-          {/* Condition & Location */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="condition">Stare</Label>
-              <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selectează starea" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">Nou</SelectItem>
-                  <SelectItem value="excellent">Excelent</SelectItem>
-                  <SelectItem value="very-good">Foarte bună</SelectItem>
-                  <SelectItem value="good">Bună</SelectItem>
-                  <SelectItem value="fair">Acceptabilă</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="pickup_location">Locația de preluare</Label>
-              <Input
-                id="pickup_location"
-                value={formData.pickup_location}
-                onChange={(e) => handleInputChange('pickup_location', e.target.value)}
-                placeholder="ex. Centrul orașului"
-              />
-            </div>
-          </div>
-
           {/* Availability */}
           <div className="flex items-center space-x-2">
             <Switch
-              id="is_available"
-              checked={formData.is_available}
-              onCheckedChange={(checked) => handleInputChange('is_available', checked)}
+              id="status"
+              checked={formData.status === 'available'}
+              onCheckedChange={(checked) => handleInputChange('status', checked ? 'available' : 'inactive')}
             />
-            <Label htmlFor="is_available">Disponibil pentru închiriere</Label>
+            <Label htmlFor="status">Disponibil pentru închiriere</Label>
           </div>
         </form>
 

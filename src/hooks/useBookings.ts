@@ -1,90 +1,111 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBookingApi } from './useApi';
+import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
 
+type Booking = Database['public']['Tables']['bookings']['Row'];
 type BookingInsert = Database['public']['Tables']['bookings']['Insert'];
-type BookingUpdate = Database['public']['Tables']['bookings']['Update'];
+
+export const useUserBookings = () => {
+  const { user } = useAuth();
+  const { getUserBookings, loading, error } = useBookingApi();
+  
+  return useQuery({
+    queryKey: ['bookings', 'user', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      return await getUserBookings(user.id);
+    },
+    enabled: !!user?.id,
+  });
+};
 
 export const useCreateBooking = () => {
   const queryClient = useQueryClient();
+  const { createBooking, loading, error } = useBookingApi();
   
   return useMutation({
-    mutationFn: async (booking: BookingInsert) => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert(booking)
-        .select(`
-          *,
-          gear:gear(*),
-          owner:profiles!bookings_owner_id_fkey(*),
-          renter:profiles!bookings_renter_id_fkey(*)
-        `)
-        .single();
-      
-      if (error) throw error;
-      return data;
+    mutationFn: async (bookingData: {
+      gear_id: string;
+      start_date: string;
+      end_date: string;
+      pickup_location?: string;
+      renter_notes?: string;
+    }) => {
+      return await createBooking(bookingData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['gear'] });
     },
+  });
+};
+
+export const useAcceptBooking = () => {
+  const queryClient = useQueryClient();
+  const { acceptBooking, loading, error } = useBookingApi();
+  
+  return useMutation({
+    mutationFn: async ({ bookingId, pickupLocation }: { bookingId: string; pickupLocation: string }) => {
+      return await acceptBooking(bookingId, pickupLocation);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+};
+
+export const useConfirmReturn = () => {
+  const queryClient = useQueryClient();
+  const { confirmReturn, loading, error } = useBookingApi();
+  
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      return await confirmReturn(bookingId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+};
+
+export const useCompleteReturn = () => {
+  const queryClient = useQueryClient();
+  const { completeReturn, loading, error } = useBookingApi();
+  
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      return await completeReturn(bookingId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+};
+
+export const useRentalDashboard = (bookingId: string) => {
+  const { getRentalDashboard, loading, error } = useBookingApi();
+  
+  return useQuery({
+    queryKey: ['rental-dashboard', bookingId],
+    queryFn: async () => {
+      if (!bookingId) return null;
+      return await getRentalDashboard(bookingId);
+    },
+    enabled: !!bookingId,
   });
 };
 
 export const useUpdateBooking = () => {
   const queryClient = useQueryClient();
-  
+  const { updateBooking, loading, error } = useBookingApi();
+
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: BookingUpdate }) => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .update(updates)
-        .eq('id', id)
-        .select(`
-          *,
-          gear:gear(*),
-          owner:profiles!bookings_owner_id_fkey(*),
-          renter:profiles!bookings_renter_id_fkey(*)
-        `)
-        .single();
-      
-      if (error) throw error;
-      return data;
+    mutationFn: async ({ bookingId, updates }: { bookingId: string; updates: any }) => {
+      return await updateBooking(bookingId, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },
-  });
-};
-
-export const useOwnerBookings = () => {
-  const { data: userData } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
-  
-  return useQuery({
-    queryKey: ['owner-bookings', userData?.id],
-    queryFn: async () => {
-      if (!userData) return [];
-      
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          gear:gear(*),
-          renter:profiles!bookings_renter_id_fkey(*)
-        `)
-        .eq('owner_id', userData.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!userData,
   });
 };

@@ -36,6 +36,15 @@ serve(async (req) => {
       case 'charge.refunded':
         await handleChargeRefunded(event.data.object, supabaseClient)
         break
+      case 'account.updated':
+        await handleAccountUpdated(event.data.object, supabaseClient)
+        break
+      case 'transfer.created':
+        await handleTransferCreated(event.data.object, supabaseClient)
+        break
+      case 'transfer.failed':
+        await handleTransferFailed(event.data.object, supabaseClient)
+        break
       default:
         console.log(`Unhandled event type ${event.type}`)
     }
@@ -155,5 +164,96 @@ async function handleChargeRefunded(charge: any, supabaseClient: any) {
 
   } catch (error) {
     console.error('Error handling charge refund:', error)
+  }
+}
+
+async function handleAccountUpdated(account: any, supabaseClient: any) {
+  console.log('Account updated:', account.id)
+
+  try {
+    // Update connected account status
+    await supabaseClient
+      .from('connected_accounts')
+      .update({
+        account_status: account.charges_enabled ? 'active' : 'pending',
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_account_id', account.id)
+
+  } catch (error) {
+    console.error('Error handling account update:', error)
+  }
+}
+
+async function handleTransferCreated(transfer: any, supabaseClient: any) {
+  console.log('Transfer created:', transfer.id)
+
+  try {
+    // Update escrow transaction status
+    await supabaseClient
+      .from('escrow_transactions')
+      .update({
+        escrow_status: 'released',
+        transfer_id: transfer.id,
+        release_date: new Date().toISOString(),
+      })
+      .eq('stripe_payment_intent_id', transfer.source_transaction)
+
+    // Update booking status
+    const { data: escrowTransaction } = await supabaseClient
+      .from('escrow_transactions')
+      .select('booking_id')
+      .eq('stripe_payment_intent_id', transfer.source_transaction)
+      .single()
+
+    if (escrowTransaction) {
+      await supabaseClient
+        .from('bookings')
+        .update({ 
+          payment_status: 'completed',
+          escrow_status: 'released'
+        })
+        .eq('id', escrowTransaction.booking_id)
+    }
+
+  } catch (error) {
+    console.error('Error handling transfer created:', error)
+  }
+}
+
+async function handleTransferFailed(transfer: any, supabaseClient: any) {
+  console.log('Transfer failed:', transfer.id)
+
+  try {
+    // Update escrow transaction status
+    await supabaseClient
+      .from('escrow_transactions')
+      .update({
+        escrow_status: 'transfer_failed',
+        transfer_failure_reason: transfer.failure_message,
+      })
+      .eq('stripe_payment_intent_id', transfer.source_transaction)
+
+    // Update booking status
+    const { data: escrowTransaction } = await supabaseClient
+      .from('escrow_transactions')
+      .select('booking_id')
+      .eq('stripe_payment_intent_id', transfer.source_transaction)
+      .single()
+
+    if (escrowTransaction) {
+      await supabaseClient
+        .from('bookings')
+        .update({ 
+          payment_status: 'transfer_failed',
+          escrow_status: 'transfer_failed'
+        })
+        .eq('id', escrowTransaction.booking_id)
+    }
+
+  } catch (error) {
+    console.error('Error handling transfer failed:', error)
   }
 } 

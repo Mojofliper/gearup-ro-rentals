@@ -37,11 +37,14 @@ const HomePage = () => {
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   
+  console.log('AppRoutes: Rendering with state:', { user: !!user, loading, userId: user?.id });
+  
   if (loading) {
+    console.log('AppRoutes: Showing loading screen');
     return <LoadingScreen />;
   }
   
-  console.log('AppRoutes rendered');
+  console.log('AppRoutes: Loading complete, rendering routes');
   
   return (
     <Routes>
@@ -58,20 +61,23 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <AppRoutes />
-            <Toaster />
-            <Sonner />
-          </BrowserRouter>
-        </AuthProvider>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  console.log('App: Rendering main App component');
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <AppRoutes />
+              <Toaster />
+              <Sonner />
+            </BrowserRouter>
+          </AuthProvider>
+        </ThemeProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

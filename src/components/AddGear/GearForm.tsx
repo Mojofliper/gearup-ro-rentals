@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -134,22 +133,30 @@ export const GearForm: React.FC = () => {
     try {
       const gearData = {
         owner_id: user.id,
-        name: sanitizeInput(formData.name),
+        title: sanitizeInput(formData.name),
         description: formData.description ? sanitizeInput(formData.description) : null,
         category_id: formData.categoryId || null,
-        brand: formData.brand ? sanitizeInput(formData.brand) : null,
-        model: formData.model ? sanitizeInput(formData.model) : null,
-        condition: formData.condition,
-        price_per_day: Math.round(parseFloat(formData.pricePerDay) * 100),
-        deposit_amount: formData.depositAmount ? Math.round(parseFloat(formData.depositAmount) * 100) : 0,
-        pickup_location: formData.pickupLocation ? sanitizeInput(formData.pickupLocation) : null,
-        specifications: formData.specifications.map(spec => sanitizeInput(spec)),
-        included_items: formData.includedItems.map(item => sanitizeInput(item)),
-        images: images,
-        is_available: true,
+        daily_rate: parseFloat(formData.pricePerDay),
+        deposit_amount: formData.depositAmount ? parseFloat(formData.depositAmount) : 0,
+        location: formData.pickupLocation ? sanitizeInput(formData.pickupLocation) : 'Romania',
+        status: 'available' as const,
       };
 
+      // 1. Create the gear item
       const result = await createGear.mutateAsync(gearData);
+
+      // 2. Upload images to gear_photos table
+      // Assume images are base64 data URLs, convert and upload
+      // Use the API service method uploadGearPhotos
+      if (images.length > 0 && result.id) {
+        const photos = images.map((img, idx) => ({
+          photo_url: img,
+          is_primary: idx === 0
+        }));
+        // Dynamically import the API service to avoid circular deps
+        const apiService = await import('@/services/apiService');
+        await apiService.api.gear.uploadGearPhotos(result.id, photos);
+      }
       
       toast({
         title: 'Echipament adăugat cu succes!',

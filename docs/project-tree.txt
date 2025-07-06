@@ -1,0 +1,198 @@
+tree -I node_modules
+.
+├── bun.lockb
+├── components.json
+├── docs
+│   ├── ADMIN_GUIDE.md
+│   ├── API_DOCUMENTATION.md
+│   ├── API_ENDPOINTS_COMPLETE.md
+│   ├── COMPLIANCE_GUIDE.md
+│   ├── CONFIRMATION_FLOW.md
+│   ├── DATABASE_REDESIGN_BENEFITS.md
+│   ├── DATABASE_SCHEMA.md
+│   ├── DEPLOYMENT_GUIDE.md
+│   ├── ENVIRONMENT_SETUP.md
+│   ├── ENV_TEMPLATE.md
+│   ├── FAQ.md
+│   ├── IMPLEMENTATION_ROADMAP.md
+│   ├── IMPLEMENTATION_STATUS.md
+│   ├── PAYMENT_ARCHITECTURE.md
+│   ├── PERFORMANCE_GUIDE.md
+│   ├── PLATFORM_FLOW.md
+│   ├── project-tree.txt
+│   ├── SECURITY_GUIDE.md
+│   ├── STRIPE_SETUP.md
+│   ├── TECHNICAL_ARCHITECTURE.md
+│   ├── TESTING_GUIDE.md
+│   ├── TROUBLESHOOTING.md
+│   └── USER_GUIDE.md
+├── eslint.config.js
+├── index.html
+├── package.json
+├── package-lock.json
+├── postcss.config.js
+├── public
+│   ├── favicon.ico
+│   ├── lovable-uploads
+│   │   └── 81ffbf32-0e06-4641-b110-f9aec3ae32c7.png
+│   ├── placeholder.svg
+│   └── robots.txt
+├── README.md
+├── src
+│   ├── App.css
+│   ├── App.tsx
+│   ├── components
+│   │   ├── AddGear
+│   │   │   ├── AddGearHeader.tsx
+│   │   │   ├── BasicInfo.tsx
+│   │   │   ├── GearForm.tsx
+│   │   │   └── PhotoUpload.tsx
+│   │   ├── AddGearHeader.tsx
+│   │   ├── AddGear.tsx
+│   │   ├── AuthGuard.tsx
+│   │   ├── AuthModal.tsx
+│   │   ├── AvatarUpload.tsx
+│   │   ├── BookingModal.tsx
+│   │   ├── BrowseGear
+│   │   │   ├── GearCard.tsx
+│   │   │   └── SearchFilters.tsx
+│   │   ├── BrowseGear.tsx
+│   │   ├── Cart.tsx
+│   │   ├── Checkout.tsx
+│   │   ├── ConfirmationSystem.tsx
+│   │   ├── ConversationModal.tsx
+│   │   ├── EditGearModal.tsx
+│   │   ├── FeaturedGear.tsx
+│   │   ├── Footer.tsx
+│   │   ├── GearDetail.tsx
+│   │   ├── Header.tsx
+│   │   ├── Hero.tsx
+│   │   ├── HowItWorks.tsx
+│   │   ├── LoadingScreen.tsx
+│   │   ├── LocationDetector.tsx
+│   │   ├── Messages.tsx
+│   │   ├── PaymentModal.tsx
+│   │   ├── Profile.tsx
+│   │   ├── RentOfferToggle.tsx
+│   │   ├── ReviewModal.tsx
+│   │   ├── SecureForm.tsx
+│   │   └── ui
+│   │       ├── accordion.tsx
+│   │       ├── alert-dialog.tsx
+│   │       ├── alert.tsx
+│   │       ├── aspect-ratio.tsx
+│   │       ├── avatar.tsx
+│   │       ├── badge.tsx
+│   │       ├── breadcrumb.tsx
+│   │       ├── button.tsx
+│   │       ├── calendar.tsx
+│   │       ├── card.tsx
+│   │       ├── carousel.tsx
+│   │       ├── chart.tsx
+│   │       ├── checkbox.tsx
+│   │       ├── collapsible.tsx
+│   │       ├── command.tsx
+│   │       ├── context-menu.tsx
+│   │       ├── dialog.tsx
+│   │       ├── drawer.tsx
+│   │       ├── dropdown-menu.tsx
+│   │       ├── form.tsx
+│   │       ├── hover-card.tsx
+│   │       ├── input-otp.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── menubar.tsx
+│   │       ├── navigation-menu.tsx
+│   │       ├── pagination.tsx
+│   │       ├── popover.tsx
+│   │       ├── progress.tsx
+│   │       ├── radio-group.tsx
+│   │       ├── resizable.tsx
+│   │       ├── scroll-area.tsx
+│   │       ├── select.tsx
+│   │       ├── separator.tsx
+│   │       ├── sheet.tsx
+│   │       ├── sidebar.tsx
+│   │       ├── skeleton.tsx
+│   │       ├── slider.tsx
+│   │       ├── sonner.tsx
+│   │       ├── switch.tsx
+│   │       ├── table.tsx
+│   │       ├── tabs.tsx
+│   │       ├── textarea.tsx
+│   │       ├── toaster.tsx
+│   │       ├── toast.tsx
+│   │       ├── toggle-group.tsx
+│   │       ├── toggle.tsx
+│   │       ├── tooltip.tsx
+│   │       └── use-toast.ts
+│   ├── contexts
+│   │   ├── AuthContext.tsx
+│   │   └── ThemeContext.tsx
+│   ├── hooks
+│   │   ├── useBookings.ts
+│   │   ├── useCategories.ts
+│   │   ├── useGear.ts
+│   │   ├── use-mobile.tsx
+│   │   ├── usePayments.ts
+│   │   ├── useRateLimit.ts
+│   │   ├── useReviews.ts
+│   │   ├── useSecureAuth.ts
+│   │   ├── useSecureGear.ts
+│   │   ├── useSecureValidation.ts
+│   │   ├── use-toast.ts
+│   │   └── useUserData.ts
+│   ├── index.css
+│   ├── integrations
+│   │   ├── stripe
+│   │   │   └── client.ts
+│   │   └── supabase
+│   │       ├── client.ts
+│   │       └── types.ts
+│   ├── lib
+│   │   └── utils.ts
+│   ├── main.tsx
+│   ├── pages
+│   │   ├── Index.tsx
+│   │   ├── NotFound.tsx
+│   │   ├── PaymentCancel.tsx
+│   │   └── PaymentSuccess.tsx
+│   ├── services
+│   │   └── paymentService.ts
+│   ├── test-env.tsx
+│   ├── utils
+│   │   ├── htmlSanitizer.ts
+│   │   ├── secureApi.ts
+│   │   ├── securityMonitor.ts
+│   │   ├── security.ts
+│   │   └── validation.ts
+│   └── vite-env.d.ts
+├── supabase
+│   ├── config.toml
+│   ├── functions
+│   │   ├── stripe-create-payment-intent
+│   │   │   └── index.ts
+│   │   ├── stripe-refund
+│   │   │   └── index.ts
+│   │   └── stripe-webhook
+│   │       └── index.ts
+│   ├── migrations
+│   │   └── 20250101000000_complete_schema_redesign.sql
+│   └── migrations_backup
+│       ├── 20250630180634_b10af023_cd39_41c8_a41c_9285a575b338.sql
+│       ├── 20250630180634_initial_schema.sql
+│       ├── 20250630182310_566b5bdf_f3eb_485c_9791_009806971e6d.sql
+│       ├── 20250630182310_second_migration.sql
+│       ├── 20250703152719_abc0abb1_a8ae_4732_9c57_8794c9af62f6.sql
+│       ├── 20250703152719_third_migration.sql
+│       ├── 20250703152720_stripe_payments.sql
+│       ├── 20250705193200_add_claims_and_photos.sql
+│       ├── 20250705194153_remote_schema.sql
+│       └── 20250705195000_fix_transaction_validation.sql
+├── tailwind.config.ts
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
+
+25 directories, 170 files

@@ -3,23 +3,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CreditCard, Shield, CheckCircle, XCircle } from 'lucide-react';
-import { useCreatePaymentIntent, useConfirmPayment } from '@/hooks/usePayments';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, CreditCard, Shield, CheckCircle, XCircle, Lock, AlertTriangle, Info } from 'lucide-react';
+import { useEscrowPayments } from '@/hooks/useEscrowPayments';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { 
   getStripe, 
   formatAmountForDisplay, 
   calculatePlatformFee,
   StripeError 
 } from '@/integrations/stripe/client';
-import { PaymentService } from '@/services/paymentService';
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: any;
-  transaction?: any;
   onPaymentSuccess?: () => void;
 }
 
@@ -27,31 +26,39 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,
   booking,
-  transaction,
   onPaymentSuccess
 }) => {
   const { user } = useAuth();
-  const { mutate: createPaymentIntent, isPending: isCreatingIntent } = useCreatePaymentIntent();
-  const { mutate: confirmPayment, isPending: isConfirming } = useConfirmPayment();
+  const {
+    loading,
+    connectedAccount,
+    escrowTransaction,
+    createEscrowPaymentIntent,
+    getConnectedAccountStatus,
+    getEscrowTransaction,
+    canReceivePayments,
+    needsOnboarding,
+    setupStripeConnect
+  } = useEscrowPayments();
   
   const [stripe, setStripe] = useState<any>(null);
-  const [elements, setElements] = useState<any>(null);
-  const [cardElement, setCardElement] = useState<any>(null);
-  const [clientSecret, setClientSecret] = useState<string>('');
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error' | 'escrow_pending'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showOwnerSetup, setShowOwnerSetup] = useState(false);
 
-  // Use transaction fields if available
-  const rentalAmount = (transaction?.rental_amount ?? booking.total_amount) || 0;
-  const depositAmount = (transaction?.deposit_amount ?? booking.deposit_amount) || 0;
-  const platformFee = transaction?.platform_fee ?? calculatePlatformFee(rentalAmount);
-  const totalAmount = transaction?.amount ?? (rentalAmount + depositAmount + platformFee);
+  // Calculate amounts
+  const rentalAmount = booking.total_amount || 0;
+  const depositAmount = booking.deposit_amount || 0;
+  const platformFee = calculatePlatformFee(rentalAmount);
+  const totalAmount = rentalAmount + depositAmount + platformFee;
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && booking) {
       initializeStripe();
+      checkOwnerPaymentSetup();
+      checkExistingEscrowTransaction();
     }
-  }, [isOpen]);
+  }, [isOpen, booking]);
 
   const initializeStripe = async () => {
     try {
@@ -66,75 +73,189 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
-  const handleCheckoutRedirect = async () => {
-    if (!user || !booking) return;
-    
-    // If no transaction is provided, we need to create one
-    let transactionToUse = transaction;
-    if (!transactionToUse) {
+  const checkOwnerPaymentSetup = async () => {
+    if (booking.owner_id && user?.id !== booking.owner_id) {
+      // Only check if user is not the owner (renters checking owner setup)
       try {
-        transactionToUse = await PaymentService.getOrCreateTransactionForBooking(booking);
-      } catch (error: any) {
-        console.error('Error creating transaction:', error);
-        setPaymentStatus('error');
-        setErrorMessage('Failed to create transaction');
-        return;
+        const account = await getConnectedAccountStatus();
+        if (account && !account.charges_enabled) {
+          setShowOwnerSetup(true);
+        }
+      } catch (error) {
+        console.error('Error checking owner payment setup:', error);
       }
     }
+  };
+
+  const checkExistingEscrowTransaction = async () => {
+    if (booking.id) {
+      try {
+        const transaction = await getEscrowTransaction(booking.id);
+        if (transaction) {
+          setPaymentStatus('escrow_pending');
+        }
+      } catch (error) {
+        console.error('Error checking escrow transaction:', error);
+      }
+    }
+  };
+
+  const handleOwnerSetup = async () => {
+    if (!user) {
+      toast.error('You must be logged in to setup payments');
+      return;
+    }
+
+    try {
+      await setupStripeConnect(user.email || '', 'RO');
+    } catch (error) {
+      console.error('Owner setup error:', error);
+      toast.error('Failed to setup payment account');
+    }
+  };
+
+  const handleEscrowPayment = async () => {
+    if (!user || !booking) return;
+
     setPaymentStatus('processing');
     setErrorMessage('');
-    createPaymentIntent({
-      bookingId: booking.id,
-      transactionId: transactionToUse?.id,
-      amount: totalAmount,
-      rentalAmount,
-      depositAmount,
-      platformFee,
-      metadata: {
-        gear_name: booking.gear?.name || 'Unknown Gear',
-        owner_name: booking.owner?.full_name || 'Unknown Owner',
-        renter_name: user.user_metadata?.full_name || 'Unknown Renter',
-      },
-    }, {
-      onSuccess: (data) => {
-        console.log('Payment intent created successfully:', data);
-        if (!data.url) {
-          console.error('No URL returned from payment intent creation');
-          setPaymentStatus('error');
-          setErrorMessage('No payment URL received from server');
-          return;
+
+    try {
+      const result = await createEscrowPaymentIntent(
+        booking.id,
+        rentalAmount,
+        depositAmount
+      );
+
+      if (result && result.clientSecret) {
+        // Use Stripe Elements for secure payment
+        const { error } = await stripe.confirmPayment({
+          elements: null, // We'll use redirect flow for simplicity
+          clientSecret: result.clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/payment-success?booking_id=${booking.id}`,
+          },
+        });
+
+        if (error) {
+          throw new Error(error.message);
         }
-        window.location.href = data.url;
-      },
-      onError: (error: any) => {
-        console.error('Payment intent creation failed:', error);
-        setPaymentStatus('error');
-        setErrorMessage(error.message || 'Failed to create checkout session');
+      } else {
+        throw new Error('Failed to create payment intent');
       }
-    });
+    } catch (error: any) {
+      console.error('Escrow payment error:', error);
+      setPaymentStatus('error');
+      setErrorMessage(error.message || 'Failed to process payment');
+      
+      if (error.message?.includes('Owner account not ready')) {
+        setShowOwnerSetup(true);
+      }
+    }
   };
 
   const handleClose = () => {
     if (paymentStatus === 'processing') return;
     
-    if (cardElement) {
-      cardElement.destroy();
-    }
     setPaymentStatus('idle');
     setErrorMessage('');
-    setClientSecret('');
-    setElements(null);
-    setCardElement(null);
+    setShowOwnerSetup(false);
     onClose();
   };
 
   if (!booking) return null;
 
+  // Show owner setup message if owner needs to complete payment setup
+  if (showOwnerSetup && user?.id === booking.owner_id) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configurare plăți</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Pentru a primi plăți pentru închirierea echipamentului, trebuie să vă configurați contul de plată.
+              </AlertDescription>
+            </Alert>
+
+            <div className="p-3 bg-muted rounded-lg">
+              <h3 className="font-semibold mb-2">Procesul de configurare:</h3>
+              <ul className="text-sm space-y-1">
+                <li>• Verificare identitate</li>
+                <li>• Configurare cont bancar</li>
+                <li>• Activare plăți</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={handleOwnerSetup} disabled={loading}>
+              {loading ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
+              Configurare cont plată
+            </Button>
+            <Button variant="outline" onClick={handleClose}>
+              Anulează
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show escrow pending status
+  if (paymentStatus === 'escrow_pending' && escrowTransaction) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Plată în escrow</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Alert className="border-blue-200 bg-blue-50">
+              <Shield className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                Plata este în escrow și va fi eliberată după finalizarea închirierii.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2 p-3 bg-muted rounded-lg">
+              <div className="flex justify-between text-sm">
+                <span>Status escrow:</span>
+                <Badge variant={escrowTransaction.escrow_status === 'held' ? 'default' : 'secondary'}>
+                  {escrowTransaction.escrow_status === 'held' ? 'Fonduri reținute' : 'În procesare'}
+                </Badge>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Suma totală:</span>
+                <span>{formatAmountForDisplay(escrowTransaction.rental_amount + escrowTransaction.deposit_amount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Taxă platformă:</span>
+                <span>{formatAmountForDisplay(escrowTransaction.platform_fee)}</span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={handleClose} className="w-full">
+              Închide
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Plată securizată</DialogTitle>
+          <DialogTitle>Plată securizată cu escrow</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -145,6 +266,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
             </p>
           </div>
+
+          {/* Escrow Information */}
+          <Alert className="border-green-200 bg-green-50">
+            <Lock className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              Plata este protejată prin sistemul de escrow. Fondurile vor fi eliberate automat după finalizarea închirierii.
+            </AlertDescription>
+          </Alert>
 
           {/* Payment Breakdown */}
           <div className="space-y-2 p-3 bg-muted rounded-lg">
@@ -169,12 +298,22 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
           </div>
 
+          {/* Owner Setup Warning */}
+          {showOwnerSetup && user?.id !== booking.owner_id && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Proprietarul echipamentului trebuie să își configureze contul de plată înainte de a putea procesa plata.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Payment Status */}
           {paymentStatus === 'success' && (
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
-                Plata a fost procesată cu succes!
+                Plata a fost procesată cu succes și este în escrow!
               </AlertDescription>
             </Alert>
           )}
@@ -192,14 +331,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <DialogFooter>
           {paymentStatus === 'idle' && (
             <>
-              <Button onClick={handleCheckoutRedirect} disabled={isCreatingIntent}>
-                {isCreatingIntent ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
-                Continuă la plată
+              <Button 
+                onClick={handleEscrowPayment} 
+                disabled={loading || showOwnerSetup}
+                className="flex-1"
+              >
+                {loading ? <Loader2 className="animate-spin mr-2" /> : <Shield className="mr-2" />}
+                Plătește cu escrow
               </Button>
               <Button 
                 variant="outline" 
                 onClick={handleClose}
-                disabled={isCreatingIntent}
+                disabled={loading}
               >
                 Anulează
               </Button>
@@ -215,7 +358,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <Button variant="outline" onClick={handleClose}>
                 Închide
               </Button>
-              <Button onClick={handleCheckoutRedirect}>
+              <Button onClick={handleEscrowPayment} disabled={loading}>
                 Încearcă din nou
               </Button>
             </>

@@ -21,52 +21,60 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (file: File) => {
+    if (!user) return;
+
     try {
       setUploading(true);
 
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('You must select an image to upload.');
-      }
-
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user?.id}/${Math.random()}.${fileExt}`;
-
       // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const { data, error } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(fileName, file);
 
-      if (uploadError) {
-        throw uploadError;
+      if (error) {
+        toast({
+          title: 'Eroare',
+          description: error.message || 'Nu s-a putut încărca avatarul',
+          variant: 'destructive',
+        });
+        throw error;
       }
 
       // Get public URL
-      const { data } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
-      // Update profile with new avatar URL
+      // Update user profile
       const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: filePath })
-        .eq('id', user?.id);
+        .from('users')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
 
       if (updateError) {
+        toast({
+          title: 'Eroare',
+          description: updateError.message || 'Nu s-a putut actualiza profilul',
+          variant: 'destructive',
+        });
         throw updateError;
       }
 
-      onAvatarUpdate(data.publicUrl);
+      // Update local state
+      onAvatarUpdate(publicUrl);
       toast({
-        title: 'Avatar actualizat',
-        description: 'Imaginea de profil a fost actualizată cu succes.',
+        title: 'Succes',
+        description: 'Avatar actualizat cu succes!',
+        variant: 'default',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast({
         title: 'Eroare',
-        description: 'Nu s-a putut actualiza imaginea de profil.',
+        description: 'Nu s-a putut încărca avatarul',
         variant: 'destructive',
       });
     } finally {
@@ -109,7 +117,11 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={uploadAvatar}
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              handleUpload(e.target.files[0]);
+            }
+          }}
           disabled={uploading}
         />
         <p className="text-xs text-gray-500">

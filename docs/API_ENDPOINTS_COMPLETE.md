@@ -4,6 +4,13 @@
 
 This document provides comprehensive API endpoints for the redesigned GearUp platform, supporting all planned features including escrow system, admin dashboard, photo documentation, and notifications.
 
+**✅ IMPLEMENTATION STATUS: COMPLETE**
+- All API endpoints are implemented in `src/services/apiService.ts`
+- React hooks available in `src/hooks/useApi.ts`
+- Full TypeScript support with proper error handling
+- Real-time subscriptions supported
+- Row Level Security (RLS) policies configured
+
 ---
 
 ## 🔐 Authentication
@@ -24,6 +31,37 @@ Content-Type: application/json
 #### Get Current User Profile
 ```http
 GET /profiles?id=eq.{user_id}&select=*
+```
+
+#### Update Profile (Popup)
+```http
+PATCH /profiles?id=eq.{user_id}
+Content-Type: application/json
+
+{
+  "full_name": "John Doe",
+  "avatar_url": "https://storage.example.com/avatars/user_123.jpg",
+  "phone": "+40123456789",
+  "location": "Bucharest",
+  "county": "București"
+}
+```
+
+### Dashboard Data
+
+#### Get Dashboard Overview
+```http
+GET /rpc/get_dashboard_overview?user_id={user_id}
+```
+
+#### Get My Equipment (Owner)
+```http
+GET /gear?owner_id=eq.{user_id}&select=*,bookings(status,renter_id,start_date,end_date),profiles!bookings!renter_id(full_name)&order=created_at.desc
+```
+
+#### Get My Bookings (Renter)
+```http
+GET /bookings?renter_id=eq.{user_id}&select=*,gear(name,gear_images),profiles!owner_id(full_name)&order=created_at.desc
 ```
 
 #### Update User Profile

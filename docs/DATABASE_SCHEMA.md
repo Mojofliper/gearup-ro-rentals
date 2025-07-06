@@ -35,11 +35,12 @@ auth.users {
 }
 ```
 
-#### `public.profiles`
+#### `public.users`
 ```sql
-CREATE TABLE public.profiles (
+CREATE TABLE public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name TEXT,
+  first_name TEXT,
+  last_name TEXT,
   avatar_url TEXT,
   location TEXT,
   phone TEXT,
@@ -86,8 +87,8 @@ CREATE TABLE public.categories (
 ```sql
 CREATE TABLE public.gear (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
+  owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
   description TEXT,
   category_id UUID REFERENCES public.categories(id),
   brand TEXT,
@@ -98,7 +99,7 @@ CREATE TABLE public.gear (
   pickup_location TEXT,
   specifications JSONB DEFAULT '[]',
   included_items JSONB DEFAULT '[]',
-  images JSONB DEFAULT '[]',
+  gear_photos JSONB DEFAULT '[]',
   is_available BOOLEAN DEFAULT true,
   view_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -122,8 +123,8 @@ CREATE TABLE public.gear (
 CREATE TABLE public.bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gear_id UUID NOT NULL REFERENCES public.gear(id) ON DELETE CASCADE,
-  renter_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  owner_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  renter_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   total_days INTEGER NOT NULL,
@@ -178,7 +179,7 @@ CREATE TABLE public.transactions (
 ```sql
 CREATE TABLE IF NOT EXISTS public.connected_accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES public.profiles(id) UNIQUE,
+  owner_id UUID REFERENCES public.users(id) UNIQUE,
   stripe_account_id TEXT UNIQUE NOT NULL,
   account_status TEXT DEFAULT 'pending' CHECK (account_status IN ('pending', 'active', 'restricted')),
   charges_enabled BOOLEAN DEFAULT FALSE,
@@ -216,7 +217,7 @@ CREATE TABLE IF NOT EXISTS public.escrow_transactions (
 CREATE TABLE public.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   is_read BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -234,8 +235,8 @@ CREATE TABLE public.messages (
 CREATE TABLE public.message_threads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE,
-  participant1_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  participant2_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  participant1_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  participant2_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(participant1_id, participant2_id, booking_id)
@@ -255,8 +256,8 @@ CREATE TABLE public.message_threads (
 CREATE TABLE public.reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  reviewer_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  reviewed_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  reviewer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  reviewed_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   gear_id UUID NOT NULL REFERENCES public.gear(id) ON DELETE CASCADE,
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   comment TEXT,
@@ -278,7 +279,7 @@ CREATE TABLE public.reviews (
 CREATE TABLE public.claims (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  claimant_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  claimant_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   claim_type TEXT NOT NULL CHECK (claim_type IN ('damage', 'late_return', 'missing_item', 'other')),
   description TEXT NOT NULL,
   evidence_photos JSONB, -- Array of photo URLs
@@ -286,7 +287,7 @@ CREATE TABLE public.claims (
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'under_review', 'resolved', 'dismissed')),
   resolution TEXT,
   deposit_penalty INTEGER DEFAULT 0, -- Amount withheld from deposit in RON cents
-  admin_id UUID REFERENCES public.profiles(id),
+  admin_id UUID REFERENCES public.users(id),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   resolved_at TIMESTAMPTZ
@@ -305,7 +306,7 @@ CREATE TABLE public.claims (
 CREATE TABLE public.photo_uploads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  uploaded_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  uploaded_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   photo_type TEXT NOT NULL CHECK (photo_type IN ('pickup_renter', 'pickup_owner', 'return_renter', 'return_owner', 'claim_evidence')),
   photo_url TEXT NOT NULL,
   timestamp TIMESTAMPTZ DEFAULT now(),
@@ -326,7 +327,7 @@ CREATE TABLE public.photo_uploads (
 ```sql
 CREATE TABLE public.rate_limits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   action_type TEXT NOT NULL,
   action_count INTEGER DEFAULT 1,
   window_start TIMESTAMPTZ DEFAULT now(),
@@ -374,10 +375,11 @@ VALUES (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, avatar_url, location)
+  INSERT INTO public.users (id, first_name, last_name, avatar_url, location)
   VALUES (
     new.id,
-    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'first_name',
+    new.raw_user_meta_data->>'last_name',
     new.raw_user_meta_data->>'avatar_url',
     new.raw_user_meta_data->>'location'
   );
@@ -534,18 +536,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 ## 🔒 Row Level Security (RLS)
 
-### 1. Profiles Policies
+### 1. Users Policies
 ```sql
--- Public profiles are viewable by everyone
-CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
+-- Public users are viewable by everyone
+CREATE POLICY "Public users are viewable by everyone" ON public.users
   FOR SELECT USING (true);
 
 -- Users can insert their own profile
-CREATE POLICY "Users can insert their own profile" ON public.profiles
+CREATE POLICY "Users can insert their own profile" ON public.users
   FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Users can update their own profile
-CREATE POLICY "Users can update their own profile" ON public.profiles
+CREATE POLICY "Users can update their own profile" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 ```
 
@@ -760,7 +762,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply to all tables with updated_at
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.profiles
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.gear
@@ -849,10 +851,10 @@ CREATE TRIGGER update_booking_payment_status_trigger
 
 ### Entity Relationship Diagram
 ```
-auth.users (1) ←→ (1) public.profiles
-public.profiles (1) ←→ (N) public.gear
-public.profiles (1) ←→ (N) public.bookings (as renter)
-public.profiles (1) ←→ (N) public.bookings (as owner)
+auth.users (1) ←→ (1) public.users
+public.users (1) ←→ (N) public.gear
+public.users (1) ←→ (N) public.bookings (as renter)
+public.users (1) ←→ (N) public.bookings (as owner)
 public.gear (1) ←→ (N) public.bookings
 public.bookings (1) ←→ (N) public.messages
 public.bookings (1) ←→ (N) public.reviews

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { useReviewApi } from './useApi';
 
 type ReviewInsert = Database['public']['Tables']['reviews']['Insert'];
 
@@ -14,7 +15,7 @@ export const useGearReviews = (gearId?: string) => {
         .from('reviews')
         .select(`
           *,
-          reviewer:profiles!reviews_reviewer_id_fkey(*)
+          reviewer:users!reviews_reviewer_id_fkey(full_name, avatar_url)
         `)
         .eq('gear_id', gearId);
       
@@ -42,8 +43,8 @@ export const useCreateReview = () => {
         .insert(review)
         .select(`
           *,
-          reviewer:profiles!reviews_reviewer_id_fkey(*),
-          reviewed:profiles!reviews_reviewed_id_fkey(*),
+          reviewer:users!reviews_reviewer_id_fkey(*),
+          reviewed:users!reviews_reviewed_id_fkey(full_name, avatar_url),
           gear:gear(*)
         `)
         .single();
@@ -55,6 +56,24 @@ export const useCreateReview = () => {
       queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       queryClient.invalidateQueries({ queryKey: ['gear-reviews'] });
+    },
+  });
+};
+
+// Enhanced review hooks
+export const useUpdateReview = () => {
+  const queryClient = useQueryClient();
+  const { updateReview, loading, error } = useReviewApi();
+  
+  return useMutation({
+    mutationFn: async ({ reviewId, updates }: {
+      reviewId: string;
+      updates: { rating?: number; comment?: string };
+    }) => {
+      return await updateReview(reviewId, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
     },
   });
 };

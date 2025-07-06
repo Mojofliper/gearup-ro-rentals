@@ -15,6 +15,8 @@ import { useGear } from '@/hooks/useGear';
 import { useGearReviews } from '@/hooks/useReviews';
 import { toast } from '@/hooks/use-toast';
 import { BookingModal } from '@/components/BookingModal';
+import { ErrorBoundary } from './ErrorBoundary';
+import { GearCardSkeleton } from './LoadingSkeleton';
 
 export const GearDetail: React.FC = () => {
   const { id } = useParams();
@@ -37,8 +39,14 @@ export const GearDetail: React.FC = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-16">
-          <div className="text-center">
-            <p className="text-lg">Se încarcă...</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <GearCardSkeleton />
+            </div>
+            <div className="space-y-6">
+              <GearCardSkeleton />
+              <GearCardSkeleton />
+            </div>
           </div>
         </div>
         <Footer />
@@ -64,13 +72,19 @@ export const GearDetail: React.FC = () => {
     );
   }
 
+  // Type assertion for gear with relations
+  const gearWithRelations = gear as any;
+
+  // Get owner data from the correct key
+  const owner = gearWithRelations.users;
+
   // Parse JSON fields safely
-  const images = Array.isArray(gear.images) ? gear.images : 
-                 (typeof gear.images === 'string' ? JSON.parse(gear.images || '[]') : []);
-  const specifications = Array.isArray(gear.specifications) ? gear.specifications : 
-                        (typeof gear.specifications === 'string' ? JSON.parse(gear.specifications || '[]') : []);
-  const includedItems = Array.isArray(gear.included_items) ? gear.included_items : 
-                       (typeof gear.included_items === 'string' ? JSON.parse(gear.included_items || '[]') : []);
+  const images = gear.gear_photos?.map((photo: any) => photo.photo_url) || [];
+  const specifications = gear.gear_specifications?.map((spec: any) => `${spec.spec_key}: ${spec.spec_value}`) || [];
+  const includedItems: string[] = [];
+
+  // Use gear.location for the location display
+  const gearLocation = gear.location || 'Necunoscut';
 
   const handleRentRequest = () => {
     if (!user) {
@@ -142,15 +156,15 @@ export const GearDetail: React.FC = () => {
       id: `${gear.id}-${Date.now()}`,
       gear: {
         id: gear.id,
-        name: gear.name,
-        price_per_day: gear.price_per_day,
+        title: gear.title,
+        daily_rate: gear.daily_rate,
         deposit_amount: gear.deposit_amount,
         // Nu salvăm imaginea în localStorage pentru a evita QuotaExceededError
         owner: {
           id: gear.owner_id,
-          full_name: gear.owner?.full_name || 'Utilizator',
-          location: gear.owner?.location || 'România',
-          is_verified: gear.owner?.is_verified || false
+          full_name: owner?.full_name || 'Utilizator',
+          location: owner?.location || 'România',
+          is_verified: owner?.is_verified || false
         }
       },
       selectedDates: selectedDates,
@@ -207,14 +221,15 @@ export const GearDetail: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    const pricePerDay = gear.price_per_day / 100; // Convert from cents
+    const pricePerDay = gear.daily_rate; // Already in RON
     return selectedDates.length * pricePerDay;
   };
 
-  const depositAmount = gear.deposit_amount ? gear.deposit_amount / 100 : 0;
-  const pricePerDay = gear.price_per_day / 100;
+  const depositAmount = gear.deposit_amount || 0;
+  const pricePerDay = gear.daily_rate;
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen bg-background">
       <Header />
       
@@ -237,11 +252,11 @@ export const GearDetail: React.FC = () => {
                   <div className="relative mb-4">
                     <img
                       src={images[currentImageIndex]}
-                      alt={gear.name}
+                      alt={gear.title}
                       className="w-full h-96 object-cover rounded-lg"
                     />
-                    {gear.category && (
-                      <Badge className="absolute top-4 left-4">{gear.category.name}</Badge>
+                    {gearWithRelations.categories && (
+                      <Badge className="absolute top-4 left-4">{gearWithRelations.categories.name}</Badge>
                     )}
                   </div>
                   <div className="flex space-x-2">
@@ -267,7 +282,7 @@ export const GearDetail: React.FC = () => {
 
             {/* Title & Rating */}
             <div className="mb-6">
-              <h1 className="text-3xl font-bold mb-2">{gear.name}</h1>
+              <h1 className="text-3xl font-bold mb-2">{gear.title}</h1>
                               <div className="flex items-center space-x-4">
                   <div className="text-muted-foreground">
                     {reviewsData?.totalReviews ? (
@@ -285,14 +300,16 @@ export const GearDetail: React.FC = () => {
                     ) : (
                       'Fără recenzii încă'
                     )}
+                    {/* Add separator if both reviews and location exist */}
+                    {gearLocation && (
+                      <span className="mx-2 text-gray-400">•</span>
+                    )}
+                    <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-muted-foreground">{gearLocation}</span>
+                    </div>
                   </div>
-                {gear.owner?.location && (
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{gear.owner.location}</span>
-                  </div>
-                )}
-              </div>
+                </div>
             </div>
 
             {/* Description */}
@@ -344,24 +361,109 @@ export const GearDetail: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Reviews Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Star className="h-5 w-5" />
+                  <span>Recenzii</span>
+                  {reviewsData?.totalReviews && (
+                    <Badge variant="secondary">
+                      {reviewsData.totalReviews} recenzii
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {reviewsData?.totalReviews ? (
+                  <div className="space-y-4">
+                    {/* Average Rating */}
+                    <div className="flex items-center space-x-2">
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-5 w-5 ${
+                              star <= reviewsData.averageRating 
+                                ? 'fill-yellow-400 text-yellow-400' 
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-semibold">
+                        {reviewsData.averageRating.toFixed(1)} din 5
+                      </span>
+                    </div>
+
+                    {/* Individual Reviews */}
+                    <div className="space-y-4">
+                      {reviewsData.reviews.map((review: any) => (
+                        <div key={review.id} className="border-t pt-4">
+                          <div className="flex items-start space-x-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-xs">
+                                {review.reviewer?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="font-medium text-sm">
+                                  {review.reviewer?.full_name || 'Utilizator'}
+                                </span>
+                                <div className="flex">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`h-3 w-3 ${
+                                        star <= review.rating 
+                                          ? 'fill-yellow-400 text-yellow-400' 
+                                          : 'text-gray-300'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              {review.comment && (
+                                <p className="text-sm text-gray-600 mb-2">{review.comment}</p>
+                              )}
+                              <p className="text-xs text-gray-400">
+                                {new Date(review.created_at).toLocaleDateString('ro-RO')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Star className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>Nu există încă recenzii pentru acest echipament.</p>
+                    <p className="text-sm">Fii primul care lasă o recenzie!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column - Booking */}
           <div className="space-y-6">
             {/* Owner Info */}
-            {gear.owner && (
+            {owner && (
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-3 mb-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback>
-                        {gear.owner.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                        {owner.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold">{gear.owner.full_name || 'Utilizator'}</h3>
-                        {gear.owner.is_verified && (
+                        <h3 className="font-semibold">{owner.full_name || 'Utilizator'}</h3>
+                        {owner.is_verified && (
                           <Badge variant="secondary" className="text-xs">
                             <Shield className="h-3 w-3 mr-1" />
                             Verificat
@@ -451,16 +553,16 @@ export const GearDetail: React.FC = () => {
                   <Button 
                     className="w-full" 
                     onClick={handleRentRequest}
-                    disabled={!gear.is_available}
+                    disabled={gear.status !== 'available'}
                   >
-                    {gear.is_available ? 'Solicită închirierea' : 'Indisponibil'}
+                    {gear.status === 'available' ? 'Solicită închirierea' : 'Indisponibil'}
                   </Button>
                   
                   <Button 
                     variant="outline"
                     className="w-full" 
                     onClick={handleAddToCart}
-                    disabled={!gear.is_available}
+                    disabled={gear.status !== 'available'}
                   >
                     <ShoppingBag className="h-4 w-4 mr-2" />
                     Adaugă în coș
@@ -510,5 +612,6 @@ export const GearDetail: React.FC = () => {
         depositAmount={depositAmount}
       />
     </div>
+    </ErrorBoundary>
   );
 };

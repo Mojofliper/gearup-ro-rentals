@@ -11,10 +11,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '@/hooks/useUserData';
-import { useOwnerBookings, useUpdateBooking } from '@/hooks/useBookings';
+import { useUserBookings as useOwnerBookings, useAcceptBooking, useConfirmReturn } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
-import { useSecureGear } from '@/hooks/useSecureGear';
+import { useDeleteGear } from '@/hooks/useGear';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmationSystem } from '@/components/ConfirmationSystem';
 import { Star, MapPin, Calendar, Edit, Shield, Package, AlertCircle, Eye, Settings, CheckCircle, CreditCard, Trash2 } from 'lucide-react';
@@ -22,6 +22,8 @@ import { PaymentModal } from '@/components/PaymentModal';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { PaymentService } from '@/services/paymentService';
+import { ErrorBoundary } from './ErrorBoundary';
+import { ProfileSkeleton, BookingSkeleton } from './LoadingSkeleton';
 
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
@@ -29,7 +31,8 @@ export const Profile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile?.avatar_url || '');
   const [formData, setFormData] = useState({
-    full_name: profile?.full_name || '',
+    first_name: profile?.first_name || '',
+    last_name: profile?.last_name || '',
     location: profile?.location || '',
   });
 
@@ -38,8 +41,19 @@ export const Profile: React.FC = () => {
   const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews();
   const { data: stats, isLoading: statsLoading } = useUserStats();
   const { data: ownerBookings = [], isLoading: ownerBookingsLoading } = useOwnerBookings();
-  const { mutate: updateBooking } = useUpdateBooking();
-  const { deleteGear, loading: deleteLoading } = useSecureGear();
+  
+  // Debug logging for ownerBookings
+  console.log('ownerBookings data:', ownerBookings);
+  console.log('ownerBookings loading:', ownerBookingsLoading);
+  console.log('Current user ID:', user?.id);
+  
+  // Filter ownerBookings to only show bookings where user is the owner
+  const filteredOwnerBookings = (ownerBookings as any[]).filter(booking => booking.owner_id === user?.id);
+  console.log('Filtered ownerBookings (user as owner):', filteredOwnerBookings);
+  
+  const { mutate: acceptBooking } = useAcceptBooking();
+  const { mutate: confirmReturn } = useConfirmReturn();
+  const { mutate: deleteGear, isPending: deleteLoading } = useDeleteGear();
   
   const [editingGear, setEditingGear] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
@@ -54,13 +68,30 @@ export const Profile: React.FC = () => {
     if (profile) {
       setCurrentAvatarUrl(profile.avatar_url || '');
       setFormData({
-        full_name: profile.full_name || '',
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
         location: profile.location || '',
       });
     }
   }, [profile]);
 
   if (!user || !profile) return null;
+
+  // Type assertions for data with relations
+  // Only show bookings where user is the renter in the renter tab
+  const bookingsWithRelations = (bookings as any[]).filter(booking => booking.renter_id === user.id);
+  const listingsWithRelations = listings as any[];
+  // Map ownerBookingsWithRelations to ensure .renter and .gear fields are always present
+  const ownerBookingsWithRelations = filteredOwnerBookings.map((booking) => ({
+    ...booking,
+    renter: booking.renter || booking["renter"] || { id: booking.renter_id, full_name: booking.renter_full_name || null },
+    owner: booking.owner || booking["owner"] || { id: booking.owner_id, full_name: booking.owner_full_name || null },
+    gear: booking.gear || booking["gear"] || null,
+  }));
+  
+  // Debug logging for mapped data
+  console.log('ownerBookingsWithRelations:', ownerBookingsWithRelations);
+  console.log('Sample booking structure:', ownerBookingsWithRelations[0]);
 
   const handleSave = async () => {
     await updateProfile(formData);
@@ -81,16 +112,12 @@ export const Profile: React.FC = () => {
   };
 
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
-    updateBooking({
-      id: bookingId,
-      updates: { status }
-    }, {
+    if (status === 'confirmed') {
+      acceptBooking({ bookingId, pickupLocation: 'To be set' }, {
       onSuccess: () => {
         toast({
-          title: status === 'confirmed' ? 'Rezervare acceptată!' : 'Rezervare respinsă',
-          description: status === 'confirmed' 
-            ? 'Închiriatorul a fost notificat despre acceptarea rezervării.'
-            : 'Închiriatorul a fost notificat despre respingerea rezervării.',
+            title: 'Rezervare acceptată!',
+            description: 'Închiriatorul a fost notificat despre acceptarea rezervării.',
         });
       },
       onError: (error: any) => {
@@ -102,6 +129,14 @@ export const Profile: React.FC = () => {
         console.error('Booking update error:', error);
       }
     });
+    } else {
+      // For rejected bookings, we'll need to implement a reject function
+      toast({
+        title: 'Funcționalitate în dezvoltare',
+        description: 'Respingerea rezervărilor va fi implementată în curând.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDeleteGear = async (gearId: string) => {
@@ -182,7 +217,11 @@ export const Profile: React.FC = () => {
       : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
     : '';
 
+  // Get full name from first_name and last_name
+  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User';
+
   return (
+    <ErrorBoundary>
     <div className="min-h-screen bg-background">
       <Header />
       
@@ -200,7 +239,7 @@ export const Profile: React.FC = () => {
               
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-2xl font-bold">{profile.full_name || 'Utilizator'}</h1>
+                  <h1 className="text-2xl font-bold">{fullName}</h1>
                   {profile.is_verified && (
                     <Badge variant="secondary">
                       <Shield className="h-3 w-3 mr-1" />
@@ -240,23 +279,32 @@ export const Profile: React.FC = () => {
               <div className="mt-6 pt-6 border-t space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="full_name">Nume complet</Label>
+                    <Label htmlFor="first_name">Nume</Label>
                     <Input
-                      id="full_name"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      placeholder="Numele tău complet"
+                      id="first_name"
+                      value={formData.first_name}
+                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                      placeholder="Primul nume"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location">Locație</Label>
+                    <Label htmlFor="last_name">Prenume</Label>
                     <Input
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder="Orașul tău"
+                      id="last_name"
+                      value={formData.last_name}
+                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                      placeholder="Ultimul nume"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Locație</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Orașul tău"
+                  />
                 </div>
                 <div className="flex space-x-2">
                   <Button onClick={handleSave}>Salvează</Button>
@@ -334,14 +382,18 @@ export const Profile: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {bookingsLoading ? (
-                  <div className="text-center py-8">Se încarcă...</div>
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <BookingSkeleton key={index} />
+                    ))}
+                  </div>
                 ) : bookings.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     Nu ai încă nicio rezervare.
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {bookings.map((booking) => (
+                    {bookingsWithRelations.map((booking) => (
                       <div key={booking.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold">{booking.gear?.title}</h3>
@@ -354,7 +406,8 @@ export const Profile: React.FC = () => {
                           <p>Proprietar: {booking.owner?.full_name}</p>
                         </div>
                         <div className="flex space-x-2 mt-3">
-                          {booking.status === 'confirmed' && booking.payment_status === 'pending' && (
+                          {((booking.payment_status === 'pending' && booking.renter_id === user.id && booking.status !== 'cancelled') ||
+                            ((!booking.payment_status || booking.payment_status === null) && booking.status === 'confirmed' && booking.renter_id === user.id)) && (
                             <Button
                               size="sm"
                               onClick={() => handlePaymentClick(booking)}
@@ -410,20 +463,24 @@ export const Profile: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {listingsLoading ? (
-                  <div className="text-center py-8">Se încarcă...</div>
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <BookingSkeleton key={index} />
+                    ))}
+                  </div>
                 ) : listings.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     Nu ai încă niciun echipament listat.
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {listings.map((gear) => (
+                    {listingsWithRelations.map((gear) => (
                       <div key={gear.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold">{gear.title}</h3>
                           <div className="flex items-center space-x-2">
-                            <Badge variant={gear.is_available ? 'default' : 'secondary'}>
-                              {gear.is_available ? 'Disponibil' : 'Indisponibil'}
+                            <Badge variant={gear.status === 'available' ? 'default' : 'secondary'}>
+                              {gear.status === 'available' ? 'Disponibil' : 'Indisponibil'}
                             </Badge>
                             <Button
                               size="sm"
@@ -443,8 +500,9 @@ export const Profile: React.FC = () => {
                           </div>
                         </div>
                         <div className="text-sm text-muted-foreground space-y-1">
-                          <p>Preț: {gear.price_per_day} RON/zi</p>
-                          <p>Categorie: {gear.category}</p>
+                          <p>Preț: {gear.daily_rate} RON/zi</p>
+                          <p>Garanție: {gear.deposit_amount} RON</p>
+                          <p>Categorie: {gear.category_id}</p>
                           <p>Locație: {gear.location}</p>
                         </div>
                       </div>
@@ -463,7 +521,11 @@ export const Profile: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {reviewsLoading ? (
-                  <div className="text-center py-8">Se încarcă...</div>
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <BookingSkeleton key={index} />
+                    ))}
+                  </div>
                 ) : reviews.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     Nu ai încă nicio recenzie.
@@ -509,14 +571,18 @@ export const Profile: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {ownerBookingsLoading ? (
-                  <div className="text-center py-8">Se încarcă...</div>
-                ) : ownerBookings.length === 0 ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <BookingSkeleton key={index} />
+                    ))}
+                  </div>
+                ) : filteredOwnerBookings.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     Nu ai încă nicio rezervare pentru echipamentele tale.
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {ownerBookings.map((booking) => (
+                    {ownerBookingsWithRelations.map((booking) => (
                       <div key={booking.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold">{booking.gear?.title}</h3>
@@ -526,7 +592,7 @@ export const Profile: React.FC = () => {
                           <p>De la: {format(new Date(booking.start_date), 'dd/MM/yyyy')}</p>
                           <p>Până la: {format(new Date(booking.end_date), 'dd/MM/yyyy')}</p>
                           <p>Total: {booking.total_amount} RON</p>
-                          <p>Închiriator: {booking.renter?.full_name}</p>
+                          <p>Închiriator: {booking.renter?.full_name || booking.renter_full_name || 'N/A'}</p>
                         </div>
                         {booking.status === 'pending' && (
                           <div className="flex space-x-2 mt-3">
@@ -560,6 +626,7 @@ export const Profile: React.FC = () => {
       {/* Modals */}
       {editingGear && (
         <EditGearModal
+          isOpen={!!editingGear}
           gear={editingGear}
           onClose={() => setEditingGear(null)}
         />
@@ -567,6 +634,7 @@ export const Profile: React.FC = () => {
 
       {reviewingBooking && (
         <ReviewModal
+          isOpen={!!reviewingBooking}
           booking={reviewingBooking}
           onClose={() => setReviewingBooking(null)}
         />
@@ -576,7 +644,6 @@ export const Profile: React.FC = () => {
         <PaymentModal
           isOpen={!!paymentBooking}
           booking={paymentBooking}
-          transaction={paymentTransaction}
           onClose={() => {
             setPaymentBooking(null);
             setPaymentTransaction(null);
@@ -586,6 +653,7 @@ export const Profile: React.FC = () => {
 
       {confirmationBooking && (
         <ConfirmationSystem
+          isOpen={!!confirmationBooking}
           booking={confirmationBooking}
           type={confirmationType}
           onClose={() => setConfirmationBooking(null)}
@@ -594,5 +662,6 @@ export const Profile: React.FC = () => {
 
       <Footer />
     </div>
+    </ErrorBoundary>
   );
 };

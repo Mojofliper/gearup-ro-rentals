@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Camera, Filter, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { SearchFilters } from './BrowseGear/SearchFilters';
-import { GearCard } from './BrowseGear/GearCard';
+import { GearCard } from './GearCard';
 import { useGearList } from '@/hooks/useGear';
 import { RentOfferToggle } from './RentOfferToggle';
+import { ErrorBoundary } from './ErrorBoundary';
+import { GridSkeleton } from './LoadingSkeleton';
 export const BrowseGear: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -21,10 +23,12 @@ export const BrowseGear: React.FC = () => {
   } = useGearList({
     search: searchQuery,
     category: selectedCategory,
-    location: selectedLocation,
+    location: selectedLocation === 'all' ? undefined : selectedLocation,
     sortBy
   });
-  return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+  return (
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
@@ -38,7 +42,16 @@ export const BrowseGear: React.FC = () => {
           </div>
         </div>
 
-        <SearchFilters searchQuery={searchQuery} selectedLocation={selectedLocation} selectedCategory={selectedCategory} sortBy={sortBy} onSearchChange={setSearchQuery} onLocationChange={setSelectedLocation} onCategoryChange={setSelectedCategory} onSortChange={setSortBy} />
+          <SearchFilters 
+            searchQuery={searchQuery} 
+            selectedLocation={selectedLocation} 
+            selectedCategory={selectedCategory} 
+            sortBy={sortBy} 
+            onSearchChange={setSearchQuery} 
+            onLocationChange={setSelectedLocation} 
+            onCategoryChange={setSelectedCategory} 
+            onSortChange={setSortBy} 
+          />
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
@@ -54,34 +67,55 @@ export const BrowseGear: React.FC = () => {
         </div>
 
         {/* Content area with loading state */}
-        {isLoading ? <div className="flex items-center justify-center py-16">
-            <div className="flex items-center space-x-3">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              <span className="text-lg text-gray-600">Se încarcă echipamentele...</span>
-            </div>
-          </div> : error ? <div className="text-center py-16">
+          {isLoading ? (
+            <GridSkeleton count={8} columns={4} />
+          ) : error ? (
+            <div className="text-center py-16">
             <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <h3 className="text-2xl font-bold text-gray-800 mb-3">Oops! Ceva nu a mers bine</h3>
               <p className="text-gray-600">Nu am putut încărca echipamentele. Te rugăm să încerci din nou.</p>
             </div>
-          </div> : gear.length === 0 ? <div className="text-center py-16">
+            </div>
+          ) : gear.length === 0 ? (
+            <div className="text-center py-16">
             <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <Camera className="h-16 w-16 text-gray-300 mx-auto mb-6" />
               <h3 className="text-2xl font-bold text-gray-800 mb-3">Nu am găsit echipamente</h3>
               <p className="text-gray-600 mb-6">Încearcă să modifici criteriile de căutare sau explorează alte categorii</p>
-              <Button onClick={() => {
+                <Button 
+                  onClick={() => {
             setSearchQuery('');
             setSelectedLocation('all');
             setSelectedCategory('all');
-          }} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
+                  }} 
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                >
                 Resetează filtrele
               </Button>
+              </div>
             </div>
-          </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {gear.map((item: any) => <GearCard key={item.id} gear={item} />)}
-          </div>}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {gear.map((item: any) => (
+                <GearCard 
+                  key={item.id} 
+                  gear={item}
+                  onViewDetails={(gearId) => {
+                    // Navigate to gear detail page
+                    window.location.href = `/gear/${gearId}`;
+                  }}
+                  onBookNow={(gearId) => {
+                    // Open booking modal or navigate to booking page
+                    window.location.href = `/gear/${gearId}?book=true`;
+                  }}
+                />
+              ))}
+            </div>
+          )}
       </div>
 
       <Footer />
-    </div>;
+      </div>
+    </ErrorBoundary>
+  );
 };

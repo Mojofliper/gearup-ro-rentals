@@ -1,28 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useGearApi } from './useApi';
 import { Database } from '@/integrations/supabase/types';
 
 type Gear = Database['public']['Tables']['gear']['Row'];
 type GearInsert = Database['public']['Tables']['gear']['Insert'];
 
 export const useGear = (id?: string) => {
+  const { getGearItem, loading, error } = useGearApi();
+  
   return useQuery({
     queryKey: ['gear', id],
     queryFn: async () => {
       if (!id) return null;
-      
-      const { data, error } = await supabase
-        .from('gear')
-        .select(`
-          *,
-          owner:profiles(*),
-          category:categories(*)
-        `)
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      return data;
+      return await getGearItem(id);
     },
     enabled: !!id,
   });
@@ -34,101 +24,56 @@ export const useGearList = (filters?: {
   location?: string;
   sortBy?: string;
 }) => {
+  const { getAvailableGear, loading, error } = useGearApi();
+  
   return useQuery({
     queryKey: ['gear', 'list', filters],
     queryFn: async () => {
       console.log('Fetching gear with filters:', filters);
       
-      let query = supabase
-        .from('gear')
-        .select(`
-          *,
-          owner:profiles(*),
-          category:categories(*)
-        `)
-        .eq('is_available', true);
-
-      if (filters?.search) {
-        // Escape special characters for LIKE queries
-        const safeSearch = filters.search.replace(/[%_]/g, '\\$&');
-        query = query.or(`name.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
-      }
-
-      if (filters?.category && filters.category !== 'all') {
-        // Filter by category using category_id directly
-        const { data: categoryData } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('slug', filters.category)
-          .single();
-        
-        if (categoryData) {
-          query = query.eq('category_id', categoryData.id);
-        }
-      }
-
-      if (filters?.location && filters.location !== 'all') {
-        // We need to filter by the owner's location
-        // First get profile IDs for the location
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('location', filters.location);
-        
-        if (profileData && profileData.length > 0) {
-          const profileIds = profileData.map(p => p.id);
-          query = query.in('owner_id', profileIds);
-        } else {
-          // If no profiles found for this location, return empty array
-          return [];
-        }
-      }
-
-      if (filters?.sortBy) {
+      // Transform filters to match API service format
+      const apiFilters = {
+        category_id: filters?.category !== 'all' ? filters?.category : undefined,
+        location: filters?.location !== 'all' ? filters?.location : undefined,
+        search: filters?.search,
+        min_price: undefined,
+        max_price: undefined,
+        condition: undefined
+      };
+      
+      const result = await getAvailableGear(apiFilters);
+      console.log('API result:', result);
+      
+      // Apply sorting if needed (API service handles basic sorting)
+      if (filters?.sortBy && result) {
         switch (filters.sortBy) {
           case 'price-low':
-            query = query.order('price_per_day', { ascending: true });
-            break;
+            return result.sort((a, b) => a.price_per_day - b.price_per_day);
           case 'price-high':
-            query = query.order('price_per_day', { ascending: false });
-            break;
+            return result.sort((a, b) => b.price_per_day - a.price_per_day);
           case 'rating':
-            query = query.order('created_at', { ascending: false });
-            break;
+            return result.sort((a, b) => {
+              const ratingA = (a as any).users?.rating || 0;
+              const ratingB = (b as any).users?.rating || 0;
+              return ratingB - ratingA;
+            });
           default:
-            query = query.order('created_at', { ascending: false });
+            return result;
         }
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
-
-      const { data, error } = await query;
-      
-      console.log('Query result:', { data, error });
-      
-      if (error) {
-        console.error('Query error:', error);
-        throw error;
       }
       
-      return data || [];
+      return result || [];
     },
   });
 };
 
 export const useCreateGear = () => {
   const queryClient = useQueryClient();
+  const { createGear, loading, error } = useGearApi();
   
   return useMutation({
     mutationFn: async (gear: GearInsert) => {
-      const { data, error } = await supabase
-        .from('gear')
-        .insert(gear)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      return await createGear(gear);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gear'] });
@@ -138,22 +83,123 @@ export const useCreateGear = () => {
 
 export const useUpdateGear = () => {
   const queryClient = useQueryClient();
+  const { updateGear, loading, error } = useGearApi();
   
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Gear> }) => {
-      const { data, error } = await supabase
-        .from('gear')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      return await updateGear(id, updates);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['gear'] });
-      queryClient.invalidateQueries({ queryKey: ['gear', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['gear', data?.id] });
+    },
+  });
+};
+
+export const useDeleteGear = () => {
+  const queryClient = useQueryClient();
+  const { deleteGear, loading, error } = useGearApi();
+  
+  return useMutation({
+    mutationFn: async (gearId: string) => {
+      return await deleteGear(gearId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gear'] });
+    },
+  });
+};
+
+// Categories hooks
+export const useCategories = () => {
+  const { getAllCategories, loading, error } = useGearApi();
+  
+  return useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      return await getAllCategories();
+    },
+  });
+};
+
+export const useCategoryBySlug = (slug: string) => {
+  const { getCategoryBySlug, loading, error } = useGearApi();
+  
+  return useQuery({
+    queryKey: ['category', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      return await getCategoryBySlug(slug);
+    },
+    enabled: !!slug,
+  });
+};
+
+export const useCreateCategory = () => {
+  const queryClient = useQueryClient();
+  const { createCategory, loading, error } = useGearApi();
+  
+  return useMutation({
+    mutationFn: async (categoryData: {
+      name: string;
+      slug: string;
+      description?: string;
+      icon_name?: string;
+    }) => {
+      return await createCategory(categoryData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+};
+
+// Search hooks
+export const useSearchGear = (filters: any) => {
+  const { searchGearWithFilters, loading, error } = useGearApi();
+  
+  return useQuery({
+    queryKey: ['search-gear', filters],
+    queryFn: async () => {
+      return await searchGearWithFilters(filters);
+    },
+    enabled: !!filters,
+  });
+};
+
+export const useSearchByLocation = (location: string) => {
+  const { searchByLocation, loading, error } = useGearApi();
+  
+  return useQuery({
+    queryKey: ['search-location', location],
+    queryFn: async () => {
+      if (!location) return [];
+      return await searchByLocation(location);
+    },
+    enabled: !!location,
+  });
+};
+
+export const useSearchByBrandModel = (searchTerm: string) => {
+  const { searchByBrandModel, loading, error } = useGearApi();
+  
+  return useQuery({
+    queryKey: ['search-brand-model', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm) return [];
+      return await searchByBrandModel(searchTerm);
+    },
+    enabled: !!searchTerm,
+  });
+};
+
+export const useFeaturedGear = (limit: number = 10) => {
+  const { getFeaturedGear, loading, error } = useGearApi();
+  
+  return useQuery({
+    queryKey: ['featured-gear', limit],
+    queryFn: async () => {
+      return await getFeaturedGear(limit);
     },
   });
 };

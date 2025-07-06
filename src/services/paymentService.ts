@@ -145,8 +145,8 @@ export class PaymentService {
         .select(`
           *,
           gear:gear(*),
-          owner:profiles!bookings_owner_id_fkey(*),
-          renter:profiles!bookings_renter_id_fkey(*)
+          owner:users!bookings_owner_id_fkey(*),
+          renter:users!bookings_renter_id_fkey(*)
         `)
         .or(`owner_id.eq.${userId},renter_id.eq.${userId}`)
         .order('created_at', { ascending: false });
@@ -175,6 +175,114 @@ export class PaymentService {
       platformFee,
       totalAmount,
     };
+  }
+
+  /**
+   * Setup Stripe Connect account for gear owner
+   */
+  static async setupStripeConnect(userId: string, email: string, country: string = 'RO') {
+    try {
+      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-connect-setup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          email,
+          country,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new StripeError(errorData.error || 'Failed to setup Stripe Connect');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Stripe Connect setup error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to setup Stripe Connect');
+    }
+  }
+
+  /**
+   * Create escrow payment intent
+   */
+  static async createEscrowPaymentIntent(
+    bookingId: string,
+    rentalAmount: number,
+    depositAmount: number
+  ) {
+    try {
+      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-escrow-transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          bookingId,
+          rentalAmount,
+          depositAmount,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new StripeError(errorData.error || 'Failed to create escrow payment intent');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Escrow payment intent error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to create escrow payment intent');
+    }
+  }
+
+  /**
+   * Get connected account status for a user
+   */
+  static async getConnectedAccountStatus(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('connected_accounts')
+        .select('*')
+        .eq('owner_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw new StripeError('Failed to fetch connected account status');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Connected account status error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to fetch connected account status');
+    }
+  }
+
+  /**
+   * Get escrow transaction details
+   */
+  static async getEscrowTransaction(bookingId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('escrow_transactions')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw new StripeError('Failed to fetch escrow transaction');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Escrow transaction error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to fetch escrow transaction');
+    }
   }
 
   /**

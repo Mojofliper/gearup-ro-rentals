@@ -254,15 +254,15 @@ See [Environment Setup Guide](./docs/ENVIRONMENT_SETUP.md) for detailed configur
 
 ### **4. Booking Approval (Owner)**
 - Owner receives **email notification** about booking request
-- Notification redirects to **Profile → "Ca Proprietar" tab → Rental Requests**
+- Notification redirects to **Dashboard → "My Equipment" → Equipment dropdown → Rental Requests**
 - Owner can Accept or Reject the request
 - If **Accepted**: 
   - **Popup appears to set pickup location** (exact address)
   - Renter receives **email notification**
-  - Renter is directed to **Profile → "Rezervările Mele" tab**
+  - Renter is directed to **Dashboard → "My Bookings" tab**
 
 ### **5. Payment Processing**
-- Renter clicks **"Plătește"** button in "Rezervările Mele" tab
+- Renter clicks **"Plătește"** button in "My Bookings" tab
 - **Rental Dashboard** opens with special thread for this rental
 - Total paid upfront (rental + platform fee + deposit)
 - Platform fee → platform account immediately
@@ -285,7 +285,7 @@ See [Environment Setup Guide](./docs/ENVIRONMENT_SETUP.md) for detailed configur
 - If issues: claim system activated
 
 ### **8. Owner Analytics Dashboard**
-- **Profile → "Ca Proprietar" tab → Analytics**
+- **Dashboard → "Analytics" tab**
 - Financial analytics (earnings, fees, pending payments)
 - Equipment performance metrics
 - Customer analytics and reviews

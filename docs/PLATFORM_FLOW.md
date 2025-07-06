@@ -179,8 +179,8 @@ Total: 369.50 RON
 
 ### Owner Notification
 - **Email notification** sent immediately to owner
-- **In-app notification** appears in profile dashboard
-- **Notification redirects to Profile → "Ca Proprietar" tab → Rental Requests**
+- **In-app notification** appears in dashboard
+- **Notification redirects to Dashboard → "Ca Proprietar" tab → Rental Requests**
 
 ### Approval Decision
 **Owner receives booking details:**
@@ -216,7 +216,7 @@ pending → cancelled (owner rejects)
 
 ### Payment Flow
 1. **Booking Confirmed**: Owner accepts booking and sets pickup location
-2. **Renter Notification**: Email notification directs to Profile → "Rezervările Mele" tab
+2. **Renter Notification**: Email notification directs to Dashboard → "Rezervările Mele" tab
 3. **Payment Button**: Renter clicks "Plătește" button
 4. **Rental Dashboard**: Opens special thread/dashboard for this rental
 5. **Payment Processing**: Stripe integration for secure payment
@@ -516,7 +516,7 @@ claims {
 - **Market Analysis**: Competition and demand
 
 ### Dashboard Access
-- **Profile → "Ca Proprietar" tab → Analytics**
+- **Dashboard → "Ca Proprietar" tab → Analytics**
 - **Real-time updates** via Supabase realtime
 - **Export functionality** for financial records
 - **Mobile responsive** design for on-the-go access
@@ -639,26 +639,46 @@ reviews {
 
 ## 📱 13. USER EXPERIENCE FLOW
 
+### Dashboard Structure
+**Main Dashboard Navigation:**
+- **Dashboard**: Main hub with all user activities
+- **Edit Profile**: Small button with popup for profile picture, name, etc.
+- **My Equipment**: Combined view of owned equipment and rental requests
+- **My Bookings**: All rental bookings as renter
+- **Analytics**: Financial and performance data (owners only)
+
+### Equipment Management (Owners)
+**"My Equipment" Section:**
+- **Equipment List**: All owned gear with status
+- **Rental Requests**: Dropdown for each equipment showing:
+  - Active rental threads
+  - Pending requests
+  - Completed rentals
+- **Quick Actions**: Accept/Reject, Set pickup location, View analytics
+
 ### New User Journey
 1. **Landing Page**: Learn about platform
 2. **Sign Up**: Create account with verification
-3. **Browse Gear**: Explore available equipment
-4. **First Booking**: Complete rental process
-5. **Review**: Leave feedback after completion
+3. **Dashboard Setup**: Complete profile via popup
+4. **Browse Gear**: Explore available equipment
+5. **First Booking**: Complete rental process
+6. **Review**: Leave feedback after completion
 
 ### Owner Journey
-1. **Add Gear**: Create detailed listing
-2. **Manage Requests**: Review and approve bookings
-3. **Coordinate Pickup**: Arrange handover
-4. **Monitor Return**: Ensure safe return
-5. **Receive Payment**: Get rental fees
+1. **Dashboard**: Access "My Equipment" section
+2. **Add Gear**: Create detailed listing
+3. **Manage Requests**: Review and approve bookings via dropdown
+4. **Coordinate Pickup**: Arrange handover in rental thread
+5. **Monitor Return**: Ensure safe return
+6. **Receive Payment**: Get rental fees via Stripe Connect
 
 ### Renter Journey
-1. **Find Gear**: Search and filter equipment
-2. **Book Gear**: Request rental with dates
-3. **Make Payment**: Complete secure payment
-4. **Pickup Gear**: Meet owner and collect
-5. **Return Gear**: Safe return and confirmation
+1. **Dashboard**: Access "My Bookings" section
+2. **Find Gear**: Search and filter equipment
+3. **Book Gear**: Request rental with dates
+4. **Make Payment**: Complete secure payment
+5. **Pickup Gear**: Meet owner and collect
+6. **Return Gear**: Safe return and confirmation
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
 - Complete user journeys implemented

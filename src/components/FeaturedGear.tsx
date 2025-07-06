@@ -45,9 +45,11 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
         <div className="absolute top-3 left-3">
           <Badge variant="secondary">{categoryName}</Badge>
         </div>
-        {!gear.is_available && (
-          <div className="absolute top-3 right-3">
-            <Badge variant="destructive">Indisponibil</Badge>
+        {gear.status !== 'available' && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+            <Badge variant="secondary" className="text-white bg-red-600">
+              Indisponibil
+            </Badge>
           </div>
         )}
       </div>
@@ -93,11 +95,11 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
           <Link to={`/gear/${gear.id}`} className="flex-1">
             <Button 
               size="sm" 
-              disabled={!gear.is_available}
-              className={`w-full ${gear.is_available ? "btn-creative shadow-md hover:shadow-lg transition-all duration-300" : ""}`}
-              variant={gear.is_available ? "default" : "secondary"}
+              disabled={gear.status !== 'available'}
+              className={`w-full ${gear.status === 'available' ? "btn-creative shadow-md hover:shadow-lg transition-all duration-300" : ""}`}
+              variant={gear.status === 'available' ? "default" : "secondary"}
             >
-              {gear.is_available ? '🚀 Închiriază' : '❌ Indisponibil'}
+              {gear.status === 'available' ? '🚀 Închiriază' : '❌ Indisponibil'}
             </Button>
           </Link>
           

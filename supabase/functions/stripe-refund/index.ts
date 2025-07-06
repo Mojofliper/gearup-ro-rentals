@@ -84,6 +84,13 @@ serve(async (req) => {
       .eq('id', transactionId)
       .single()
 
+    // Get escrow transaction if exists
+    const { data: escrowTransaction } = await supabaseClient
+      .from('escrow_transactions')
+      .select('*')
+      .eq('stripe_payment_intent_id', transaction?.stripe_payment_intent_id)
+      .single()
+
     if (transactionError || !transaction) {
       return new Response(
         JSON.stringify({ error: 'Transaction not found' }),
@@ -163,6 +170,27 @@ serve(async (req) => {
         refund_reason: reason,
       })
       .eq('id', transactionId)
+
+    // Update escrow transaction if exists
+    if (escrowTransaction) {
+      await supabaseClient
+        .from('escrow_transactions')
+        .update({
+          escrow_status: 'refunded',
+          refund_amount: amount,
+          refund_reason: reason,
+          refund_id: refund.id,
+        })
+        .eq('id', escrowTransaction.id)
+
+      // Update booking escrow status
+      await supabaseClient
+        .from('bookings')
+        .update({
+          escrow_status: 'refunded',
+        })
+        .eq('id', transaction.booking_id)
+    }
 
     return new Response(
       JSON.stringify({

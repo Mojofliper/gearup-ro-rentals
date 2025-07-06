@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,21 +13,21 @@ import { toast } from '@/hooks/use-toast';
 interface GearCardProps {
   gear: {
     id: string;
-    name: string;
+    title: string;
     description?: string;
-    price_per_day: number;
+    daily_rate: number;
     deposit_amount?: number;
-    images: any[];
-    is_available: boolean;
-    owner: {
-      id: string;
-      full_name: string;
-      location: string;
-      is_verified: boolean;
+    location: string;
+    status: string;
+    gear_photos?: Array<{ photo_url: string }>;
+    categories?: { name: string };
+    users?: { 
+      full_name: string; 
+      rating?: number; 
+      total_reviews?: number;
+      is_verified?: boolean;
     };
-    category?: {
-      name: string;
-    };
+    owner_id?: string;
   };
 }
 
@@ -38,9 +37,9 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   
-  // Convert price from cents to RON
-  const price = Math.round(gear.price_per_day / 100);
-  const imageUrl = gear.images?.[0] || 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
+  // Price is already in RON, no need to convert from cents
+  const price = gear.daily_rate;
+  const imageUrl = gear.gear_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
 
   const handleImageClick = () => {
     console.log('Image clicked for gear:', gear.id);
@@ -57,7 +56,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
     }
 
     // Check if user is trying to add their own gear to cart
-    if (user.id === gear.owner.id) {
+    if (user.id === gear.users?.full_name) {
       toast({
         title: 'Nu poți închiria propriul echipament',
         description: 'Selectează alt echipament pentru închiriere.',
@@ -74,15 +73,15 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
       id: `${gear.id}-${Date.now()}`,
       gear: {
         id: gear.id,
-        name: gear.name,
-        price_per_day: gear.price_per_day,
+        title: gear.title,
+        daily_rate: gear.daily_rate,
         deposit_amount: gear.deposit_amount || 0,
-        images: gear.images,
+        gear_photos: gear.gear_photos?.map(photo => ({ photo_url: photo.photo_url })) || [],
         owner: {
-          id: gear.owner.id,
-          full_name: gear.owner.full_name,
-          location: gear.owner.location,
-          is_verified: gear.owner.is_verified
+          id: gear.owner_id || '',
+          full_name: gear.users?.full_name || '',
+          location: gear.location,
+          is_verified: gear.users?.is_verified || false
         }
       },
       selectedDates: [tomorrow],
@@ -143,25 +142,24 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
           <div className="relative overflow-hidden cursor-pointer">
             <img
               src={imageUrl}
-              alt={gear.name}
+              alt={gear.title}
               className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
             />
             <div className="absolute top-3 left-3">
               <Badge variant="secondary" className="bg-white/90 text-gray-700 shadow-sm">
-                {gear.category?.name || 'Echipament'}
+                {gear.categories?.name || 'Echipament'}
               </Badge>
             </div>
-            {!gear.is_available && (
+            {gear.status !== 'available' && (
               <div className="absolute top-3 right-3">
                 <Badge variant="destructive" className="bg-red-500/90 text-white shadow-sm">
                   Indisponibil
                 </Badge>
               </div>
             )}
-            {gear.is_available && (
+            {gear.status === 'available' && (
               <div className="absolute top-3 right-3">
                 <Badge className="bg-green-500/90 text-white shadow-sm">
-                  <Zap className="h-3 w-3 mr-1" />
                   Disponibil
                 </Badge>
               </div>
@@ -173,7 +171,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-3">
             <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors">
-              {gear.name}
+              {gear.title}
             </h3>
             <div className="text-xs text-gray-500">
               {reviewsData?.totalReviews ? (
@@ -190,18 +188,18 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
           <div className="flex items-center space-x-2 mb-4">
             <Avatar className="h-7 w-7 ring-2 ring-blue-100">
               <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                {gear.owner.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                {gear.users?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
-            <span className="text-sm text-gray-600 font-medium">{gear.owner.full_name}</span>
-            {gear.owner.is_verified && (
+            <span className="text-sm text-gray-600 font-medium">{gear.users?.full_name}</span>
+            {gear.users?.rating === 5 && (
               <Badge variant="secondary" className="text-xs">Verificat</Badge>
             )}
           </div>
 
           <div className="flex items-center space-x-1 mb-4">
             <MapPin className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-600">{gear.owner.location}</span>
+            <span className="text-sm text-gray-600">{gear.location}</span>
           </div>
 
           <div className="flex items-center justify-between">
@@ -211,14 +209,14 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
             </div>
             <Button 
               size="sm" 
-              disabled={!gear.is_available}
+              disabled={gear.status !== 'available'}
               onClick={handleAddToCart}
-              className={gear.is_available 
+              className={gear.status === 'available' 
                 ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg" 
                 : "bg-gray-200 text-gray-500"
               }
             >
-              {gear.is_available ? (
+              {gear.status === 'available' ? (
                 <>
                   <ShoppingBag className="h-4 w-4 mr-1" />
                   Adaugă în coș
