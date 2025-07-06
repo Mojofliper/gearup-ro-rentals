@@ -65,7 +65,9 @@ Use Stripe's test card numbers:
 - **Success**: `4242 4242 4242 4242`
 - **Decline**: `4000 0000 0000 0002`
 - **Requires Authentication**: `4000 0025 0000 3155`
-
+SUCCESS_URL=http://localhost:5173/payment-success
+CANCEL_URL=http://localhost:5173/payment-cancel
+For redirecting stripe
 ## Production Checklist
 
 - [ ] Switch to live Stripe keys

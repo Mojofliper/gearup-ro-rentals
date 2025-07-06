@@ -19,6 +19,7 @@ export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 
 // Payment intent types
 export interface CreatePaymentIntentParams {
   bookingId: string;
+  transactionId?: string; // Optional transaction ID for transaction-based payments
   amount: number; // in RON cents
   rentalAmount: number; // in RON cents
   depositAmount: number; // in RON cents

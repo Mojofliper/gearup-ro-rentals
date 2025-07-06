@@ -17,6 +17,8 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import NotFound from "./pages/NotFound";
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentCancel from './pages/PaymentCancel';
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,8 @@ const AppRoutes = () => {
       <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />
       <Route path="/add-gear" element={user ? <AddGear /> : <Navigate to="/" />} />
       <Route path="/messages" element={user ? <Messages /> : <Navigate to="/" />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/payment-cancel" element={<PaymentCancel />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -18,6 +18,7 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: any;
+  transaction?: any;
   onPaymentSuccess?: () => void;
 }
 
@@ -25,6 +26,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,
   booking,
+  transaction,
   onPaymentSuccess
 }) => {
   const { user } = useAuth();
@@ -38,11 +40,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Calculate payment breakdown
-  const rentalAmount = booking.total_amount || 0;
-  const depositAmount = booking.deposit_amount || 0;
-  const platformFee = calculatePlatformFee(rentalAmount);
-  const totalAmount = rentalAmount + depositAmount + platformFee;
+  // Use transaction fields if available
+  const rentalAmount = (transaction?.rental_amount ?? booking.total_amount) || 0;
+  const depositAmount = (transaction?.deposit_amount ?? booking.deposit_amount) || 0;
+  const platformFee = transaction?.platform_fee ?? calculatePlatformFee(rentalAmount);
+  const totalAmount = transaction?.amount ?? (rentalAmount + depositAmount + platformFee);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,132 +65,39 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
-  const handlePaymentIntentCreation = async () => {
-    if (!user || !booking) return;
-
-    try {
-      setPaymentStatus('processing');
-      setErrorMessage('');
-
-      createPaymentIntent({
-        bookingId: booking.id,
-        amount: totalAmount,
-        rentalAmount,
-        depositAmount,
-        platformFee,
-        metadata: {
-          gear_name: booking.gear?.name || 'Unknown Gear',
-          owner_name: booking.owner?.full_name || 'Unknown Owner',
-          renter_name: user.user_metadata?.full_name || 'Unknown Renter',
-        },
-      }, {
-        onSuccess: (data) => {
-          setClientSecret(data.clientSecret);
-          setupCardElement(data.clientSecret);
-        },
-        onError: (error: any) => {
-          console.error('Payment intent creation error:', error);
-          setPaymentStatus('error');
-          setErrorMessage(error.message || 'Failed to create payment intent');
-        }
-      });
-    } catch (error) {
-      console.error('Payment intent creation error:', error);
-      setPaymentStatus('error');
-      setErrorMessage('Failed to create payment intent');
-    }
-  };
-
-  const setupCardElement = (secret: string) => {
-    if (!stripe) return;
-
-    const elementsInstance = stripe.elements({
-      clientSecret: secret,
-      appearance: {
-        theme: 'stripe',
-        variables: {
-          colorPrimary: '#3b82f6',
-        },
-      },
-    });
-
-    setElements(elementsInstance);
-
-    const card = elementsInstance.create('card', {
-      style: {
-        base: {
-          fontSize: '16px',
-          color: '#424770',
-          '::placeholder': {
-            color: '#aab7c4',
-          },
-        },
-        invalid: {
-          color: '#9e2146',
-        },
-      },
-    });
-
-    card.mount('#card-element');
-    setCardElement(card);
-  };
-
-  const handlePaymentSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    if (!stripe || !elements || !clientSecret) {
-      setErrorMessage('Payment system not ready');
-      return;
-    }
-
+  const handleCheckoutRedirect = async () => {
+    if (!user || !booking || !transaction) return;
     setPaymentStatus('processing');
     setErrorMessage('');
-
-    try {
-      const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/payment-success`,
-        },
-        redirect: 'if_required',
-      });
-
-      if (error) {
-        console.error('Payment confirmation error:', error);
-        setPaymentStatus('error');
-        
-        if (error.type === 'card_error' || error.type === 'validation_error') {
-          setErrorMessage(error.message || 'Payment failed');
-        } else {
-          setErrorMessage('An unexpected error occurred');
+    createPaymentIntent({
+      bookingId: booking.id,
+      transactionId: transaction?.id,
+      amount: totalAmount,
+      rentalAmount,
+      depositAmount,
+      platformFee,
+      metadata: {
+        gear_name: booking.gear?.name || 'Unknown Gear',
+        owner_name: booking.owner?.full_name || 'Unknown Owner',
+        renter_name: user.user_metadata?.full_name || 'Unknown Renter',
+      },
+    }, {
+      onSuccess: (data) => {
+        console.log('Payment intent created successfully:', data);
+        if (!data.url) {
+          console.error('No URL returned from payment intent creation');
+          setPaymentStatus('error');
+          setErrorMessage('No payment URL received from server');
+          return;
         }
-      } else {
-        // Payment succeeded
-        setPaymentStatus('success');
-        
-        // Confirm payment in our system
-        confirmPayment(clientSecret, {
-          onSuccess: () => {
-            toast({
-              title: 'Plată reușită!',
-              description: 'Rezervarea ta a fost confirmată și plata procesată.',
-            });
-            onPaymentSuccess?.();
-            setTimeout(() => {
-              onClose();
-            }, 2000);
-          },
-          onError: (error: any) => {
-            console.error('Payment confirmation error:', error);
-            setErrorMessage('Payment processed but confirmation failed');
-          }
-        });
+        window.location.href = data.url;
+      },
+      onError: (error: any) => {
+        console.error('Payment intent creation failed:', error);
+        setPaymentStatus('error');
+        setErrorMessage(error.message || 'Failed to create checkout session');
       }
-    } catch (error) {
-      console.error('Payment submission error:', error);
-      setPaymentStatus('error');
-      setErrorMessage('Failed to process payment');
-    }
+    });
   };
 
   const handleClose = () => {
@@ -264,47 +173,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Payment Form */}
-          {paymentStatus === 'idle' && (
-            <form onSubmit={handlePaymentSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Detalii card
-                </label>
-                <div 
-                  id="card-element" 
-                  className="p-3 border rounded-md bg-white"
-                />
-              </div>
-
-              {/* Security Notice */}
-              <div className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-blue-800 dark:text-blue-200">Plată securizată</p>
-                  <p className="text-blue-700 dark:text-blue-300">
-                    Datele tale sunt protejate prin criptare SSL și procesate de Stripe.
-                  </p>
-                </div>
-              </div>
-            </form>
-          )}
-
-          {/* Loading State */}
-          {paymentStatus === 'processing' && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              <span className="ml-2 text-sm text-muted-foreground">
-                Se procesează plata...
-              </span>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
           {paymentStatus === 'idle' && (
             <>
+              <Button onClick={handleCheckoutRedirect} disabled={isCreatingIntent}>
+                {isCreatingIntent ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
+                Continuă la plată
+              </Button>
               <Button 
                 variant="outline" 
                 onClick={handleClose}
@@ -312,37 +189,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               >
                 Anulează
               </Button>
-              <Button 
-                onClick={handlePaymentIntentCreation}
-                disabled={isCreatingIntent || !stripe}
-              >
-                {isCreatingIntent ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Se pregătește...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Continuă la plată
-                  </>
-                )}
-              </Button>
             </>
           )}
-          
           {paymentStatus === 'success' && (
             <Button onClick={handleClose} className="w-full">
               Închide
             </Button>
           )}
-          
           {paymentStatus === 'error' && (
             <>
               <Button variant="outline" onClick={handleClose}>
                 Închide
               </Button>
-              <Button onClick={handlePaymentIntentCreation}>
+              <Button onClick={handleCheckoutRedirect}>
                 Încearcă din nou
               </Button>
             </>

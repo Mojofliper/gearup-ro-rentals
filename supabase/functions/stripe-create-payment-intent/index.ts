@@ -115,47 +115,85 @@ serve(async (req) => {
       )
     }
 
-    // Create Stripe payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
-      currency: currency,
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      metadata: {
-        transaction_id: transactionId,
-        booking_id: transaction.booking_id,
-        user_id: user.id,
-        ...metadata,
-      },
-      description: `Payment for booking ${transaction.booking_id}`,
-    })
+    // Create Stripe Checkout Session instead of PaymentIntent
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: currency,
+              product_data: {
+                name: `Rental for booking ${transaction.booking_id}`,
+                description: `Gear rental payment`,
+              },
+              unit_amount: amount,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${Deno.env.get('SUCCESS_URL') || 'https://your-app.com/payment-success'}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${Deno.env.get('CANCEL_URL') || 'https://your-app.com/payment-cancel'}`,
+        customer_email: transaction.booking.renter?.email,
+        metadata: {
+          transaction_id: transactionId,
+          booking_id: transaction.booking_id,
+          user_id: user.id,
+          ...metadata,
+        },
+      });
+    } catch (stripeError) {
+      console.error('Stripe session creation failed:', stripeError);
+      return new Response(
+        JSON.stringify({ error: 'Stripe session creation failed', details: stripeError.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
-    // Update transaction with payment intent ID
+    if (!session || !session.url) {
+      console.error('Stripe session was not created or missing URL:', session);
+      return new Response(
+        JSON.stringify({ error: 'Stripe session was not created or missing URL' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Update transaction with session ID
     await supabaseClient
       .from('transactions')
       .update({
-        stripe_payment_intent_id: paymentIntent.id,
+        stripe_payment_intent_id: session.payment_intent,
         status: 'processing',
       })
-      .eq('id', transactionId)
+      .eq('id', transactionId);
 
     return new Response(
       JSON.stringify({
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-        amount: paymentIntent.amount,
+        url: session.url,
+        sessionId: session.id,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    )
+    );
 
   } catch (error) {
     console.error('Error creating payment intent:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: error.message || 'Unknown error',
+        stack: error.stack
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

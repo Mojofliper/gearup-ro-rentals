@@ -25,6 +25,7 @@ import { PaymentModal } from '@/components/PaymentModal';
 >>>>>>> Stashed changes
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { PaymentService } from '@/services/paymentService';
 
 export const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
@@ -346,6 +347,16 @@ export const Profile: React.FC = () => {
 <<<<<<< Updated upstream
                       <div className="text-right space-y-2">
                         {getStatusBadge(booking.status || 'pending')}
+                        {booking.status === 'confirmed' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handlePayClick(booking)}
+                            className="w-full"
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            Plătește
+                          </Button>
+                        )}
                         {booking.status === 'completed' && !reviews.some(r => r.booking_id === booking.id) && (
                           <Button
                             variant="outline"

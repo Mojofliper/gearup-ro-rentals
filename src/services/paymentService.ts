@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { 
@@ -15,7 +14,7 @@ export class PaymentService {
   /**
    * Create a payment intent for a booking
    */
-  static async createPaymentIntent(params: CreatePaymentIntentParams): Promise<PaymentIntentResponse> {
+  static async createPaymentIntent(params: CreatePaymentIntentParams): Promise<{ url: string; sessionId: string }> {
     try {
       // Validate amounts
       if (!validatePaymentAmounts(params.rentalAmount, params.depositAmount, params.platformFee)) {
@@ -52,7 +51,7 @@ export class PaymentService {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify({
-          bookingId: params.bookingId,
+          transactionId: params.transactionId || params.bookingId, // Use transactionId if available, fallback to bookingId
           amount: params.amount,
           currency: 'ron',
           metadata: {
@@ -67,19 +66,25 @@ export class PaymentService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new StripeError(errorData.message || 'Failed to create payment intent');
+        console.error('Edge Function error response:', errorData);
+        throw new StripeError(errorData.details || errorData.message || 'Failed to create checkout session');
       }
 
-      const paymentIntentData = await response.json();
-
+      const sessionData = await response.json();
+      console.log('Edge Function success response:', sessionData);
+      
+      if (!sessionData.url) {
+        console.error('No URL in session data:', sessionData);
+        throw new StripeError('No payment URL received from server');
+      }
+      
       return {
-        clientSecret: paymentIntentData.clientSecret,
-        paymentIntentId: paymentIntentData.paymentIntentId,
-        amount: params.amount,
+        url: sessionData.url,
+        sessionId: sessionData.sessionId,
       };
     } catch (error) {
-      console.error('Payment intent creation error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to create payment intent');
+      console.error('Checkout session creation error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to create checkout session');
     }
   }
 
@@ -192,5 +197,70 @@ export class PaymentService {
       platformFee,
       totalAmount,
     };
+  }
+
+  /**
+   * Create a transaction for a booking if one does not exist
+   */
+  static async getOrCreateTransactionForBooking(booking: Database['public']['Tables']['bookings']['Row']): Promise<Database['public']['Tables']['transactions']['Row']> {
+    console.log('Creating transaction for booking:', booking.id);
+    console.log('Booking data:', booking);
+    
+    // Try to find an existing transaction for this booking
+    const { data: existing, error: findError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('booking_id', booking.id)
+      .single();
+    
+    if (findError && findError.code !== 'PGRST116') {
+      console.error('Error finding existing transaction:', findError);
+    }
+    
+    if (existing) {
+      console.log('Found existing transaction:', existing);
+      return existing;
+    }
+    
+    // Calculate the correct amounts
+    // The booking.total_amount should be the rental amount (price per day * days)
+    // We need to calculate platform fee and total amount
+    const rentalAmount = booking.total_amount || 0;
+    const depositAmount = booking.deposit_amount || 0;
+    const platformFee = Math.round(rentalAmount * 0.13);
+    const totalAmount = rentalAmount + depositAmount + platformFee;
+    
+    console.log('Calculated amounts:', {
+      rentalAmount,
+      depositAmount,
+      platformFee,
+      totalAmount
+    });
+    
+    // If not found, create a new transaction
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert({
+        booking_id: booking.id,
+        amount: totalAmount,
+        platform_fee: platformFee,
+        deposit_amount: depositAmount,
+        rental_amount: rentalAmount,
+        status: 'pending',
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating transaction:', error);
+      throw new StripeError(`Failed to create transaction: ${error.message}`);
+    }
+    
+    if (!data) {
+      throw new StripeError('Failed to create transaction: No data returned');
+    }
+    
+    console.log('Created transaction:', data);
+    return data;
   }
 }
