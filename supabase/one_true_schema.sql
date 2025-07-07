@@ -1754,119 +1754,37 @@ INSERT INTO public.platform_settings (setting_key, setting_value, description) V
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- =============================================================================
--- 22. AUTH TRIGGERS
+-- 22. AUTH TRIGGERS CLEANUP
 -- =============================================================================
 
--- Create auth trigger for new user registration
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-DECLARE
-  v_full_name TEXT;
-  v_user_id UUID;
-  v_email TEXT;
-BEGIN
-  -- Get the user ID and email
-  v_user_id := NEW.id;
-  v_email := COALESCE(NEW.email, '');
-  
-  -- Extract full name from metadata with better fallbacks
-  v_full_name := COALESCE(
-    NEW.raw_user_meta_data->>'full_name',
-    concat_ws(' ', 
-      NEW.raw_user_meta_data->>'first_name', 
-      NEW.raw_user_meta_data->>'last_name'
-    ),
-    v_email,
-    'User' -- final fallback
-  );
-  
-  -- Log the trigger execution
-  RAISE LOG 'Auth trigger: Creating profile for user % with email % and name %', 
-    v_user_id, v_email, v_full_name;
-  
-  -- Insert the user profile with comprehensive data
-  INSERT INTO public.users (
-    id, 
-    email, 
-    first_name, 
-    last_name, 
-    avatar_url, 
-    location,
-    role,
-    is_verified,
-    is_suspended,
-    rating,
-    total_reviews,
-    total_rentals,
-    total_earnings,
-    created_at,
-    updated_at
-  )
-  VALUES (
-    v_user_id,
-    v_email,
-    COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
-    COALESCE(NEW.raw_user_meta_data->>'location', ''),
-    'user',
-    false,
-    false,
-    0.00,
-    0,
-    0,
-    0.00,
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (id) DO NOTHING;
-  
-  -- Log successful creation
-  RAISE LOG 'Auth trigger: Successfully created profile for user %', v_user_id;
-  
-  RETURN NEW;
-  
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Log the error but don't fail the auth process
-    RAISE LOG 'Auth trigger: Error creating profile for user %: %', v_user_id, SQLERRM;
-    
-    -- Try a simpler insert as fallback
-    BEGIN
-      INSERT INTO public.users (id, email, first_name, last_name, role, created_at, updated_at)
-      VALUES (
-        v_user_id,
-        v_email,
-        COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-        'user',
-        NOW(),
-        NOW()
-      )
-      ON CONFLICT (id) DO NOTHING;
-      
-      RAISE LOG 'Auth trigger: Fallback profile creation successful for user %', v_user_id;
-    EXCEPTION
-      WHEN OTHERS THEN
-        RAISE LOG 'Auth trigger: Fallback profile creation also failed for user %: %', v_user_id, SQLERRM;
-    END;
-    
-    -- Always return NEW to not break the auth process
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Remove any existing auth triggers that create profiles automatically
+-- This prevents profile creation during signin
 
--- Grant execute permissions on the function
-GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
-
--- Create the trigger
+-- Drop the trigger if it exists
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Drop the function if it exists
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- Drop other potential profile creation functions
+DROP FUNCTION IF EXISTS public.ensure_user_profile();
+DROP FUNCTION IF EXISTS public.ensure_user_profile_with_email();
+
+-- Log the cleanup
+DO $$
+BEGIN
+  RAISE LOG 'Auth triggers and functions removed successfully';
+END $$;
 
 -- =============================================================================
--- 23. FINAL SETUP
+-- 23. AUTH TRIGGERS
+-- =============================================================================
+
+-- Auth trigger removed - profiles will be created manually only during signup
+-- This prevents automatic profile creation when users try to sign in with non-existent accounts
+
+-- =============================================================================
+-- 24. FINAL SETUP
 -- =============================================================================
 
 -- Grant execute permissions on all functions
@@ -1877,7 +1795,7 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
 ALTER SCHEMA public OWNER TO postgres;
 
 -- =============================================================================
--- 24. SCHEMA VERIFICATION
+-- 25. SCHEMA VERIFICATION
 -- =============================================================================
 
 -- Log schema completion
@@ -1886,7 +1804,7 @@ BEGIN
   RAISE LOG 'GearUp schema setup completed successfully';
   RAISE LOG 'Tables created: users, categories, gear, gear_photos, gear_specifications, bookings, transactions, connected_accounts, escrow_transactions, messages, message_threads, conversations, reviews, claims, photo_uploads, handover_photos, claim_photos, rate_limits, notifications, email_notifications, moderation_queue, admin_actions, analytics, platform_settings';
   RAISE LOG 'RLS policies enabled for all tables';
-  RAISE LOG 'Auth trigger configured for automatic user profile creation';
+  RAISE LOG 'Auth triggers removed - profiles created manually only during signup';
   RAISE LOG 'Foreign key relationships established';
   RAISE LOG 'Indexes created for optimal performance';
   RAISE LOG 'Default data inserted (categories, platform settings)';

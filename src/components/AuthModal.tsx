@@ -55,7 +55,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           setLoading(false);
           return;
         }
-        result = await signup(email, password, fullName, location);
+        result = await signup(email, password, fullName, location, phoneNumber);
       }
 
       if (!result.error) {
