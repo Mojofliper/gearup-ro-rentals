@@ -91,7 +91,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
           {/* Gear Info */}
           <div className="text-sm text-muted-foreground">
-            <p>Pentru închirierea: <span className="font-medium">{booking.gear?.name}</span></p>
+                          <p>Pentru închirierea: <span className="font-medium">{booking.gear?.title}</span></p>
           </div>
 
           {/* Rating */}

@@ -77,30 +77,42 @@ export const GridSkeleton: React.FC<{ count?: number; columns?: number }> = ({
   </div>
 );
 
-// Profile skeleton
-export const ProfileSkeleton: React.FC = () => (
+// Dashboard skeleton
+export const DashboardSkeleton: React.FC = () => (
   <div className="space-y-6">
-    <div className="flex items-center space-x-4">
-      <AvatarSkeleton className="h-16 w-16" />
-      <div className="space-y-2">
+    {/* Stats cards */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Card key={index}>
+          <CardContent className="p-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-16" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+    
+    {/* Recent activity */}
+    <Card>
+      <CardHeader>
         <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-4 w-24" />
-      </div>
-    </div>
-    <div className="grid grid-cols-3 gap-4">
-      <div className="text-center">
-        <Skeleton className="h-8 w-12 mx-auto" />
-        <Skeleton className="h-3 w-16 mx-auto mt-1" />
-      </div>
-      <div className="text-center">
-        <Skeleton className="h-8 w-12 mx-auto" />
-        <Skeleton className="h-3 w-16 mx-auto mt-1" />
-      </div>
-      <div className="text-center">
-        <Skeleton className="h-8 w-12 mx-auto" />
-        <Skeleton className="h-3 w-16 mx-auto mt-1" />
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex items-center space-x-3">
+              <AvatarSkeleton className="h-8 w-8" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   </div>
 );
 
@@ -180,44 +192,5 @@ export const TableSkeleton: React.FC<{ rows?: number; columns?: number }> = ({
         ))}
       </div>
     ))}
-  </div>
-);
-
-// Dashboard skeleton
-export const DashboardSkeleton: React.FC = () => (
-  <div className="space-y-6">
-    {/* Stats cards */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <Card key={index}>
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-16" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-    
-    {/* Recent activity */}
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-32" />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="flex items-center space-x-3">
-              <AvatarSkeleton className="h-8 w-8" />
-              <div className="flex-1 space-y-1">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
   </div>
 ); 

@@ -44,18 +44,47 @@ serve(async (req) => {
       .single()
 
     if (existingAccount) {
+      // If account is active – nothing to do, just return status
+      if (existingAccount.account_status === 'active') {
       return new Response(
         JSON.stringify({ 
           accountId: existingAccount.stripe_account_id,
-          accountStatus: existingAccount.account_status 
+            accountStatus: existingAccount.account_status,
         }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Create Stripe Connect Express account
+      // For pending / restricted accounts we need a fresh onboarding link so the user can complete verification
+      try {
+        const isLiveMode = (stripe._apiKey || '').startsWith('sk_live_')
+        const appBaseUrl = isLiveMode
+          ? 'https://gearup.ro' // TODO: replace with your prod domain
+          : 'http://localhost:5173'
+
+        const accountLink = await stripe.accountLinks.create({
+          account: existingAccount.stripe_account_id,
+          refresh_url: `${appBaseUrl}/dashboard?refresh=true`,
+          return_url: `${appBaseUrl}/dashboard?success=true`,
+          type: 'account_onboarding',
+          collection_options: { fields: 'eventually_due' },
+        })
+
+        return new Response(
+          JSON.stringify({
+            accountId: existingAccount.stripe_account_id,
+            accountStatus: existingAccount.account_status,
+            onboardingUrl: accountLink.url,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } catch (_) {
+        // Fall through to trying to create a brand-new account below
+      }
+    }
+
+    try {
+      // Try to create Stripe Connect Express account
     const account = await stripe.accounts.create({
       type: 'express',
       country: country,
@@ -71,19 +100,19 @@ serve(async (req) => {
       },
     })
 
-    // Store connected account in database
-    const { error: insertError } = await supabaseClient
+      // Store or update connected account in database
+      const { error: upsertError } = await supabaseClient
       .from('connected_accounts')
-      .insert({
+        .upsert({
         owner_id: userId,
         stripe_account_id: account.id,
-        account_status: account.charges_enabled ? 'active' : 'pending',
-        charges_enabled: account.charges_enabled,
-        payouts_enabled: account.payouts_enabled,
-      })
+          account_status: 'pending',
+          charges_enabled: false,
+          payouts_enabled: false,
+        }, { onConflict: 'owner_id' })
 
-    if (insertError) {
-      console.error('Error storing connected account:', insertError)
+      if (upsertError) {
+        console.error('Error storing connected account:', upsertError)
       return new Response(
         JSON.stringify({ error: 'Failed to store connected account' }),
         { 
@@ -94,23 +123,75 @@ serve(async (req) => {
     }
 
     // Create account link for onboarding
+    const isLiveMode = (stripe._apiKey || '').startsWith('sk_live_')
+    const appBaseUrl = isLiveMode
+      ? 'https://gearup.ro' // TODO: replace with your prod domain
+      : 'http://localhost:5173'
+
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${Deno.env.get('FRONTEND_URL')}/dashboard?refresh=true`,
-      return_url: `${Deno.env.get('FRONTEND_URL')}/dashboard?success=true`,
+      refresh_url: `${appBaseUrl}/dashboard?refresh=true`,
+      return_url: `${appBaseUrl}/dashboard?success=true`,
       type: 'account_onboarding',
+      collection_options: { fields: 'eventually_due' },
     })
 
     return new Response(
       JSON.stringify({
         accountId: account.id,
-        accountStatus: account.charges_enabled ? 'active' : 'pending',
+          accountStatus: 'pending',
         onboardingUrl: accountLink.url,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
+
+    } catch (stripeError: any) {
+      console.error('Stripe Connect setup error:', stripeError)
+      
+      // If Connect is not enabled, create a placeholder account
+      if (stripeError.message?.includes('signed up for Connect')) {
+        // Create a placeholder connected account for now
+        const placeholderAccountId = `placeholder_${userId}_${Date.now()}`
+        
+        const { error: insertError } = await supabaseClient
+          .from('connected_accounts')
+          .insert({
+            owner_id: userId,
+            stripe_account_id: placeholderAccountId,
+            account_status: 'connect_required',
+            charges_enabled: false,
+            payouts_enabled: false,
+          })
+
+        if (insertError) {
+          console.error('Error storing placeholder account:', insertError)
+          return new Response(
+            JSON.stringify({ error: 'Failed to store placeholder account' }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+
+        return new Response(
+          JSON.stringify({
+            accountId: placeholderAccountId,
+            accountStatus: 'connect_required',
+            error: 'Stripe Connect needs to be enabled in your Stripe dashboard. Please contact support.',
+            requiresConnectSetup: true,
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Re-throw other Stripe errors
+      throw stripeError
+    }
 
   } catch (error) {
     console.error('Stripe Connect setup error:', error)

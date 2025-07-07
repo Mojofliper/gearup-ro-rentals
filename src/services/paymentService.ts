@@ -289,8 +289,20 @@ export class PaymentService {
    * Create a transaction for a booking if one does not exist
    */
   static async getOrCreateTransactionForBooking(booking: Database['public']['Tables']['bookings']['Row']): Promise<Database['public']['Tables']['transactions']['Row']> {
-    console.log('Creating transaction for booking:', booking.id);
-    console.log('Booking data:', booking);
+    // console.log('🔍 FUNCTION CALLED: getOrCreateTransactionForBooking');
+    // console.log('=== TRANSACTION DEBUG START ===');
+    // Debug: Log current Supabase user/session and booking ID
+    const session = await supabase.auth.getSession();
+    // console.log('Supabase session:', session?.data?.session);
+    // console.log('Supabase user:', session?.data?.session?.user);
+    // console.log('User ID:', session?.data?.session?.user?.id);
+    // console.log('Creating transaction for booking:', booking.id);
+    // console.log('Booking data:', booking);
+    // console.log('Booking renter_id:', booking.renter_id);
+    // console.log('Booking owner_id:', booking.owner_id);
+    // console.log('Is user the renter?', session?.data?.session?.user?.id === booking.renter_id);
+    // console.log('Is user the owner?', session?.data?.session?.user?.id === booking.owner_id);
+    // console.log('=== TRANSACTION DEBUG END ===');
     
     // Try to find an existing transaction for this booking
     const { data: existing, error: findError } = await supabase
@@ -304,24 +316,24 @@ export class PaymentService {
     }
     
     if (existing) {
-      console.log('Found existing transaction:', existing);
+      // console.log('Found existing transaction:', existing);
       return existing;
     }
     
     // Calculate the correct amounts
     // The booking.total_amount should be the rental amount (price per day * days)
     // We need to calculate platform fee and total amount
-    const rentalAmount = booking.total_amount || 0;
-    const depositAmount = booking.deposit_amount || 0;
+    const rentalAmount = Number(booking.total_amount) || 0;
+    const depositAmount = Number(booking.deposit_amount) || 0;
     const platformFee = Math.round(rentalAmount * 0.13);
     const totalAmount = rentalAmount + depositAmount + platformFee;
     
-    console.log('Calculated amounts:', {
-      rentalAmount,
-      depositAmount,
-      platformFee,
-      totalAmount
-    });
+    // console.log('Calculated amounts:', {
+    //   rentalAmount,
+    //   depositAmount,
+    //   platformFee,
+    //   totalAmount
+    // });
     
     // If not found, create a new transaction
     const { data, error } = await supabase
@@ -346,7 +358,113 @@ export class PaymentService {
       throw new StripeError('Failed to create transaction: No data returned');
     }
     
-    console.log('Created transaction:', data);
+    // console.log('Created transaction:', data);
     return data;
+  }
+
+  /**
+   * Release escrow funds for a completed booking
+   */
+  static async releaseEscrowFunds(bookingId: string, releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' = 'automatic', depositToOwner: boolean = false) {
+    try {
+      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          release_type: releaseType,
+          deposit_to_owner: depositToOwner,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new StripeError(errorData.error || 'Failed to release escrow funds');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Escrow release error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to release escrow funds');
+    }
+  }
+
+  /**
+   * Get payment status for a booking
+   */
+  static async getPaymentStatus(bookingId: string) {
+    try {
+      // Get booking with payment details
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          transactions(*),
+          escrow_transactions(*)
+        `)
+        .eq('id', bookingId)
+        .single();
+
+      if (bookingError) {
+        throw new StripeError('Failed to fetch booking payment status');
+      }
+
+      return {
+        booking,
+        transaction: booking.transactions?.[0] || null,
+        escrowTransaction: booking.escrow_transactions?.[0] || null,
+        paymentStatus: booking.payment_status || 'pending',
+        escrowStatus: booking.escrow_transactions?.[0]?.escrow_status || 'pending'
+      };
+    } catch (error) {
+      console.error('Payment status error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to get payment status');
+    }
+  }
+
+  /**
+   * Process automatic escrow release for completed bookings
+   */
+  static async processAutomaticEscrowRelease() {
+    try {
+      // Find bookings that are ready for automatic escrow release
+      const { data: completedBookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          escrow_transactions(*)
+        `)
+        .eq('status', 'completed')
+        .eq('payment_status', 'paid')
+        .eq('escrow_transactions.escrow_status', 'held');
+
+      if (error) {
+        throw new StripeError('Failed to fetch completed bookings');
+      }
+
+      const releasePromises = completedBookings?.map(async (booking) => {
+        try {
+          return await this.releaseEscrowFunds(booking.id, 'automatic');
+        } catch (error) {
+          console.error(`Failed to release escrow for booking ${booking.id}:`, error);
+          return null;
+        }
+      }) || [];
+
+      const results = await Promise.all(releasePromises);
+      const successful = results.filter(result => result !== null);
+
+      return {
+        total: completedBookings?.length || 0,
+        successful: successful.length,
+        failed: (completedBookings?.length || 0) - successful.length
+      };
+    } catch (error) {
+      console.error('Automatic escrow release error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to process automatic escrow release');
+    }
   }
 }

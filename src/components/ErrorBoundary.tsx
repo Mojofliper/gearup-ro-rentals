@@ -1,71 +1,87 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, ArrowLeft } from 'lucide-react';
+import { captureException, addBreadcrumb } from '@/utils/errorReporting';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
   hasError: boolean;
   error?: Error;
   errorInfo?: ErrorInfo;
+  errorId?: string;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+  public state: State = {
+    hasError: false
+  };
 
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Generate unique error ID
+    const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    this.setState({
-      error,
-      errorInfo
+    this.setState({ error, errorInfo, errorId });
+
+    // Add breadcrumb for debugging
+    addBreadcrumb('error', 'Error boundary caught error', {
+      errorId,
+      componentStack: errorInfo.componentStack,
+      errorMessage: error.message
     });
 
-    // Call the onError callback if provided
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
-    }
+    // Send to error reporting service
+    captureException(error, {
+      errorId,
+      componentStack: errorInfo.componentStack,
+      url: window.location.href,
+      userAgent: navigator.userAgent
+    });
 
-    // Log to external service in production
-    if (process.env.NODE_ENV === 'production') {
-      // TODO: Send to error reporting service (Sentry, LogRocket, etc.)
-      console.error('Production error:', {
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString()
-      });
-    }
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
-  handleRetry = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+  private handleReload = () => {
+    window.location.reload();
   };
 
-  handleGoHome = () => {
+  private handleGoHome = () => {
     window.location.href = '/';
   };
 
-  render() {
+  private handleGoBack = () => {
+    window.history.back();
+  };
+
+  private handleReportError = () => {
+    const { error, errorInfo, errorId } = this.state;
+    if (error) {
+      // Send additional context to error reporting
+      captureException(error, {
+        errorId,
+        componentStack: errorInfo?.componentStack,
+        userAction: 'manual_report',
+        url: window.location.href
+      });
+      
+      alert(`Eroarea a fost raportată cu ID: ${errorId}\nMulțumim pentru feedback!`);
+    }
+  };
+
+  public render() {
     if (this.state.hasError) {
-      // Use custom fallback if provided
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      // Default error UI
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
           <Card className="w-full max-w-md">
@@ -73,56 +89,64 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
-              <CardTitle className="text-xl font-semibold text-gray-900">
-                Oops! Ceva nu a mers bine
-              </CardTitle>
+              <CardTitle className="text-xl">A apărut o eroare</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600 text-center">
-                A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să revii la pagina principală.
+                Ne pare rău, a apărut o eroare neașteptată. Echipa noastră a fost notificată și va rezolva problema cât mai curând.
               </p>
               
-              {process.env.NODE_ENV === 'development' && this.state.error && (
-                <details className="mt-4 p-3 bg-gray-100 rounded-md">
-                  <summary className="cursor-pointer text-sm font-medium text-gray-700 mb-2">
-                    Detalii eroare (doar în dezvoltare)
-                  </summary>
-                  <pre className="text-xs text-red-600 overflow-auto">
-                    {this.state.error.message}
-                    {'\n'}
-                    {this.state.error.stack}
-                  </pre>
-                </details>
+              {this.state.errorId && (
+                <div className="text-xs text-gray-500 text-center">
+                  ID Eroare: {this.state.errorId}
+                </div>
               )}
 
               <div className="flex flex-col space-y-2">
-                <Button
-                  onClick={this.handleRetry}
-                  className="w-full"
-                  variant="outline"
-                >
+                <Button onClick={this.handleReload} className="w-full">
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Încearcă din nou
+                  Reîncarcă Pagina
                 </Button>
                 
-                <Button
-                  onClick={this.handleGoHome}
-                  className="w-full"
-                >
+                <Button variant="outline" onClick={this.handleGoBack} className="w-full">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Înapoi
+                </Button>
+                
+                <Button variant="outline" onClick={this.handleGoHome} className="w-full">
                   <Home className="h-4 w-4 mr-2" />
-                  Pagina principală
+                  Pagina Principală
+                </Button>
+                
+                <Button variant="outline" onClick={this.handleReportError} className="w-full">
+                  Raportează Eroarea
                 </Button>
               </div>
 
-              <p className="text-xs text-gray-500 text-center">
-                Dacă problema persistă, te rugăm să ne contactezi la{' '}
-                <a 
-                  href="mailto:support@gearup.ro" 
-                  className="text-blue-600 hover:underline"
-                >
-                  support@gearup.ro
-                </a>
-              </p>
+              {process.env.NODE_ENV === 'development' && this.state.error && (
+                <details className="mt-4">
+                  <summary className="cursor-pointer text-sm font-medium text-gray-700">
+                    Detalii Eroare (Development)
+                  </summary>
+                  <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono overflow-auto">
+                    <div className="mb-2">
+                      <strong>Error:</strong> {this.state.error.message}
+                    </div>
+                    {this.state.error.stack && (
+                      <div>
+                        <strong>Stack:</strong>
+                        <pre className="whitespace-pre-wrap">{this.state.error.stack}</pre>
+                      </div>
+                    )}
+                    {this.state.errorInfo && (
+                      <div>
+                        <strong>Component Stack:</strong>
+                        <pre className="whitespace-pre-wrap">{this.state.errorInfo.componentStack}</pre>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -4,7 +4,7 @@
 
 This document audits the current API implementation against the documented endpoints in `API_ENDPOINTS_COMPLETE.md` and `API_DOCUMENTATION.md`.
 
-**Last Updated:** $(date)
+**Last Updated:** 2025-07-07
 **Status:** NEARLY COMPLETE
 
 ---
@@ -79,6 +79,7 @@ This document audits the current API implementation against the documented endpo
 - ✅ `updateClaimStatus()` - Update claim status (admin)
 - ✅ `uploadEvidence()` - Upload claim evidence
 - ✅ `getClaimEvidence()` - Get claim evidence
+- ✅ `claimStatusBroadcast()` - Realtime broadcast channel for claim status updates (edge function)
 
 ### 🔔 Notification API
 - ✅ `getUserNotifications()` - Get user notifications

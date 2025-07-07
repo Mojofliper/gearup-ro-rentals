@@ -10,15 +10,16 @@ import { HowItWorks } from '@/components/HowItWorks';
 import { Footer } from '@/components/Footer';
 import { BrowseGear } from '@/components/BrowseGear';
 import { GearDetail } from '@/components/GearDetail';
-import { Profile } from '@/components/Profile';
+import { Dashboard } from '@/components/Dashboard';
 import { AddGear } from '@/components/AddGear';
 import { Messages } from '@/components/Messages';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import NotFound from "./pages/NotFound";
-import PaymentSuccess from './pages/PaymentSuccess';
-import PaymentCancel from './pages/PaymentCancel';
+import { PaymentSuccess } from './pages/PaymentSuccess';
+import { PaymentCancel } from './pages/PaymentCancel';
+import { AdminDashboard } from '@/components/AdminDashboard';
 
 const queryClient = new QueryClient();
 
@@ -37,7 +38,7 @@ const HomePage = () => {
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   
-  console.log('AppRoutes: Rendering with state:', { user: !!user, loading, userId: user?.id });
+  // console.log('AppRoutes: Rendering with state:', { user: !!user, loading, userId: user?.id });
   
   if (loading) {
     console.log('AppRoutes: Showing loading screen');
@@ -51,9 +52,10 @@ const AppRoutes = () => {
       <Route path="/" element={<HomePage />} />
       <Route path="/browse" element={<BrowseGear />} />
       <Route path="/gear/:id" element={<GearDetail />} />
-      <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />
+      <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
       <Route path="/add-gear" element={user ? <AddGear /> : <Navigate to="/" />} />
       <Route path="/messages" element={user ? <Messages /> : <Navigate to="/" />} />
+      <Route path="/admin/*" element={user && user.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />
       <Route path="*" element={<NotFound />} />
@@ -68,7 +70,7 @@ const App = () => {
       <TooltipProvider>
         <ThemeProvider>
           <AuthProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <AppRoutes />
               <Toaster />
               <Sonner />

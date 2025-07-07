@@ -105,3 +105,9 @@ export const checkFileSize = (file: File, maxSizeMB: number): boolean => {
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
   return file.size <= maxSizeBytes;
 };
+
+export const isScamContent = (text: string): boolean => {
+  const emailRegex = /[\w.+-]+@[\w-]+\.[\w.-]+/i;
+  const phoneRegex = /\b(\+\d{1,3}[- ]?)?(\d{3}[- ]?){2}\d{4}\b/;
+  return emailRegex.test(text) || phoneRegex.test(text);
+};

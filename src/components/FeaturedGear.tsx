@@ -16,14 +16,14 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
   const { user } = useAuth();
   
   // Safely parse images from Json type
-  const images = Array.isArray(gear.images) ? (gear.images as unknown as string[]) : [];
+  const images = Array.isArray(gear.gear_photos) ? (gear.gear_photos as unknown as string[]) : [];
   const firstImage = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
   const ownerName = gear.owner?.full_name || 'Utilizator';
   const ownerLocation = gear.owner?.location || 'România';
   const categoryName = gear.category?.name || 'Echipament';
   
   // Convert price from cents to RON
-  const priceInRON = Math.round(gear.price_per_day / 100);
+          const priceInRON = gear.daily_rate; // Price is already in RON
   
   // Get full avatar URL
   const ownerAvatar = gear.owner?.avatar_url 
@@ -38,7 +38,7 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
         <Link to={`/gear/${gear.id}`}>
           <img
             src={firstImage}
-            alt={gear.name}
+            alt={gear.title}
             className="w-full h-48 object-cover rounded-t-lg cursor-pointer"
           />
         </Link>
@@ -56,7 +56,7 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
 
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-lg">{gear.name}</h3>
+          <h3 className="font-semibold text-lg">{gear.title}</h3>
           <div className="text-xs text-muted-foreground">
             {reviewsData?.totalReviews ? (
               <div className="flex items-center space-x-1">
@@ -158,7 +158,7 @@ export const FeaturedGear: React.FC = () => {
       isOpen: true,
       gearId: gear.id,
       ownerId: gear.owner_id,
-      gearName: gear.name,
+      gearName: gear.title,
       ownerName,
       ownerAvatar
     });

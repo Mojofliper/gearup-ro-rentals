@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -172,6 +172,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Configurare plăți</DialogTitle>
+            <DialogDescription>
+              Configurați-vă contul de plată pentru a primi plăți pentru închirierea echipamentului.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -213,6 +216,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Plată în escrow</DialogTitle>
+            <DialogDescription>
+              Vizualizați statusul plății în escrow pentru această închiriere.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -256,12 +262,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Plată securizată cu escrow</DialogTitle>
+          <DialogDescription>
+            Finalizați plata pentru închirierea echipamentului folosind sistemul de escrow securizat.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           {/* Booking Summary */}
           <div className="p-3 bg-muted rounded-lg">
-            <h3 className="font-semibold mb-2">{booking.gear?.name || 'Echipament'}</h3>
+                            <h3 className="font-semibold mb-2">{booking.gear?.title || 'Echipament'}</h3>
             <p className="text-sm text-muted-foreground">
               {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
             </p>

@@ -135,15 +135,31 @@ export const GearForm: React.FC = () => {
         owner_id: user.id,
         title: sanitizeInput(formData.name),
         description: formData.description ? sanitizeInput(formData.description) : null,
-        category_id: formData.categoryId || null,
-        daily_rate: parseFloat(formData.pricePerDay),
-        deposit_amount: formData.depositAmount ? parseFloat(formData.depositAmount) : 0,
+        category_id: formData.categoryId,
+        daily_rate: Math.round(parseFloat(formData.pricePerDay)), // Store as actual amount, not cents
+        deposit_amount: formData.depositAmount ? Math.round(parseFloat(formData.depositAmount)) : 0, // Store as actual amount, not cents
         location: formData.pickupLocation ? sanitizeInput(formData.pickupLocation) : 'Romania',
-        status: 'available' as const,
+        // Note: brand, model, condition, specifications, included_items, is_available are not in the original schema
+        // They were added in the migration, so we'll keep them for now
+        brand: formData.brand ? sanitizeInput(formData.brand) : null,
+        model: formData.model ? sanitizeInput(formData.model) : null,
+        condition: formData.condition || 'Bună',
+        specifications: formData.specifications.length > 0 ? formData.specifications : [],
+        included_items: formData.includedItems.length > 0 ? formData.includedItems : [],
+        is_available: true,
       };
+
+      console.log('Creating gear with data:', gearData);
 
       // 1. Create the gear item
       const result = await createGear.mutateAsync(gearData);
+      
+      console.log('Create gear result:', result);
+
+      // Check if gear was created successfully
+      if (!result) {
+        throw new Error('Failed to create gear: No result returned from API');
+      }
 
       // 2. Upload images to gear_photos table
       // Assume images are base64 data URLs, convert and upload
@@ -167,9 +183,20 @@ export const GearForm: React.FC = () => {
     } catch (error: any) {
       console.error('Error creating gear:', error);
       
+      // Get more specific error message
+      let errorMessage = 'Nu am putut adăuga echipamentul. Te rugăm să încerci din nou.';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.error?.message) {
+        errorMessage = error.error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
       toast({
         title: 'Eroare',
-        description: 'Nu am putut adăuga echipamentul. Te rugăm să încerci din nou.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

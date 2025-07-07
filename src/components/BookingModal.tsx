@@ -41,20 +41,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     const endDate = sortedDates[sortedDates.length - 1];
     
     const totalDays = selectedDates.length;
-    const rentalAmount = totalDays * Math.round(pricePerDay * 100); // Convert to cents
-    const totalAmount = rentalAmount + (depositAmount * 100);
+    const rentalAmount = totalDays * pricePerDay; // Price is already in RON
+    const totalAmount = rentalAmount + depositAmount;
 
     createBooking({
       gear_id: gear.id,
-      owner_id: gear.owner_id,
-      renter_id: user.id,
       start_date: startDate.toISOString().split('T')[0],
       end_date: endDate.toISOString().split('T')[0],
-      total_days: totalDays,
-      total_amount: rentalAmount,
-      deposit_amount: depositAmount * 100,
-      notes: notes || null,
-      status: 'pending'
+      pickup_location: notes || null,
+      renter_notes: notes || null
     }, {
       onSuccess: () => {
         toast({
@@ -76,7 +71,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const totalDays = selectedDates.length;
   const rentalTotal = totalDays * pricePerDay;
-  const platformFee = calculatePlatformFee(rentalTotal * 100) / 100; // Convert back from cents
+  const platformFee = calculatePlatformFee(rentalTotal); // Price is already in RON
   const finalTotal = rentalTotal + depositAmount + platformFee;
 
   return (
@@ -90,7 +85,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           {/* Gear Info */}
           <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
             <div className="flex-1">
-              <h3 className="font-semibold">{gear.name}</h3>
+              <h3 className="font-semibold">{gear.title}</h3>
               <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                 <MapPin className="h-3 w-3" />
                 <span>{gear.owner?.location || 'Locație necunoscută'}</span>

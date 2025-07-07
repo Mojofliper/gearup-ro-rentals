@@ -81,14 +81,11 @@ serve(async (req) => {
     const totalAmount = rentalAmount + depositAmount
     const platformFee = Math.round(totalAmount * 0.13) // 13% platform fee
 
-    // Create payment intent with escrow
+    // Create payment intent WITHOUT transfer_data so funds stay on the platform balance (escrow)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmount,
       currency: 'ron',
-      application_fee_amount: platformFee,
-      transfer_data: {
-        destination: connectedAccount.stripe_account_id,
-      },
+      // Funds stay with platform; we will transfer rental later and keep platform fee
       metadata: {
         booking_id: bookingId,
         rental_amount: rentalAmount,
@@ -97,6 +94,7 @@ serve(async (req) => {
         gear_id: booking.gear_id,
         owner_id: booking.owner_id,
         renter_id: booking.renter_id,
+        escrow: 'true'
       },
       automatic_payment_methods: {
         enabled: true,

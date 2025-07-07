@@ -26,12 +26,14 @@ export const GearCard = React.memo<GearCardProps>(({
   showOwnerInfo = true 
 }) => {
   const formatPrice = (price: number) => {
+    // Convert from cents to RON if needed, or use as-is if already in RON
+    const priceInRON = price > 1000 ? price / 100 : price; // If price is very high, assume it's in cents
     return new Intl.NumberFormat('ro-RO', {
       style: 'currency',
       currency: 'RON',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(price || 0);
+    }).format(priceInRON || 0);
   };
 
   const formatRating = (rating: number) => {
@@ -40,7 +42,13 @@ export const GearCard = React.memo<GearCardProps>(({
 
   const getFirstImage = () => {
     if (gear.gear_photos && Array.isArray(gear.gear_photos) && gear.gear_photos.length > 0) {
-      return gear.gear_photos[0].photo_url;
+      const firstPhoto = gear.gear_photos[0];
+      // Handle different image data structures
+      if (typeof firstPhoto === 'string') {
+        return firstPhoto;
+      } else if (firstPhoto && typeof firstPhoto === 'object') {
+        return firstPhoto.photo_url || firstPhoto.url || firstPhoto;
+      }
     }
     return null;
   };

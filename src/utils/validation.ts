@@ -79,7 +79,7 @@ export const validateBookingDates = (startDate: string, endDate: string): string
 export const validatePhoneNumber = (phone: string): string | null => {
   if (!phone) return null;
   
-  const phoneRegex = /^[\+]?[\d\s\-\(\)]{10,15}$/;
+  const phoneRegex = /^[+]?[\d\s\-()]{10,15}$/;
   if (!phoneRegex.test(phone)) {
     return 'Numărul de telefon nu este valid';
   }
@@ -195,7 +195,7 @@ export const validateFileUpload = (file: File): { valid: boolean; error?: string
   }
   
   // Check filename for suspicious content
-  if (/[<>"|*?\\\/:]/.test(file.name)) {
+  if (/[<>"|*?\\/:]/.test(file.name)) {
     return { valid: false, error: 'Numele fișierului conține caractere nepermise' };
   }
   

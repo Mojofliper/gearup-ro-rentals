@@ -72,7 +72,7 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
           <div className="bg-muted rounded-lg p-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span>Echipament:</span>
-              <span className="font-medium">{booking.gear?.name || 'Necunoscut'}</span>
+                              <span className="font-medium">{booking.gear?.title || 'Necunoscut'}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Proprietar:</span>

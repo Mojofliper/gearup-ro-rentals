@@ -210,13 +210,18 @@ const useGearApi = () => {
     setError(null);
     
     try {
+      console.log('useGearApi.createGear called with:', gearData);
       const result = await api.gear.createGear(gearData);
+      console.log('useGearApi.createGear result:', result);
+      
       if (result.error) {
+        console.error('useGearApi.createGear error:', result.error);
         setError(result.error);
         return null;
       }
       return result.data;
     } catch (err: any) {
+      console.error('useGearApi.createGear exception:', err);
       setError(new ApiError(err.message || 'Failed to create gear', 'CREATE_ERROR'));
       return null;
     } finally {
@@ -682,6 +687,25 @@ const usePaymentApi = () => {
     }
   }, []);
 
+  const processRefund = useCallback(async (transactionId: string, refundAmount: number, reason: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.payment.processRefund(transactionId, refundAmount, reason);
+      if (result.error) {
+        setError(result.error);
+        return null;
+      }
+      return result.data;
+    } catch (err: any) {
+      setError(new ApiError(err.message || 'Failed to process refund', 'REFUND_ERROR'));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     createPaymentIntent,
     getTransactionDetails,
@@ -689,6 +713,7 @@ const usePaymentApi = () => {
     createConnectedAccount,
     getConnectedAccountStatus,
     releaseEscrowFunds,
+    processRefund,
     loading,
     error
   };
@@ -867,10 +892,50 @@ const useReviewApi = () => {
     }
   }, []);
 
+  const getUserReviews = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.review.getUserReviews(userId);
+      if (result.error) {
+        setError(result.error);
+        return [];
+      }
+      return result.data || [];
+    } catch (err: any) {
+      setError(new ApiError(err.message || 'Failed to get user reviews', 'FETCH_ERROR'));
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getUserRatingStats = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.review.getUserRatingStats(userId);
+      if (result.error) {
+        setError(result.error);
+        return null;
+      }
+      return result.data;
+    } catch (err: any) {
+      setError(new ApiError(err.message || 'Failed to get user rating stats', 'FETCH_ERROR'));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     createReview,
     getGearReviews,
     updateReview,
+    getUserReviews,
+    getUserRatingStats,
     loading,
     error
   };

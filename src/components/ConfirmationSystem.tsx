@@ -126,10 +126,10 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
             <CardContent className="p-4">
               <div className="flex items-start space-x-3">
                 <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                  {booking.gear?.images && booking.gear.images.length > 0 ? (
+                  {booking.gear?.gear_photos && booking.gear.gear_photos.length > 0 ? (
                     <img
-                      src={booking.gear.images[0]}
-                      alt={booking.gear.name}
+                      src={booking.gear.gear_photos[0]}
+                      alt={booking.gear.title}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -140,7 +140,7 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800">{booking.gear?.name}</h3>
+                  <h3 className="font-semibold text-gray-800">{booking.gear?.title}</h3>
                   <div className="flex items-center space-x-2 mt-1">
                     <Avatar className="h-5 w-5">
                       <AvatarFallback className="text-xs">

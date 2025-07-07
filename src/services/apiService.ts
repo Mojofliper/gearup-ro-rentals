@@ -26,7 +26,7 @@ export class ApiError extends Error {
 }
 
 // Generic API response wrapper
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
   data: T | null;
   error: ApiError | null;
 }
@@ -77,38 +77,120 @@ export const userApi = {
   // Get dashboard overview
   async getDashboardOverview(userId: string): Promise<ApiResponse<any>> {
     try {
-      // Get user's gear count
-      const { data: gearCount } = await supabase
-        .from('gear')
-        .select('id', { count: 'exact' })
-        .eq('owner_id', userId);
-
       // Get user's bookings count
-      const { data: bookingCount } = await supabase
+      const { count: bookingCount } = await supabase
         .from('bookings')
-        .select('id', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .or(`renter_id.eq.${userId},owner_id.eq.${userId}`);
 
-      // Get user's total earnings
-      const { data: earnings } = await supabase
-        .from('bookings')
-        .select('total_amount')
-        .eq('owner_id', userId)
-        .eq('status', 'completed');
+      // Get user's gear count
+      const { count: gearCount } = await supabase
+        .from('gear')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', userId);
 
-      const totalEarnings = earnings?.reduce((sum, booking) => sum + booking.total_amount, 0) || 0;
+      // Get recent activity
+      const recentActivity = await this.getRecentActivity(userId);
 
       return {
         data: {
-          gearCount: gearCount?.length || 0,
-          bookingCount: bookingCount?.length || 0,
-          totalEarnings,
-          recentActivity: [] // TODO: Implement recent activity
+          bookingCount: bookingCount || 0,
+          gearCount: gearCount || 0,
+          recentActivity
         },
         error: null
       };
     } catch (error: any) {
       return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    }
+  },
+
+  // Get recent activity for user
+  async getRecentActivity(userId: string, limit: number = 10): Promise<ApiResponse<any[]>> {
+    try {
+      // Get recent bookings
+      const { data: recentBookings } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          status,
+          created_at,
+          gear_id,
+          renter_id,
+          owner_id
+        `)
+        .or(`renter_id.eq.${userId},owner_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      // Get recent reviews
+      const { data: recentReviews } = await supabase
+        .from('reviews')
+        .select(`
+          id,
+          rating,
+          created_at,
+          gear_id,
+          reviewer_id,
+          reviewed_id
+        `)
+        .or(`reviewer_id.eq.${userId},reviewed_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      // Get recent messages
+      const { data: recentMessages } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          content,
+          created_at,
+          sender_id,
+          booking_id
+        `)
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      // Combine and sort all activities
+      const activities = [
+        ...(recentBookings || []).map(booking => ({
+          id: booking.id,
+          type: 'booking',
+          action: booking.status === 'pending' ? 'booking_requested' : 
+                  booking.status === 'confirmed' ? 'booking_confirmed' :
+                  booking.status === 'completed' ? 'booking_completed' : 'booking_updated',
+          title: `Rezervare #${booking.id}`,
+          description: `${booking.status === 'pending' ? 'Cerere de rezervare' : 
+                        booking.status === 'confirmed' ? 'Rezervare confirmată' :
+                        booking.status === 'completed' ? 'Rezervare finalizată' : 'Rezervare actualizată'}`,
+          timestamp: booking.created_at,
+          data: booking
+        })),
+        ...(recentReviews || []).map(review => ({
+          id: review.id,
+          type: 'review',
+          action: 'review_posted',
+          title: `Recenzie ${review.rating}/5`,
+          description: `Recenzie ${review.rating} stele`,
+          timestamp: review.created_at,
+          data: review
+        })),
+        ...(recentMessages || []).map(message => ({
+          id: message.id,
+          type: 'message',
+          action: 'message_sent',
+          title: 'Mesaj trimis',
+          description: 'Mesaj trimis',
+          timestamp: message.created_at,
+          data: message
+        }))
+      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+       .slice(0, limit);
+
+      return { data: activities, error: null };
+    } catch (error: any) {
+      return { data: [], error: new ApiError(error.message, 'FETCH_ERROR') };
     }
   },
 
@@ -254,7 +336,8 @@ export const gearApi = {
         .select(`
           *,
           categories!category_id(name, description, icon),
-          users!owner_id(full_name, rating, total_reviews, avatar_url)
+          users!owner_id(full_name, rating, total_reviews, avatar_url),
+          gear_photos(photo_url, is_primary, description)
         `)
         .eq('status', 'available');
 
@@ -308,19 +391,25 @@ export const gearApi = {
   // Create gear listing
   async createGear(gearData: Omit<Gear, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<Gear>> {
     try {
+      console.log('apiService.createGear called with:', gearData);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.error('apiService.createGear: User not authenticated');
         return { data: null, error: new ApiError('User not authenticated', 'AUTH_REQUIRED', 401) };
       }
+
+      // console.log('apiService.createGear: User authenticated:', user.id);
 
       // Ensure required fields are present
       const gearToCreate = {
         ...gearData,
         owner_id: user.id,
-        status: 'available' as const,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      console.log('apiService.createGear: Final gear data to insert:', gearToCreate);
 
       const { data, error } = await supabase
         .from('gear')
@@ -328,9 +417,17 @@ export const gearApi = {
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('apiService.createGear: Supabase response:', { data, error });
+
+      if (error) {
+        console.error('apiService.createGear: Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('apiService.createGear: Success, returning data:', data);
       return { data, error: null };
     } catch (error: any) {
+      console.error('apiService.createGear: Exception caught:', error);
       return { data: null, error: new ApiError(error.message, 'CREATE_ERROR') };
     }
   },
@@ -453,7 +550,8 @@ export const gearApi = {
         .select(`
           *,
           categories!category_id(name, description, icon),
-          users!owner_id(full_name, rating, total_reviews, avatar_url)
+          users!owner_id(full_name, rating, total_reviews, avatar_url),
+          gear_photos(photo_url, is_primary, description)
         `)
         .eq('status', 'available');
 
@@ -492,7 +590,8 @@ export const gearApi = {
         .select(`
           *,
           categories!category_id(name, description, icon),
-          users!owner_id(full_name, rating, total_reviews, avatar_url)
+          users!owner_id(full_name, rating, total_reviews, avatar_url),
+          gear_photos(photo_url, is_primary, description)
         `)
         .eq('status', 'available')
         .ilike('location', `%${location}%`)
@@ -513,7 +612,8 @@ export const gearApi = {
         .select(`
           *,
           categories!category_id(name, description, icon),
-          users!owner_id(full_name, rating, total_reviews, avatar_url)
+          users!owner_id(full_name, rating, total_reviews, avatar_url),
+          gear_photos(photo_url, is_primary, description)
         `)
         .eq('status', 'available')
         .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
@@ -534,7 +634,8 @@ export const gearApi = {
         .select(`
           *,
           categories!category_id(name, description, icon),
-          users!owner_id(full_name, rating, total_reviews, avatar_url)
+          users!owner_id(full_name, rating, total_reviews, avatar_url),
+          gear_photos(photo_url, is_primary, description)
         `)
         .eq('status', 'available')
         .eq('is_featured', true)
@@ -577,6 +678,41 @@ export const gearApi = {
       return { data: null, error: null };
     } catch (error: any) {
       return { data: null, error: new ApiError(error.message, 'DELETE_ERROR') };
+    }
+  },
+
+  // Get reviews for a specific gear
+  async getGearReviews(gearId: string): Promise<ApiResponse<Review[]>> {
+    try {
+      // First get all bookings for this gear
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('gear_id', gearId);
+
+      if (bookingsError) throw bookingsError;
+
+      if (!bookings || bookings.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const bookingIds = bookings.map(b => b.id);
+
+      // Then get reviews for these bookings
+      const { data, error } = await supabase
+        .from('reviews')
+        .select(`
+          *,
+          reviewer:users!reviews_reviewer_id_fkey(full_name, avatar_url),
+          reviewed:users!reviews_reviewed_id_fkey(full_name, avatar_url)
+        `)
+        .in('booking_id', bookingIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
     }
   },
 };
@@ -851,10 +987,10 @@ export const paymentApi = {
   },
 
   // Get transaction details
-  async getTransactionDetails(bookingId: string): Promise<ApiResponse<Payment>> {
+  async getTransactionDetails(bookingId: string): Promise<ApiResponse<any>> {
     try {
       const { data, error } = await supabase
-        .from('payments')
+        .from('transactions')
         .select('*')
         .eq('booking_id', bookingId)
         .single();
@@ -867,9 +1003,24 @@ export const paymentApi = {
   },
 
   // Process refund
-  async processRefund(transactionId: string, refundAmount: number, reason: string): Promise<ApiResponse<Payment>> {
+  async processRefund(transactionId: string, refundAmount: number, reason: string): Promise<ApiResponse<any>> {
     try {
-      const { data, error } = await supabase.functions.invoke('stripe-refund', {
+      // First update the transaction record
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('transactions')
+        .update({
+          refund_amount: refundAmount,
+          refund_reason: reason,
+          status: 'refunded'
+        })
+        .eq('id', transactionId)
+        .select()
+        .single();
+
+      if (transactionError) throw transactionError;
+
+      // Then call Stripe refund function
+      const { data: stripeData, error: stripeError } = await supabase.functions.invoke('stripe-refund', {
         body: {
           transaction_id: transactionId,
           refund_amount: refundAmount,
@@ -877,24 +1028,49 @@ export const paymentApi = {
         }
       });
 
-      if (error) throw error;
-      return { data, error: null };
+      if (stripeError) throw stripeError;
+      return { data: { ...transactionData, stripe_refund: stripeData }, error: null };
     } catch (error: any) {
       return { data: null, error: new ApiError(error.message, 'REFUND_ERROR') };
     }
   },
 
   // Get escrow status
-  async getEscrowStatus(bookingId: string): Promise<ApiResponse<Escrow>> {
+  async getEscrowStatus(bookingId: string): Promise<ApiResponse<any>> {
     try {
-      const { data, error } = await supabase
-        .from('escrow')
+      // First try to get escrow transaction
+      const { data: escrowTransaction, error: escrowError } = await supabase
+        .from('escrow_transactions')
         .select('*')
         .eq('booking_id', bookingId)
         .single();
 
-      if (error) throw error;
-      return { data, error: null };
+      if (!escrowError && escrowTransaction) {
+        return { data: escrowTransaction, error: null };
+      }
+
+      // Fallback to transaction data if escrow doesn't exist
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .single();
+
+      if (transactionError) throw transactionError;
+      
+      // Transform transaction data to escrow format
+      const escrowData = {
+        booking_id: bookingId,
+        transaction_id: transactionData.id,
+        status: transactionData.status,
+        rental_amount: transactionData.rental_amount,
+        deposit_amount: transactionData.deposit_amount,
+        platform_fee: transactionData.platform_fee,
+        total_amount: transactionData.amount,
+        is_escrow_active: transactionData.status === 'completed' || transactionData.status === 'processing'
+      };
+      
+      return { data: escrowData, error: null };
     } catch (error: any) {
       return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
     }
@@ -1132,9 +1308,13 @@ export const reviewApi = {
         .from('reviews')
         .select(`
           *,
-          users!reviewer_id(full_name, avatar_url)
+          reviewer:users!reviews_reviewer_id_fkey(full_name, avatar_url),
+          reviewed:users!reviews_reviewed_id_fkey(full_name, avatar_url),
+          booking:bookings!reviews_booking_id_fkey(
+            gear:gear!bookings_gear_id_fkey(title, gear_photos)
+          )
         `)
-        .eq('gear_id', gearId)
+        .eq('booking.gear.id', gearId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -1151,14 +1331,42 @@ export const reviewApi = {
         .from('reviews')
         .select(`
           *,
-          gear(title, gear_photos),
-          users!reviewer_id(full_name, avatar_url)
+          reviewer:users!reviews_reviewer_id_fkey(full_name, avatar_url),
+          reviewed:users!reviews_reviewed_id_fkey(full_name, avatar_url),
+          booking:bookings!reviews_booking_id_fkey(
+            gear:gear!bookings_gear_id_fkey(title, gear_photos)
+          )
         `)
-        .eq('reviewed_id', userId)
+        .or(`reviewer_id.eq.${userId},reviewed_id.eq.${userId}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    }
+  },
+
+  // Get user rating and review count
+  async getUserRatingStats(userId: string): Promise<ApiResponse<{ rating: number; totalReviews: number }>> {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('reviewed_id', userId);
+
+      if (error) throw error;
+      
+      const reviews = data || [];
+      const totalReviews = reviews.length;
+      const averageRating = totalReviews > 0 
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews 
+        : 0;
+      
+      return { 
+        data: { rating: averageRating, totalReviews }, 
+        error: null 
+      };
     } catch (error: any) {
       return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
     }

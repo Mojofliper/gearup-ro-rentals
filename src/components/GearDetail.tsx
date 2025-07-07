@@ -226,7 +226,7 @@ export const GearDetail: React.FC = () => {
   };
 
   const depositAmount = gear.deposit_amount || 0;
-  const pricePerDay = gear.daily_rate;
+      const pricePerDay = gear.daily_rate;
 
   return (
     <ErrorBoundary>

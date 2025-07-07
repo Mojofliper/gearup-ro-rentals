@@ -48,6 +48,7 @@ export const useGetEscrowStatus = (bookingId: string) => {
 
 export const useProcessRefund = () => {
   const queryClient = useQueryClient();
+  const { processRefund, loading, error } = usePaymentApi();
   
   return useMutation({
     mutationFn: async ({ transactionId, refundAmount, reason }: {
@@ -55,9 +56,7 @@ export const useProcessRefund = () => {
       refundAmount: number;
       reason: string; 
     }) => {
-      // Note: processRefund is not yet implemented in the API service
-      // Will be added in a future update
-      throw new Error('Refund processing not yet implemented');
+      return await processRefund(transactionId, refundAmount, reason);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });

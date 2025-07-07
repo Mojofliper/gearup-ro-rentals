@@ -154,6 +154,32 @@ export const useEscrowPayments = () => {
     return !connectedAccount || !connectedAccount.charges_enabled;
   }, [connectedAccount]);
 
+  // Release escrow funds
+  const releaseEscrowFunds = useCallback(async (
+    bookingId: string,
+    releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' = 'automatic',
+    depositToOwner: boolean = false
+  ) => {
+    if (!user) {
+      toast.error('You must be logged in to release escrow funds');
+      return null;
+    }
+
+    setLoading(true);
+    try {
+      const result = await PaymentService.releaseEscrowFunds(bookingId, releaseType, depositToOwner);
+      
+      toast.success('Escrow funds released successfully');
+      return result;
+    } catch (error) {
+      console.error('Failed to release escrow funds:', error);
+      toast.error('Failed to release escrow funds');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   return {
     loading,
     connectedAccount,
@@ -164,5 +190,6 @@ export const useEscrowPayments = () => {
     getEscrowTransaction,
     canReceivePayments,
     needsOnboarding,
+    releaseEscrowFunds,
   };
 }; 

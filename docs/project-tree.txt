@@ -1,11 +1,12 @@
-tree -I node_modules
 .
 ├── bun.lockb
 ├── components.json
 ├── docs
 │   ├── ADMIN_GUIDE.md
 │   ├── API_DOCUMENTATION.md
+│   ├── API_ENDPOINTS_AUDIT.md
 │   ├── API_ENDPOINTS_COMPLETE.md
+│   ├── CHANGELOG.md
 │   ├── COMPLIANCE_GUIDE.md
 │   ├── CONFIRMATION_FLOW.md
 │   ├── DATABASE_REDESIGN_BENEFITS.md
@@ -14,6 +15,7 @@ tree -I node_modules
 │   ├── ENVIRONMENT_SETUP.md
 │   ├── ENV_TEMPLATE.md
 │   ├── FAQ.md
+│   ├── IMPLEMENTATION_AUDIT.md
 │   ├── IMPLEMENTATION_ROADMAP.md
 │   ├── IMPLEMENTATION_STATUS.md
 │   ├── PAYMENT_ARCHITECTURE.md
@@ -24,6 +26,7 @@ tree -I node_modules
 │   ├── STRIPE_SETUP.md
 │   ├── TECHNICAL_ARCHITECTURE.md
 │   ├── TESTING_GUIDE.md
+│   ├── TODO_LIST.md
 │   ├── TROUBLESHOOTING.md
 │   └── USER_GUIDE.md
 ├── eslint.config.js
@@ -36,7 +39,8 @@ tree -I node_modules
 │   ├── lovable-uploads
 │   │   └── 81ffbf32-0e06-4641-b110-f9aec3ae32c7.png
 │   ├── placeholder.svg
-│   └── robots.txt
+│   ├── robots.txt
+│   └── sw.js
 ├── README.md
 ├── src
 │   ├── App.css
@@ -49,9 +53,18 @@ tree -I node_modules
 │   │   │   └── PhotoUpload.tsx
 │   │   ├── AddGearHeader.tsx
 │   │   ├── AddGear.tsx
+│   │   ├── admin
+│   │   │   ├── AnalyticsPanel.tsx
+│   │   │   ├── ListingsPanel.tsx
+│   │   │   └── UsersPanel.tsx
+│   │   ├── AdminClaimsDashboard.tsx
+│   │   ├── AdminDashboard.tsx
+│   │   ├── AdminGuard.tsx
+│   │   ├── AdminModerationQueue.tsx
 │   │   ├── AuthGuard.tsx
 │   │   ├── AuthModal.tsx
 │   │   ├── AvatarUpload.tsx
+│   │   ├── BookingFlowGuard.tsx
 │   │   ├── BookingModal.tsx
 │   │   ├── BrowseGear
 │   │   │   ├── GearCard.tsx
@@ -59,23 +72,40 @@ tree -I node_modules
 │   │   ├── BrowseGear.tsx
 │   │   ├── Cart.tsx
 │   │   ├── Checkout.tsx
+│   │   ├── ClaimStatusBadge.tsx
 │   │   ├── ConfirmationSystem.tsx
 │   │   ├── ConversationModal.tsx
+│   │   ├── Dashboard.tsx
 │   │   ├── EditGearModal.tsx
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── ErrorHandler.tsx
+│   │   ├── EscrowStatusBadge.tsx
 │   │   ├── FeaturedGear.tsx
 │   │   ├── Footer.tsx
+│   │   ├── GearCard.tsx
 │   │   ├── GearDetail.tsx
 │   │   ├── Header.tsx
 │   │   ├── Hero.tsx
 │   │   ├── HowItWorks.tsx
 │   │   ├── LoadingScreen.tsx
+│   │   ├── LoadingSkeleton.tsx
 │   │   ├── LocationDetector.tsx
+│   │   ├── MapCard.tsx
 │   │   ├── Messages.tsx
+│   │   ├── NotificationBell.tsx
+│   │   ├── OwnerClaimForm.tsx
+│   │   ├── PaymentConfirmation.tsx
+│   │   ├── PaymentErrorHandler.tsx
 │   │   ├── PaymentModal.tsx
-│   │   ├── Profile.tsx
+│   │   ├── PaymentMonitoringDashboard.tsx
+│   │   ├── PhotoDocumentation.tsx
+│   │   ├── PickupLocationModal.tsx
 │   │   ├── RentOfferToggle.tsx
+│   │   ├── ReviewManagement.tsx
 │   │   ├── ReviewModal.tsx
 │   │   ├── SecureForm.tsx
+│   │   ├── StripeConnectModal.tsx
+│   │   ├── StripeConnectOnboarding.tsx
 │   │   └── ui
 │   │       ├── accordion.tsx
 │   │       ├── alert-dialog.tsx
@@ -130,16 +160,22 @@ tree -I node_modules
 │   │   ├── AuthContext.tsx
 │   │   └── ThemeContext.tsx
 │   ├── hooks
+│   │   ├── useApi.ts
 │   │   ├── useBookings.ts
 │   │   ├── useCategories.ts
+│   │   ├── useClaims.ts
+│   │   ├── useEscrowPayments.ts
 │   │   ├── useGear.ts
+│   │   ├── useMessages.ts
 │   │   ├── use-mobile.tsx
 │   │   ├── usePayments.ts
+│   │   ├── usePaymentTesting.ts
 │   │   ├── useRateLimit.ts
 │   │   ├── useReviews.ts
 │   │   ├── useSecureAuth.ts
 │   │   ├── useSecureGear.ts
 │   │   ├── useSecureValidation.ts
+│   │   ├── useStripeConnect.ts
 │   │   ├── use-toast.ts
 │   │   └── useUserData.ts
 │   ├── index.css
@@ -158,27 +194,74 @@ tree -I node_modules
 │   │   ├── PaymentCancel.tsx
 │   │   └── PaymentSuccess.tsx
 │   ├── services
-│   │   └── paymentService.ts
+│   │   ├── apiService.ts
+│   │   ├── paymentService.ts
+│   │   ├── pushNotificationService.ts
+│   │   └── rateLimitService.ts
 │   ├── test-env.tsx
 │   ├── utils
+│   │   ├── cspHelper.ts
+│   │   ├── googleMaps.ts
 │   │   ├── htmlSanitizer.ts
 │   │   ├── secureApi.ts
 │   │   ├── securityMonitor.ts
 │   │   ├── security.ts
+│   │   ├── stripeErrorHandler.ts
 │   │   └── validation.ts
 │   └── vite-env.d.ts
 ├── supabase
 │   ├── config.toml
 │   ├── functions
+│   │   ├── claim-status-broadcast
+│   │   │   └── index.ts
+│   │   ├── email-notification
+│   │   │   └── index.ts
+│   │   ├── escrow-auto-refund
+│   │   │   └── index.ts
+│   │   ├── escrow-release
+│   │   │   └── index.ts
+│   │   ├── handover-photo-presigned
+│   │   │   └── index.ts
+│   │   ├── stripe-connect-setup
+│   │   │   └── index.ts
 │   │   ├── stripe-create-payment-intent
+│   │   │   └── index.ts
+│   │   ├── stripe-escrow-transaction
 │   │   │   └── index.ts
 │   │   ├── stripe-refund
 │   │   │   └── index.ts
-│   │   └── stripe-webhook
+│   │   ├── stripe-test
+│   │   ├── stripe-webhook
+│   │   │   └── index.ts
+│   │   └── update-booking-status
 │   │       └── index.ts
 │   ├── migrations
-│   │   └── 20250101000000_complete_schema_redesign.sql
+│   │   ├── 20250101000000_complete_schema.sql
+│   │   ├── 20250101000013_create_email_notifications.sql
+│   │   ├── 20250101000014_create_moderation_queue.sql
+│   │   ├── 20250705200500_add_claims_table.sql
+│   │   ├── 20250705201000_update_claim_rls.sql
+│   │   ├── 20250707175058_remote_schema.sql
+│   │   ├── 20250707211000_fix_claims_schema.sql
+│   │   ├── 20250707220000_add_pickup_coords.sql
+│   │   ├── 20250707230000_add_auto_refund_enum.sql
+│   │   ├── 20250707231000_create_get_overdue_pickups.sql
+│   │   ├── 20250707233000_create_handover_photos.sql
+│   │   └── 20250708_add_all_missing_gear_columns.sql
 │   └── migrations_backup
+│       ├── 20250101000000_complete_schema_redesign.sql
+│       ├── 20250101000000_complete_schema.sql
+│       ├── 20250101000001_create_transactions_table.sql
+│       ├── 20250101000002_create_missing_tables.sql
+│       ├── 20250101000003_fix_transactions_rls.sql
+│       ├── 20250101000004_force_fix_transactions_rls.sql
+│       ├── 20250101000005_fix_transactions_data_types.sql
+│       ├── 20250101000006_debug_transactions_issue.sql
+│       ├── 20250101000007_temporary_fix_transactions_rls.sql
+│       ├── 20250101000008_check_current_policies.sql
+│       ├── 20250101000009_completely_disable_rls.sql
+│       ├── 20250101000011_recreate_transactions_table.sql
+│       ├── 20250101000012_create_missing_payment_tables.sql
 │       ├── 20250630180634_b10af023_cd39_41c8_a41c_9285a575b338.sql
 │       ├── 20250630180634_initial_schema.sql
 │       ├── 20250630182310_566b5bdf_f3eb_485c_9791_009806971e6d.sql
@@ -188,11 +271,18 @@ tree -I node_modules
 │       ├── 20250703152720_stripe_payments.sql
 │       ├── 20250705193200_add_claims_and_photos.sql
 │       ├── 20250705194153_remote_schema.sql
-│       └── 20250705195000_fix_transaction_validation.sql
+│       ├── 20250705195000_fix_transaction_validation.sql
+│       ├── 20250705195500_add_gear_id_to_reviews.sql
+│       ├── 20250705195600_add_missing_tables.sql
+│       ├── 20250705195700_add_storage_buckets.sql
+│       ├── 20250705195800_add_missing_api_tables.sql
+│       ├── 20250705195900_add_read_at_fields.sql
+│       ├── 20250705196000_add_evidence_type_field.sql
+│       └── 20250705196100_add_condition_field.sql
 ├── tailwind.config.ts
 ├── tsconfig.app.json
 ├── tsconfig.json
 ├── tsconfig.node.json
 └── vite.config.ts
 
-25 directories, 170 files
+35 directories, 251 files

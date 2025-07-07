@@ -10,12 +10,34 @@ import { useGearList } from '@/hooks/useGear';
 import { RentOfferToggle } from './RentOfferToggle';
 import { ErrorBoundary } from './ErrorBoundary';
 import { GridSkeleton } from './LoadingSkeleton';
+import { AdvancedSearchFilters, SearchFilters as AdvancedSearchFiltersType } from './BrowseGear/AdvancedSearchFilters';
+
 export const BrowseGear: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedLocation, setSelectedLocation] = useState(searchParams.get('location') || 'all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('relevance');
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedSearchFiltersType>({
+    search: '',
+    category: '',
+    minPrice: 0,
+    maxPrice: 1000,
+    location: '',
+    condition: [],
+    rating: 0,
+    availability: [],
+    sortBy: 'created_at',
+    sortOrder: 'desc',
+    dateRange: {
+      start: '',
+      end: ''
+    },
+    features: [],
+    brand: '',
+    model: ''
+  });
+
   const {
     data: gear = [],
     isLoading,
@@ -26,6 +48,15 @@ export const BrowseGear: React.FC = () => {
     location: selectedLocation === 'all' ? undefined : selectedLocation,
     sortBy
   });
+
+  const handleAdvancedFiltersChange = (filters: AdvancedSearchFiltersType) => {
+    setAdvancedFilters(filters);
+    // Apply advanced filters to the search
+    setSearchQuery(filters.search);
+    setSelectedCategory(filters.category || 'all');
+    setSortBy(filters.sortBy);
+  };
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
@@ -52,6 +83,13 @@ export const BrowseGear: React.FC = () => {
             onCategoryChange={setSelectedCategory} 
             onSortChange={setSortBy} 
           />
+
+          {/* Advanced Search Filters */}
+          <div className="mb-6">
+            <AdvancedSearchFilters 
+              onFiltersChange={handleAdvancedFiltersChange}
+            />
+          </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>

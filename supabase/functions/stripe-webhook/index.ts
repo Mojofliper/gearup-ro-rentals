@@ -45,6 +45,9 @@ serve(async (req) => {
       case 'transfer.failed':
         await handleTransferFailed(event.data.object, supabaseClient)
         break
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object, supabaseClient)
+        break
       default:
         console.log(`Unhandled event type ${event.type}`)
     }
@@ -61,6 +64,69 @@ serve(async (req) => {
     )
   }
 })
+
+async function handleCheckoutSessionCompleted(session: any, supabaseClient: any) {
+  console.log('Checkout session completed:', session.id)
+
+  try {
+    const transactionId = session.metadata?.transaction_id
+    const bookingId = session.metadata?.booking_id
+
+    if (!transactionId || !bookingId) {
+      console.error('Missing transaction_id or booking_id in session metadata')
+      return
+    }
+
+    // Update transaction status
+    const { error: transactionError } = await supabaseClient
+      .from('transactions')
+      .update({
+        status: 'completed',
+        stripe_payment_intent_id: session.payment_intent,
+        stripe_charge_id: session.payment_intent,
+      })
+      .eq('id', transactionId)
+
+    if (transactionError) {
+      console.error('Error updating transaction:', transactionError)
+    }
+
+    // Update booking payment status
+    const { error: bookingError } = await supabaseClient
+      .from('bookings')
+      .update({ 
+        payment_status: 'paid',
+        status: 'confirmed' // Auto-confirm booking after payment
+      })
+      .eq('id', bookingId)
+
+    if (bookingError) {
+      console.error('Error updating booking:', bookingError)
+    }
+
+    // Create escrow transaction record
+    const { error: escrowError } = await supabaseClient
+      .from('escrow_transactions')
+      .insert({
+        booking_id: bookingId,
+        stripe_payment_intent_id: session.payment_intent,
+        rental_amount: parseInt(session.metadata?.rental_amount || '0'),
+        deposit_amount: parseInt(session.metadata?.deposit_amount || '0'),
+        platform_fee: parseInt(session.metadata?.platform_fee || '0'),
+        escrow_status: 'held',
+        owner_stripe_account_id: session.metadata?.owner_stripe_account_id || null,
+      })
+
+    if (escrowError) {
+      console.error('Error creating escrow transaction:', escrowError)
+    }
+
+    console.log('Successfully processed checkout session completion')
+
+  } catch (error) {
+    console.error('Error handling checkout session completion:', error)
+  }
+}
 
 async function handlePaymentIntentSucceeded(paymentIntent: any, supabaseClient: any) {
   console.log('Payment succeeded:', paymentIntent.id)
@@ -89,7 +155,10 @@ async function handlePaymentIntentSucceeded(paymentIntent: any, supabaseClient: 
     if (transaction) {
       await supabaseClient
         .from('bookings')
-        .update({ payment_status: 'paid' })
+        .update({ 
+          payment_status: 'paid',
+          status: 'confirmed' // Auto-confirm booking after payment
+        })
         .eq('id', transaction.booking_id)
     }
 
@@ -124,7 +193,10 @@ async function handlePaymentIntentFailed(paymentIntent: any, supabaseClient: any
     if (transaction) {
       await supabaseClient
         .from('bookings')
-        .update({ payment_status: 'failed' })
+        .update({ 
+          payment_status: 'failed',
+          status: 'cancelled' // Cancel booking if payment fails
+        })
         .eq('id', transaction.booking_id)
     }
 
@@ -158,8 +230,21 @@ async function handleChargeRefunded(charge: any, supabaseClient: any) {
       // Update booking payment status
       await supabaseClient
         .from('bookings')
-        .update({ payment_status: 'refunded' })
+        .update({ 
+          payment_status: 'refunded',
+          status: 'cancelled'
+        })
         .eq('id', transaction.booking_id)
+
+      // Update escrow transaction if exists
+      await supabaseClient
+        .from('escrow_transactions')
+        .update({
+          escrow_status: 'refunded',
+          refund_amount: charge.amount_refunded,
+          refund_reason: 'Stripe refund',
+        })
+        .eq('stripe_payment_intent_id', transaction.stripe_payment_intent_id)
     }
 
   } catch (error) {
@@ -171,11 +256,24 @@ async function handleAccountUpdated(account: any, supabaseClient: any) {
   console.log('Account updated:', account.id)
 
   try {
-    // Update connected account status
+    // Determine custom status for our app
+    let status: 'active' | 'pending' | 'restricted' | 'connect_required' = 'pending'
+
+    if (account.charges_enabled && account.payouts_enabled) {
+      status = 'active'
+    } else if (!account.details_submitted) {
+      // User hasn't completed onboarding
+      status = 'connect_required'
+    } else {
+      // Details submitted but requirements still due / disabled
+      status = 'restricted'
+    }
+
+    // Update connected account row
     await supabaseClient
       .from('connected_accounts')
       .update({
-        account_status: account.charges_enabled ? 'active' : 'pending',
+        account_status: status,
         charges_enabled: account.charges_enabled,
         payouts_enabled: account.payouts_enabled,
         updated_at: new Date().toISOString(),
@@ -232,7 +330,8 @@ async function handleTransferFailed(transfer: any, supabaseClient: any) {
       .from('escrow_transactions')
       .update({
         escrow_status: 'transfer_failed',
-        transfer_failure_reason: transfer.failure_message,
+        transfer_failure_reason: transfer.failure_message || 'Transfer failed',
+        updated_at: new Date().toISOString(),
       })
       .eq('stripe_payment_intent_id', transfer.source_transaction)
 

@@ -38,7 +38,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   
   // Price is already in RON, no need to convert from cents
-  const price = gear.daily_rate;
+      const price = gear.daily_rate;
   const imageUrl = gear.gear_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
 
   const handleImageClick = () => {

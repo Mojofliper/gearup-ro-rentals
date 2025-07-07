@@ -33,7 +33,7 @@ export const useSendMessage = () => {
   });
 };
 
-export const useUnreadMessageCount = (bookingId: string) => {
+export const useUnreadMessageCountForBooking = (bookingId: string) => {
   const { user } = useAuth();
   const { getBookingMessages, loading, error } = useMessagingApi();
   
@@ -89,9 +89,16 @@ export const useUnreadMessageCount = () => {
     queryKey: ['unread-messages', user?.id],
     queryFn: async () => {
       if (!user?.id) return 0;
-      return await getUnreadMessageCount(user.id);
+      try {
+        return await getUnreadMessageCount(user.id);
+      } catch (error) {
+        console.error('Error fetching unread message count:', error);
+        return 0; // Return 0 on error to prevent infinite retries
+      }
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 60000, // Refetch every 60 seconds instead of 30
+    retry: 1, // Limit retries to prevent infinite loops
+    retryDelay: 2000, // Wait 2 seconds between retries
   });
 }; 

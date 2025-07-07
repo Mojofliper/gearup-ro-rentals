@@ -69,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         console.log('AuthProvider: Found existing session, fetching user...');
         setUser(session.user);
+        setLoading(true);
         fetchProfile(session.user.id).finally(() => {
           setInitialLoadComplete(true);
         });
@@ -88,11 +89,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         
-        console.log('AuthProvider: Auth state change:', event, { session: !!session, userId: session?.user?.id });
+        // console.log('AuthProvider: Auth state change:', event, { session: !!session, userId: session?.user?.id });
         
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('AuthProvider: User signed in, fetching profile data...');
           setUser(session.user);
+          setLoading(true);
+          await fetchProfile(session.user.id);
+        } else if (event === 'USER_UPDATED' && session?.user) {
+          console.log('AuthProvider: User updated, fetching profile data...');
+          setUser(session.user);
+          setLoading(true);
           await fetchProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthProvider: User signed out');
@@ -102,9 +109,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           console.log('AuthProvider: Token refreshed, fetching profile data...');
           setUser(session.user);
-          await fetchProfile(session.user.id);
+          if (!profile) {
+            setLoading(true);
+            await fetchProfile(session.user.id);
+          }
         } else {
-          console.log('AuthProvider: Other auth event:', event);
+          // console.log('AuthProvider: Other auth event:', event);
           if (!session) {
             setUser(null);
             setProfile(null);
@@ -120,70 +130,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [initialLoadComplete]);
 
+  const createProfileManually = async (userId: string): Promise<Profile | null> => {
+    try {
+      console.log('AuthProvider: Attempting to create profile manually for:', userId);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email: user?.email || '',
+          full_name: user?.user_metadata?.full_name || user?.user_metadata?.full_name || 'User',
+          role: 'user',
+          is_verified: false,
+          is_suspended: false,
+          rating: 0,
+          total_reviews: 0,
+          total_rentals: 0,
+          total_earnings: 0
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('AuthProvider: Error creating profile manually:', error);
+        return null;
+      }
+
+      console.log('AuthProvider: Profile created manually:', data);
+      return data;
+    } catch (error) {
+      console.error('AuthProvider: Exception creating profile manually:', error);
+      return null;
+    }
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
       console.log('AuthProvider: Fetching profile data for:', userId);
       
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Try multiple times with increasing delays
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
-      if (error) {
-        console.error('AuthProvider: Error fetching profile:', error);
-        // If profile doesn't exist, create it
+        if (!error) {
+          console.log('AuthProvider: Profile data fetched successfully:', data);
+          setProfile(data);
+          setLoading(false);
+          return;
+        }
+
+        console.error(`AuthProvider: Error fetching profile (attempt ${attempt}):`, error);
+        
+        // If profile doesn't exist, wait and try again (auth trigger might still be processing)
         if (error.code === 'PGRST116') {
-          console.log('AuthProvider: Profile not found, creating profile...');
-          const { data: authUser } = await supabase.auth.getUser();
-          if (authUser.user) {
-            const fullName = authUser.user.email?.split('@')[0] || 'User';
+          console.log(`AuthProvider: Profile not found (attempt ${attempt}), waiting for auth trigger...`);
+          
+          if (attempt < 3) {
+            // Wait with increasing delay: 1s, 2s, then try manual creation
+            const delay = attempt * 1000;
+            console.log(`AuthProvider: Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          } else {
+            console.error('AuthProvider: Profile still not found after 3 attempts, attempting manual creation');
             
-            const { error: createError } = await supabase
-              .from('users')
-              .insert({
-                id: authUser.user.id,
-                email: authUser.user.email!,
-                full_name: fullName,
-                location: 'Unknown'
-              });
-            
-            if (createError) {
-              console.error('AuthProvider: Error creating profile:', createError);
-              setProfile(null);
+            // Try to create the profile manually
+            const manualProfile = await createProfileManually(userId);
+            if (manualProfile) {
+              setProfile(manualProfile);
               setLoading(false);
               return;
             }
             
-            // Fetch the newly created profile
-            const { data: newProfile, error: fetchError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', userId)
-              .single();
-              
-            if (fetchError) {
-              console.error('AuthProvider: Error fetching new profile:', fetchError);
-              setProfile(null);
-              setLoading(false);
-              return;
-            }
+            // If manual creation fails, create a fallback profile
+            console.error('AuthProvider: Manual profile creation failed, creating fallback profile');
+            const fallbackProfile: Profile = {
+              id: userId,
+              email: user?.email || '',
+              full_name: user?.user_metadata?.full_name || 'User',
+              role: 'user',
+              is_verified: false,
+              is_suspended: false,
+              rating: 0,
+              total_reviews: 0,
+              total_rentals: 0,
+              total_earnings: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
             
-            console.log('AuthProvider: New profile created and fetched:', newProfile);
-            setProfile(newProfile);
+            setProfile(fallbackProfile);
             setLoading(false);
             return;
           }
         }
+        
         // For any other error, just set profile to null and stop loading
+        console.error('AuthProvider: Non-retryable error, stopping attempts');
         setProfile(null);
         setLoading(false);
         return;
       }
-      
-      console.log('AuthProvider: Profile data fetched successfully:', data);
-      setProfile(data);
-      setLoading(false);
     } catch (error) {
       console.error('AuthProvider: Error in fetchProfile:', error);
       setProfile(null);
@@ -210,30 +261,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, password: string, fullName: string, location: string) => {
     try {
       console.log('AuthProvider: Attempting signup for:', email);
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            location: location
+          }
+        }
+      });
       if (error) {
         console.error('AuthProvider: Signup error:', error);
         return { error: error.message };
       }
 
-      if (data.user) {
-        console.log('AuthProvider: User created, creating profile...');
-        // Create user profile in users table
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: data.user.email!,
-            full_name: fullName,
-            location: location
-          });
-
-        if (profileError) {
-          console.error('AuthProvider: Profile creation error:', profileError);
-          return { error: profileError.message };
+      console.log('AuthProvider: User created successfully, auth trigger will create profile');
+      
+      // If user is immediately confirmed (email confirmation not required), sign them in
+      if (data.user && !data.session) {
+        console.log('AuthProvider: User created but no session, attempting sign in...');
+        const { error: signInError } = await supabase.auth.signInWithPassword({ 
+          email, 
+          password 
+        });
+        if (signInError) {
+          console.error('AuthProvider: Auto sign-in error:', signInError);
+          return { error: 'Account created but automatic sign-in failed. Please sign in manually.' };
         }
-        console.log('AuthProvider: Profile created successfully');
+        console.log('AuthProvider: Auto sign-in successful');
+        
+        // Small delay to ensure auth state change is processed
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Manually set the user and fetch profile to ensure immediate state update
+        setUser(data.user);
+        setLoading(true);
+        await fetchProfile(data.user.id);
+      } else if (data.user && data.session) {
+        // User was immediately signed in (email confirmation not required)
+        console.log('AuthProvider: User created and immediately signed in');
+        setUser(data.user);
+        setLoading(true);
+        await fetchProfile(data.user.id);
       }
+      
+      // Store a flag to indicate recent signup for better refresh handling
+      localStorage.setItem('recentSignup', 'true');
+      setTimeout(() => localStorage.removeItem('recentSignup'), 10000); // Remove after 10 seconds
       
       return { error: undefined };
     } catch (error) {
@@ -268,7 +343,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(data);
   };
 
-  console.log('AuthProvider: Current state:', { user: !!user, profile: !!profile, loading, userId: user?.id, profileId: profile?.id });
+  // console.log('AuthProvider: Current state:', { user: !!user, profile: !!profile, loading, userId: user?.id, profileId: profile?.id });
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, login, signup, signOut, logout, updateProfile }}>

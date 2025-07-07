@@ -15,10 +15,10 @@ interface CartItem {
   id: string;
   gear: {
     id: string;
-    name: string;
-    price_per_day: number;
+    title: string;
+    daily_rate: number;
     deposit_amount: number;
-    images: any[];
+    gear_photos: any[];
     owner: {
       full_name: string;
       location: string;
@@ -90,8 +90,8 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
   };
 
   const calculateItemTotal = (item: CartItem) => {
-    const pricePerDay = item.gear.price_per_day / 100;
-    const depositAmount = item.gear.deposit_amount / 100;
+    const pricePerDay = item.gear.daily_rate; // Price is already in RON
+    const depositAmount = item.gear.deposit_amount; // Deposit is already in RON
     const rentalTotal = item.selectedDates.length * pricePerDay;
     return rentalTotal + depositAmount;
   };
@@ -177,10 +177,10 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                     <div className="flex items-start space-x-4">
                       {/* Gear Image */}
                       <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                        {item.gear.images && item.gear.images.length > 0 ? (
+                        {item.gear.gear_photos && item.gear.gear_photos.length > 0 ? (
                           <img
-                            src={item.gear.images[0]}
-                            alt={item.gear.name}
+                            src={item.gear.gear_photos[0]}
+                            alt={item.gear.title}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -195,7 +195,7 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-800 mb-1">
-                              {item.gear.name}
+                              {item.gear.title}
                             </h3>
                             
                             <div className="flex items-center space-x-2 mb-2">
@@ -218,7 +218,7 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                             <div className="flex items-center space-x-4 mb-3">
                               <div>
                                 <span className="text-lg font-bold text-gray-800">
-                                  {item.gear.price_per_day / 100} RON
+                                  {item.gear.daily_rate} RON
                                 </span>
                                 <span className="text-sm text-gray-500">/zi</span>
                               </div>
@@ -226,7 +226,7 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                                 <div>
                                   <span className="text-sm text-gray-600">Garanție: </span>
                                   <span className="text-sm font-medium">
-                                    {item.gear.deposit_amount / 100} RON
+                                    {item.gear.deposit_amount} RON
                                   </span>
                                 </div>
                               )}
@@ -309,7 +309,7 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span className="text-gray-600">
-                        {item.gear.name} ({item.selectedDates.length} {item.selectedDates.length === 1 ? 'zi' : 'zile'})
+                        {item.gear.title} ({item.selectedDates.length} {item.selectedDates.length === 1 ? 'zi' : 'zile'})
                       </span>
                       <span>{calculateItemTotal(item).toFixed(2)} RON</span>
                     </div>

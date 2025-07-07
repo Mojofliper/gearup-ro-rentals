@@ -18,11 +18,11 @@ export const useCurrentUser = () => {
 
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { updateProfile, loading, error } = useUserApi();
   
   return useMutation({
     mutationFn: async (updates: Partial<Profile>) => {
-      const { user } = useAuth();
       if (!user?.id) throw new Error('User not authenticated');
       return await updateProfile(user.id, updates);
     },
@@ -82,22 +82,40 @@ export const useUserListings = () => {
 
 export const useUserReviews = () => {
   const { user } = useAuth();
+  const { getUserReviews, loading, error } = useReviewApi();
   
   return useQuery({
     queryKey: ['user-reviews', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      // Note: getUserReviews is not yet implemented in the API service
-      // Will be added in a future update
-      return [];
+      return await getUserReviews(user.id);
     },
     enabled: !!user,
+  });
+};
+
+export const useUpdateReview = () => {
+  const queryClient = useQueryClient();
+  const { updateReview, loading, error } = useReviewApi();
+  
+  return useMutation({
+    mutationFn: async ({ reviewId, updates }: {
+      reviewId: string;
+      updates: { rating?: number; comment?: string };
+    }) => {
+      return await updateReview(reviewId, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+    },
   });
 };
 
 export const useUserStats = () => {
   const { user } = useAuth();
   const { getDashboardOverview, loading, error } = useUserApi();
+  const { getUserRatingStats } = useReviewApi();
   
   return useQuery({
     queryKey: ['user-stats', user?.id],
@@ -110,13 +128,16 @@ export const useUserStats = () => {
         joinDate: new Date().getFullYear().toString()
       };
       
-      const dashboardData = await getDashboardOverview(user.id);
+      const [dashboardData, ratingStats] = await Promise.all([
+        getDashboardOverview(user.id),
+        getUserRatingStats(user.id)
+      ]);
       
       return {
         totalRentals: dashboardData?.bookingCount || 0,
         totalListings: dashboardData?.gearCount || 0,
-        rating: 0, // Will be calculated from reviews
-        reviews: 0, // Will be calculated from reviews
+        rating: ratingStats?.rating || 0,
+        reviews: ratingStats?.totalReviews || 0,
         joinDate: user.created_at ? new Date(user.created_at).getFullYear().toString() : new Date().getFullYear().toString()
       };
     },

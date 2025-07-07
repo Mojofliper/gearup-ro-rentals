@@ -7,7 +7,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { Cart } from '@/components/Cart';
 import { Checkout } from '@/components/Checkout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Plus, User, MessageSquare, Camera, Menu, X, ShoppingBag } from 'lucide-react';
+import { Search, Plus, User, MessageSquare, Camera, Menu, X, ShoppingBag, Shield, Bell } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import { NotificationBell } from './NotificationBell';
 
 export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -33,8 +34,8 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
     setIsMobileMenuOpen(false);
   };
 
-  const handleProfileClick = () => {
-    navigate('/profile');
+  const handleDashboardClick = () => {
+    navigate('/dashboard');
     setIsMobileMenuOpen(false);
   };
 
@@ -80,7 +81,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   const handleCheckoutSuccess = () => {
     setIsCheckoutOpen(false);
     setCartItemCount(0);
-    navigate('/profile');
+    navigate('/dashboard');
   };
 
   const avatarUrl = profile?.avatar_url 
@@ -117,6 +118,15 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
           <div className="hidden md:flex items-center space-x-3">
             {user ? (
               <>
+                {/* Dashboard Button */}
+                <Link to="/dashboard">
+                  <Button variant="ghost" size="sm" className="hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                    <User className="h-4 w-4" />
+                    <span className="ml-1 hidden lg:inline">Dashboard</span>
+                  </Button>
+                </Link>
+
+                {/* Messages */}
                 <Link to="/messages">
                   <Button variant="ghost" size="sm" className="hover:bg-blue-50 hover:text-blue-600 transition-colors relative">
                     <MessageSquare className="h-4 w-4" />
@@ -125,6 +135,8 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                     )}
                   </Button>
                 </Link>
+
+                <NotificationBell />
 
                 <Button
                   variant="ghost"
@@ -151,8 +163,8 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                     </Avatar>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleProfileClick}>
-                      Profil
+                    <DropdownMenuItem onClick={handleDashboardClick}>
+                      Dashboard
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-700">
@@ -164,6 +176,14 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                   <Badge variant="secondary" className="text-xs">
                     Verificat
                   </Badge>
+                )}
+                {profile?.role === 'admin' && (
+                  <Link to="/admin">
+                    <Button variant="ghost" size="sm" className="hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                      <Shield className="h-4 w-4" />
+                      <span className="ml-1 hidden lg:inline">Admin</span>
+                    </Button>
+                  </Link>
                 )}
               </>
             ) : (
@@ -205,11 +225,11 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                     <span>Mesaje</span>
                   </Link>
                   <button 
-                    onClick={handleProfileClick}
+                    onClick={handleDashboardClick}
                     className="flex items-center space-x-2 w-full text-left text-gray-700 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50"
                   >
                     <User className="h-4 w-4" />
-                    <span>Profil</span>
+                    <span>Dashboard</span>
                   </button>
                   <button 
                     onClick={handleLogout}

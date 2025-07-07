@@ -28,7 +28,7 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
     title: gear?.title || '',
     description: gear?.description || '',
     category_id: gear?.category_id || '',
-    daily_rate: gear?.daily_rate || 0,
+            daily_rate: gear?.daily_rate || 0,
     deposit_amount: gear?.deposit_amount || 0,
     location: gear?.location || '',
     status: gear?.status || 'available'
@@ -48,7 +48,7 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
 
     const updates = {
       ...formData,
-      daily_rate: Math.round(formData.daily_rate),
+              daily_rate: Math.round(formData.daily_rate),
       deposit_amount: Math.round(formData.deposit_amount),
     };
 
