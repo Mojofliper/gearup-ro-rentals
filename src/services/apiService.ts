@@ -335,7 +335,7 @@ export const gearApi = {
         .from('gear')
         .select(`
           *,
-          categories!category_id(name, description, icon),
+          categories!category_id(name, description, icon_name),
           users!owner_id(full_name, rating, total_reviews, avatar_url),
           gear_photos(photo_url, is_primary, description)
         `)
@@ -373,7 +373,7 @@ export const gearApi = {
         .from('gear')
         .select(`
           *,
-          categories!category_id(name, description, icon),
+          categories!category_id(name, description, icon_name),
           users!owner_id(full_name, rating, total_reviews, avatar_url, location),
           gear_photos(photo_url, is_primary, description),
           gear_specifications(spec_key, spec_value)
@@ -549,7 +549,7 @@ export const gearApi = {
         .from('gear')
         .select(`
           *,
-          categories!category_id(name, description, icon),
+          categories!category_id(name, description, icon_name),
           users!owner_id(full_name, rating, total_reviews, avatar_url),
           gear_photos(photo_url, is_primary, description)
         `)
@@ -589,7 +589,7 @@ export const gearApi = {
         .from('gear')
         .select(`
           *,
-          categories!category_id(name, description, icon),
+          categories!category_id(name, description, icon_name),
           users!owner_id(full_name, rating, total_reviews, avatar_url),
           gear_photos(photo_url, is_primary, description)
         `)
@@ -611,7 +611,7 @@ export const gearApi = {
         .from('gear')
         .select(`
           *,
-          categories!category_id(name, description, icon),
+          categories!category_id(name, description, icon_name),
           users!owner_id(full_name, rating, total_reviews, avatar_url),
           gear_photos(photo_url, is_primary, description)
         `)
@@ -633,7 +633,7 @@ export const gearApi = {
         .from('gear')
         .select(`
           *,
-          categories!category_id(name, description, icon),
+          categories!category_id(name, description, icon_name),
           users!owner_id(full_name, rating, total_reviews, avatar_url),
           gear_photos(photo_url, is_primary, description)
         `)
@@ -1635,7 +1635,7 @@ export const photoApi = {
 };
 
 // ============================================================================
-// EXPORT ALL APIs
+// API EXPORTS
 // ============================================================================
 
 export const api = {

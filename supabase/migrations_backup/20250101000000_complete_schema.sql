@@ -1,283 +1,451 @@
--- Complete Database Schema for GearUp RO Rentals
--- This migration creates all core tables needed for the application
+-- Copied from docs/DATABASE_SCHEMA.md
+-- (All table definitions, foreign keys, triggers, and functions, but no RLS policies or grants)
 
--- Create handle_updated_at function
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS trigger AS $$
+-- Complete Database Schema for GearUp RO Rentals
+-- Based on docs/DATABASE_SCHEMA.md and comprehensive backup migration
+
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS cube;
+CREATE EXTENSION IF NOT EXISTS earthdistance;
+
+-- Create custom types
+CREATE TYPE user_role AS ENUM ('user', 'admin', 'moderator');
+CREATE TYPE gear_status AS ENUM ('available', 'rented', 'maintenance', 'inactive');
+CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'active', 'completed', 'cancelled', 'disputed');
+CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'refunded');
+CREATE TYPE escrow_status AS ENUM ('pending', 'held', 'released', 'refunded');
+CREATE TYPE claim_status AS ENUM ('pending', 'under_review', 'approved', 'rejected', 'resolved');
+CREATE TYPE notification_type AS ENUM ('booking_request', 'booking_confirmed', 'payment_received', 'pickup_reminder', 'return_reminder', 'dispute_opened', 'claim_submitted', 'admin_message');
+CREATE TYPE message_type AS ENUM ('text', 'image', 'system');
+
+-- Users table (extends Supabase auth.users)
+CREATE TABLE public.users (
+    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    full_name TEXT NOT NULL,
+    first_name TEXT GENERATED ALWAYS AS (split_part(full_name, ' ', 1)) STORED,
+    last_name  TEXT GENERATED ALWAYS AS (
+        CASE
+            WHEN strpos(full_name, ' ') > 0 THEN substr(full_name, strpos(full_name, ' ') + 1)
+            ELSE ''
+        END
+    ) STORED,
+    avatar_url TEXT,
+    bio TEXT,
+    location TEXT,
+    rating DECIMAL(3,2) DEFAULT 0.00,
+    total_reviews INTEGER DEFAULT 0,
+    total_rentals INTEGER DEFAULT 0,
+    total_earnings DECIMAL(10,2) DEFAULT 0.00,
+    role user_role DEFAULT 'user',
+    is_verified BOOLEAN DEFAULT FALSE,
+    is_suspended BOOLEAN DEFAULT FALSE,
+    stripe_customer_id TEXT,
+    stripe_account_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Categories table
+CREATE TABLE public.categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    icon TEXT,
+    parent_id UUID REFERENCES public.categories(id),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Gear table
+CREATE TABLE public.gear (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES public.categories(id),
+    title TEXT NOT NULL,
+    description TEXT,
+    daily_rate DECIMAL(10,2) NOT NULL,
+    weekly_rate DECIMAL(10,2),
+    monthly_rate DECIMAL(10,2),
+    deposit_amount DECIMAL(10,2) DEFAULT 0.00,
+    status gear_status DEFAULT 'available',
+    location TEXT NOT NULL,
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
+    is_featured BOOLEAN DEFAULT FALSE,
+    view_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Gear photos table
+CREATE TABLE public.gear_photos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    gear_id UUID NOT NULL REFERENCES public.gear(id) ON DELETE CASCADE,
+    photo_url TEXT NOT NULL,
+    is_primary BOOLEAN DEFAULT FALSE,
+    description TEXT,
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Gear specifications table
+CREATE TABLE public.gear_specifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    gear_id UUID NOT NULL REFERENCES public.gear(id) ON DELETE CASCADE,
+    spec_key TEXT NOT NULL,
+    spec_value TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(gear_id, spec_key)
+);
+
+-- Bookings table
+CREATE TABLE public.bookings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    gear_id UUID NOT NULL REFERENCES public.gear(id) ON DELETE CASCADE,
+    renter_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_days INTEGER NOT NULL,
+    daily_rate DECIMAL(10,2) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    platform_fee DECIMAL(10,2) NOT NULL,
+    owner_amount DECIMAL(10,2) NOT NULL,
+    deposit_amount DECIMAL(10,2) DEFAULT 0.00,
+    status booking_status DEFAULT 'pending',
+    pickup_location TEXT,
+    pickup_instructions TEXT,
+    return_location TEXT,
+    return_instructions TEXT,
+    pickup_date TIMESTAMP WITH TIME ZONE,
+    return_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Payments table
+CREATE TABLE public.payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,
+    currency TEXT DEFAULT 'RON',
+    stripe_payment_intent_id TEXT,
+    stripe_transfer_id TEXT,
+    status payment_status DEFAULT 'pending',
+    payment_method TEXT,
+    failure_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Connected accounts for Stripe Connect
+CREATE TABLE public.connected_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID REFERENCES public.users(id) UNIQUE,
+    stripe_account_id TEXT UNIQUE NOT NULL,
+    account_status TEXT DEFAULT 'pending' CHECK (account_status IN ('pending', 'active', 'restricted')),
+    charges_enabled BOOLEAN DEFAULT FALSE,
+    payouts_enabled BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Escrow transactions table
+CREATE TABLE public.escrow_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID REFERENCES public.bookings(id),
+    stripe_payment_intent_id TEXT,
+    rental_amount INTEGER NOT NULL,
+    deposit_amount INTEGER NOT NULL,
+    escrow_status TEXT DEFAULT 'pending' CHECK (escrow_status IN ('pending', 'held', 'released', 'disputed')),
+    release_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Escrow table
+CREATE TABLE public.escrow (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,
+    status escrow_status DEFAULT 'pending',
+    held_until TIMESTAMP WITH TIME ZONE,
+    released_at TIMESTAMP WITH TIME ZONE,
+    released_to UUID REFERENCES public.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Reviews table
+CREATE TABLE public.reviews (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    reviewer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    reviewed_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Claims table
+CREATE TABLE public.claims (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    claimant_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    claim_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount_requested DECIMAL(10,2),
+    status claim_status DEFAULT 'pending',
+    admin_notes TEXT,
+    resolved_at TIMESTAMP WITH TIME ZONE,
+    resolved_by UUID REFERENCES public.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Claim photos table
+CREATE TABLE public.claim_photos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+    photo_url TEXT NOT NULL,
+    description TEXT,
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Messages table
+CREATE TABLE public.messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    message_type message_type DEFAULT 'text',
+    content TEXT NOT NULL,
+    attachment_url TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Notifications table
+CREATE TABLE public.notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    type notification_type NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    data JSONB,
+    is_read BOOLEAN DEFAULT FALSE,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Admin actions table
+CREATE TABLE public.admin_actions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    admin_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id UUID NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Analytics table
+CREATE TABLE public.analytics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_type TEXT NOT NULL,
+    user_id UUID REFERENCES public.users(id),
+    gear_id UUID REFERENCES public.gear(id),
+    booking_id UUID REFERENCES public.bookings(id),
+    data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Platform settings table
+CREATE TABLE public.platform_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    setting_key TEXT NOT NULL UNIQUE,
+    setting_value TEXT NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_users_email ON public.users(email);
+CREATE INDEX idx_users_phone ON public.users(phone);
+CREATE INDEX idx_users_role ON public.users(role);
+CREATE INDEX idx_gear_owner_id ON public.gear(owner_id);
+CREATE INDEX idx_gear_category_id ON public.gear(category_id);
+CREATE INDEX idx_gear_status ON public.gear(status);
+CREATE INDEX idx_gear_location ON public.gear USING GIST (ll_to_earth(latitude, longitude));
+CREATE INDEX idx_gear_photos_gear_id ON public.gear_photos(gear_id);
+CREATE INDEX idx_bookings_gear_id ON public.bookings(gear_id);
+CREATE INDEX idx_bookings_renter_id ON public.bookings(renter_id);
+CREATE INDEX idx_bookings_owner_id ON public.bookings(owner_id);
+CREATE INDEX idx_bookings_status ON public.bookings(status);
+CREATE INDEX idx_bookings_dates ON public.bookings(start_date, end_date);
+CREATE INDEX idx_payments_booking_id ON public.payments(booking_id);
+CREATE INDEX idx_payments_status ON public.payments(status);
+CREATE INDEX idx_connected_accounts_owner_id ON public.connected_accounts(owner_id);
+CREATE INDEX idx_connected_accounts_stripe_account_id ON public.connected_accounts(stripe_account_id);
+CREATE INDEX idx_escrow_transactions_booking_id ON public.escrow_transactions(booking_id);
+CREATE INDEX idx_escrow_transactions_status ON public.escrow_transactions(escrow_status);
+CREATE INDEX idx_escrow_booking_id ON public.escrow(booking_id);
+CREATE INDEX idx_escrow_status ON public.escrow(status);
+CREATE INDEX idx_reviews_booking_id ON public.reviews(booking_id);
+CREATE INDEX idx_reviews_reviewer_id ON public.reviews(reviewer_id);
+CREATE INDEX idx_reviews_reviewed_id ON public.reviews(reviewed_id);
+CREATE INDEX idx_claims_booking_id ON public.claims(booking_id);
+CREATE INDEX idx_claims_claimant_id ON public.claims(claimant_id);
+CREATE INDEX idx_claims_status ON public.claims(status);
+CREATE INDEX idx_messages_booking_id ON public.messages(booking_id);
+CREATE INDEX idx_messages_sender_id ON public.messages(sender_id);
+CREATE INDEX idx_messages_created_at ON public.messages(created_at);
+CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX idx_notifications_is_read ON public.notifications(is_read);
+CREATE INDEX idx_analytics_event_type ON public.analytics(event_type);
+CREATE INDEX idx_analytics_created_at ON public.analytics(created_at);
+
+-- Create triggers for updated_at timestamps
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_gear_updated_at BEFORE UPDATE ON public.gear FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON public.bookings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON public.payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_connected_accounts_updated_at BEFORE UPDATE ON public.connected_accounts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_escrow_transactions_updated_at BEFORE UPDATE ON public.escrow_transactions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_escrow_updated_at BEFORE UPDATE ON public.escrow FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_claims_updated_at BEFORE UPDATE ON public.claims FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Insert default categories
+INSERT INTO public.categories (name, description, icon) VALUES
+('Cameras', 'DSLR, mirrorless, and point-and-shoot cameras', 'camera'),
+('Lenses', 'Camera lenses for various purposes', 'lens'),
+('Lighting', 'Studio lights, flashes, and modifiers', 'lightbulb'),
+('Audio', 'Microphones, recorders, and audio equipment', 'microphone'),
+('Tripods & Stabilization', 'Tripods, gimbals, and stabilizers', 'tripod'),
+('Drones', 'Aerial photography and videography drones', 'drone'),
+('Computers & Editing', 'Laptops, desktops, and editing equipment', 'computer'),
+('Accessories', 'Camera bags, filters, and other accessories', 'bag');
+
+-- Insert default platform settings
+INSERT INTO public.platform_settings (setting_key, setting_value, description) VALUES
+('platform_fee_percentage', '10', 'Platform fee as percentage of rental amount'),
+('escrow_hold_days', '3', 'Number of days to hold escrow after rental completion'),
+('max_rental_days', '30', 'Maximum number of days for a single rental'),
+('min_deposit_percentage', '20', 'Minimum deposit as percentage of gear value'),
+('auto_approval_threshold', '4.5', 'Minimum rating for auto-approval of bookings'),
+('support_email', 'support@gearup.ro', 'Platform support email address');
+
+-- Create functions for common operations
+CREATE OR REPLACE FUNCTION calculate_booking_total(
+    p_daily_rate DECIMAL,
+    p_start_date DATE,
+    p_end_date DATE,
+    p_platform_fee_percentage INTEGER DEFAULT 10
+)
+RETURNS TABLE(
+    total_days INTEGER,
+    total_amount DECIMAL(10,2),
+    platform_fee DECIMAL(10,2),
+    owner_amount DECIMAL(10,2)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        (p_end_date - p_start_date + 1)::INTEGER as total_days,
+        (p_daily_rate * (p_end_date - p_start_date + 1))::DECIMAL(10,2) as total_amount,
+        ((p_daily_rate * (p_end_date - p_start_date + 1)) * p_platform_fee_percentage / 100)::DECIMAL(10,2) as platform_fee,
+        ((p_daily_rate * (p_end_date - p_start_date + 1)) * (100 - p_platform_fee_percentage) / 100)::DECIMAL(10,2) as owner_amount;
 END;
 $$ LANGUAGE plpgsql;
 
--- 1. USERS TABLE
-CREATE TABLE IF NOT EXISTS public.users (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  first_name TEXT,
-  last_name TEXT,
-  avatar_url TEXT,
-  location TEXT,
-  phone TEXT,
-  is_verified BOOLEAN DEFAULT false,
-  role TEXT DEFAULT 'renter' CHECK (role IN ('renter', 'lender', 'both')),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+-- Function to update user ratings
+CREATE OR REPLACE FUNCTION update_user_rating(p_user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE public.users 
+    SET 
+        rating = (
+            SELECT COALESCE(AVG(rating), 0)
+            FROM public.reviews 
+            WHERE reviewed_id = p_user_id AND is_public = true
+        ),
+        total_reviews = (
+            SELECT COUNT(*)
+            FROM public.reviews 
+            WHERE reviewed_id = p_user_id AND is_public = true
+        )
+    WHERE id = p_user_id;
+END;
+$$ LANGUAGE plpgsql;
 
--- 2. CATEGORIES TABLE
-CREATE TABLE IF NOT EXISTS public.categories (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  slug TEXT NOT NULL UNIQUE,
-  description TEXT,
-  icon_name TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+-- Function to create notification
+CREATE OR REPLACE FUNCTION create_notification(
+    p_user_id UUID,
+    p_type notification_type,
+    p_title TEXT,
+    p_message TEXT,
+    p_data JSONB DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+    v_notification_id UUID;
+BEGIN
+    INSERT INTO public.notifications (user_id, type, title, message, data)
+    VALUES (p_user_id, p_type, p_title, p_message, p_data)
+    RETURNING id INTO v_notification_id;
+    
+    RETURN v_notification_id;
+END;
+$$ LANGUAGE plpgsql;
 
--- 3. GEAR TABLE
-CREATE TABLE IF NOT EXISTS public.gear (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  description TEXT,
-  category_id UUID REFERENCES public.categories(id),
-  brand TEXT,
-  model TEXT,
-  condition TEXT CHECK (condition IN ('Nou', 'Ca nou', 'Foarte bună', 'Bună', 'Acceptabilă')),
-  price_per_day INTEGER NOT NULL, -- in RON cents
-  deposit_amount INTEGER DEFAULT 0, -- in RON cents
-  pickup_location TEXT,
-  specifications JSONB DEFAULT '[]',
-  included_items JSONB DEFAULT '[]',
-  gear_photos JSONB DEFAULT '[]',
-  is_available BOOLEAN DEFAULT true,
-  view_count INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+-- Trigger to update user rating when review is created/updated
+CREATE OR REPLACE FUNCTION trigger_update_user_rating()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+        PERFORM update_user_rating(NEW.reviewed_id);
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        PERFORM update_user_rating(OLD.reviewed_id);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
--- 4. BOOKINGS TABLE
-CREATE TABLE IF NOT EXISTS public.bookings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  gear_id UUID NOT NULL REFERENCES public.gear(id) ON DELETE CASCADE,
-  renter_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  total_days INTEGER NOT NULL,
-  total_amount INTEGER NOT NULL, -- in RON cents
-  deposit_amount INTEGER NOT NULL, -- in RON cents
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'active', 'completed', 'cancelled')),
-  payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+CREATE TRIGGER update_user_rating_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON public.reviews
+    FOR EACH ROW EXECUTE FUNCTION trigger_update_user_rating();
 
--- 5. TRANSACTIONS TABLE
-CREATE TABLE IF NOT EXISTS public.transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  stripe_payment_intent_id TEXT UNIQUE,
-  amount INTEGER NOT NULL, -- total amount in RON cents
-  platform_fee INTEGER NOT NULL, -- 13% platform fee in RON cents
-  deposit_amount INTEGER NOT NULL, -- deposit amount in RON cents
-  rental_amount INTEGER NOT NULL, -- rental amount in RON cents
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'refunded')),
-  payment_method TEXT,
-  stripe_charge_id TEXT,
-  refund_amount INTEGER DEFAULT 0, -- amount refunded in RON cents
-  refund_reason TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+-- Create auth trigger for new user registration
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name)
+  VALUES (
+    new.id,
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'full_name', concat_ws(' ', new.raw_user_meta_data->>'first_name', new.raw_user_meta_data->>'last_name'))
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. CONNECTED ACCOUNTS TABLE
-CREATE TABLE IF NOT EXISTS public.connected_accounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES public.users(id) UNIQUE,
-  stripe_account_id TEXT UNIQUE NOT NULL,
-  account_status TEXT DEFAULT 'pending' CHECK (account_status IN ('pending', 'active', 'restricted')),
-  charges_enabled BOOLEAN DEFAULT FALSE,
-  payouts_enabled BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 7. ESCROW TRANSACTIONS TABLE
-CREATE TABLE IF NOT EXISTS public.escrow_transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID REFERENCES public.bookings(id),
-  stripe_payment_intent_id TEXT,
-  rental_amount INTEGER NOT NULL,
-  deposit_amount INTEGER NOT NULL,
-  platform_fee INTEGER NOT NULL,
-  escrow_status TEXT DEFAULT 'pending' CHECK (escrow_status IN ('pending', 'held', 'released', 'disputed')),
-  release_date TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 8. MESSAGES TABLE
-CREATE TABLE IF NOT EXISTS public.messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  sender_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  is_read BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 9. MESSAGE THREADS TABLE
-CREATE TABLE IF NOT EXISTS public.message_threads (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE,
-  participant1_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  participant2_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(participant1_id, participant2_id, booking_id)
-);
-
--- 10. REVIEWS TABLE
-CREATE TABLE IF NOT EXISTS public.reviews (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  reviewer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  reviewed_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  gear_id UUID NOT NULL REFERENCES public.gear(id) ON DELETE CASCADE,
-  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-  comment TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 11. CLAIMS TABLE
-CREATE TABLE IF NOT EXISTS public.claims (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  claimant_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  claim_type TEXT NOT NULL CHECK (claim_type IN ('damage', 'late_return', 'missing_item', 'other')),
-  description TEXT NOT NULL,
-  evidence_photos JSONB, -- Array of photo URLs
-  admin_notes TEXT,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'under_review', 'resolved', 'dismissed')),
-  resolution TEXT,
-  deposit_penalty INTEGER DEFAULT 0, -- Amount withheld from deposit in RON cents
-  admin_id UUID REFERENCES public.users(id),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  resolved_at TIMESTAMPTZ
-);
-
--- 12. PHOTO UPLOADS TABLE
-CREATE TABLE IF NOT EXISTS public.photo_uploads (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  uploaded_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  photo_type TEXT NOT NULL CHECK (photo_type IN ('pickup_renter', 'pickup_owner', 'return_renter', 'return_owner', 'claim_evidence')),
-  photo_url TEXT NOT NULL,
-  timestamp TIMESTAMPTZ DEFAULT now(),
-  metadata JSONB -- Additional photo metadata (camera info, location, etc.)
-);
-
--- 13. NOTIFICATIONS TABLE
-CREATE TABLE IF NOT EXISTS public.notifications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  type TEXT DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
-  is_read BOOLEAN DEFAULT false,
-  read_at TIMESTAMPTZ,
-  metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 14. RATE LIMITS TABLE
-CREATE TABLE IF NOT EXISTS public.rate_limits (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-  action_type TEXT NOT NULL,
-  action_count INTEGER DEFAULT 1,
-  window_start TIMESTAMPTZ DEFAULT now(),
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Enable RLS on all tables
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.gear ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.connected_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.escrow_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.message_threads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.claims ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.photo_uploads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
-
--- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
-CREATE INDEX IF NOT EXISTS idx_gear_owner_id ON public.gear(owner_id);
-CREATE INDEX IF NOT EXISTS idx_gear_category_id ON public.gear(category_id);
-CREATE INDEX IF NOT EXISTS idx_gear_is_available ON public.gear(is_available);
-CREATE INDEX IF NOT EXISTS idx_bookings_renter_id ON public.bookings(renter_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_owner_id ON public.bookings(owner_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_gear_id ON public.bookings(gear_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_status ON public.bookings(status);
-CREATE INDEX IF NOT EXISTS idx_transactions_booking_id ON public.transactions(booking_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_stripe_payment_intent_id ON public.transactions(stripe_payment_intent_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
-CREATE INDEX IF NOT EXISTS idx_connected_accounts_owner_id ON public.connected_accounts(owner_id);
-CREATE INDEX IF NOT EXISTS idx_escrow_transactions_booking_id ON public.escrow_transactions(booking_id);
-CREATE INDEX IF NOT EXISTS idx_messages_booking_id ON public.messages(booking_id);
-CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON public.messages(sender_id);
-CREATE INDEX IF NOT EXISTS idx_message_threads_booking_id ON public.message_threads(booking_id);
-CREATE INDEX IF NOT EXISTS idx_reviews_booking_id ON public.reviews(booking_id);
-CREATE INDEX IF NOT EXISTS idx_reviews_reviewed_id ON public.reviews(reviewed_id);
-CREATE INDEX IF NOT EXISTS idx_claims_booking_id ON public.claims(booking_id);
-CREATE INDEX IF NOT EXISTS idx_claims_claimant_id ON public.claims(claimant_id);
-CREATE INDEX IF NOT EXISTS idx_photo_uploads_booking_id ON public.photo_uploads(booking_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(is_read);
-CREATE INDEX IF NOT EXISTS idx_rate_limits_user_action ON public.rate_limits(user_id, action_type);
-
--- Create triggers for updated_at
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.gear
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.bookings
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.transactions
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.connected_accounts
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.escrow_transactions
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.message_threads
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.claims
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
--- Insert default categories
-INSERT INTO public.categories (name, slug, description, icon_name) VALUES
-('Camere foto', 'camere-foto', 'Camere foto profesionale și semi-profesionale', 'camera'),
-('Obiective', 'obiective', 'Obiective pentru camere foto', 'lens'),
-('Drone', 'drone', 'Drone pentru filmare și fotografii aeriene', 'drone'),
-('Iluminat', 'iluminat', 'Echipamente de iluminat pentru foto/video', 'lightbulb'),
-('Audio', 'audio', 'Echipamente audio pentru filmare', 'microphone'),
-('Video', 'video', 'Camere video și echipamente de filmare', 'video'),
-('Trepiere', 'trepiere', 'Trepiere și suporturi pentru echipamente', 'tripod'),
-('Accesorii', 'accesorii', 'Accesorii diverse pentru foto/video', 'tools')
-ON CONFLICT (name) DO NOTHING; 
+-- Create the trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user(); 

@@ -29,8 +29,6 @@ export const useGearList = (filters?: {
   return useQuery({
     queryKey: ['gear', 'list', filters],
     queryFn: async () => {
-      console.log('Fetching gear with filters:', filters);
-      
       // Transform filters to match API service format
       const apiFilters = {
         category_id: filters?.category !== 'all' ? filters?.category : undefined,
@@ -42,7 +40,6 @@ export const useGearList = (filters?: {
       };
       
       const result = await getAvailableGear(apiFilters);
-      console.log('API result:', result);
       
       // Apply sorting if needed (API service handles basic sorting)
       if (filters?.sortBy && result) {

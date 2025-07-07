@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '@/hooks/useUserData';
-import { useUserBookings as useOwnerBookings, useAcceptBooking, useConfirmReturn } from '@/hooks/useBookings';
+import { useAcceptBooking, useConfirmReturn } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
 import { useDeleteGear } from '@/hooks/useGear';
@@ -56,16 +56,11 @@ export const Dashboard: React.FC = () => {
   const { data: listings = [], isLoading: listingsLoading } = useUserListings();
   const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews();
   const { data: stats, isLoading: statsLoading } = useUserStats();
-  const { data: ownerBookings = [], isLoading: ownerBookingsLoading } = useOwnerBookings();
   
-  // Debug logging for ownerBookings
-  // console.log('ownerBookings data:', ownerBookings);
-  // console.log('ownerBookings loading:', ownerBookingsLoading);
-  // console.log('Current user ID:', user?.id);
-  
-  // Filter ownerBookings to only show bookings where user is the owner
-  const filteredOwnerBookings = (ownerBookings as any[]).filter(booking => booking.owner_id === user?.id);
-  // console.log('Filtered ownerBookings (user as owner):', filteredOwnerBookings);
+  // Filter bookings to separate user bookings (as renter) from owner bookings
+  const userBookings = (bookings as any[]).filter(booking => booking.renter_id === user?.id);
+  const ownerBookings = (bookings as any[]).filter(booking => booking.owner_id === user?.id);
+  const ownerBookingsLoading = bookingsLoading;
   
   const { mutate: acceptBooking } = useAcceptBooking();
   const { mutate: confirmReturn } = useConfirmReturn();
@@ -106,7 +101,6 @@ export const Dashboard: React.FC = () => {
         .select('id, booking_id, claim_status')
         .in('booking_id', [
           ...bookings.map(b => b.id),
-          ...filteredOwnerBookings.map(b => b.id),
         ]);
       if (error) {
         console.error('Error loading claims', error);
@@ -130,7 +124,7 @@ export const Dashboard: React.FC = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, [user, bookings, filteredOwnerBookings]);
+  }, [user, bookings]);
 
   // Financial analytics data
   const { data: financialData, isLoading: financialLoading } = useQuery({
@@ -255,7 +249,7 @@ export const Dashboard: React.FC = () => {
   const bookingsWithRelations = (bookings as any[]).filter(booking => booking.renter_id === user.id);
   const listingsWithRelations = listings as any[];
   // Map ownerBookingsWithRelations to ensure .renter and .gear fields are always present
-  const ownerBookingsWithRelations = filteredOwnerBookings.map((booking) => ({
+  const ownerBookingsWithRelations = ownerBookings.map((booking) => ({
     ...booking,
     renter: booking.renter || booking["renter"] || { id: booking.renter_id, full_name: booking.renter_full_name || null },
     owner: booking.owner || booking["owner"] || { id: booking.owner_id, full_name: booking.owner_full_name || null },
@@ -775,7 +769,7 @@ export const Dashboard: React.FC = () => {
                       <BookingSkeleton key={index} />
                     ))}
                   </div>
-                ) : filteredOwnerBookings.length === 0 ? (
+                ) : ownerBookings.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     Nu ai încă nicio rezervare pentru echipamentele tale.
                   </div>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 // import { Database } from '@/integrations/supabase/types';
@@ -43,6 +43,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Add refs to prevent duplicate operations
+  const fetchingProfileRef = useRef<string | null>(null);
+  const creatingProfileRef = useRef<string | null>(null);
+  const initialSessionProcessedRef = useRef(false);
+  const lastSignedInUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     console.log('AuthProvider: Initializing auth...');
@@ -52,6 +58,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('AuthProvider: Loading timeout reached, stopping loading');
       setLoading(false);
       setInitialLoadComplete(true);
+      // Reset refs
+      fetchingProfileRef.current = null;
+      creatingProfileRef.current = null;
+      initialSessionProcessedRef.current = false;
+      lastSignedInUserIdRef.current = null;
     }, 10000); // 10 second timeout
     
     // Get initial session
@@ -66,8 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      if (session?.user) {
-        console.log('AuthProvider: Found existing session, fetching user...');
+      if (session?.user && !initialSessionProcessedRef.current) {
+        console.log('AuthProvider: Found existing session, fetching user...', session.user.id);
+        initialSessionProcessedRef.current = true;
         setUser(session.user);
         setLoading(true);
         fetchProfile(session.user.id).finally(() => {
@@ -89,26 +101,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         
+        // Skip if we're still processing the initial session
+        if (event === 'INITIAL_SESSION' && initialSessionProcessedRef.current) {
+          console.log('AuthProvider: Skipping duplicate initial session event');
+          return;
+        }
+        
         // console.log('AuthProvider: Auth state change:', event, { session: !!session, userId: session?.user?.id });
         
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log('AuthProvider: User signed in, fetching profile data...');
+          console.log('AuthProvider: User signed in, fetching profile data...', session.user.id);
+          console.log('AuthProvider: Current user state:', user?.id);
+          console.log('AuthProvider: Session user metadata:', session.user.user_metadata);
+          
+          // Prevent duplicate SIGNED_IN events for the same user
+          if (lastSignedInUserIdRef.current === session.user.id) {
+            console.log('AuthProvider: Duplicate SIGNED_IN event for same user, skipping');
+            return;
+          }
+          
+          lastSignedInUserIdRef.current = session.user.id;
+          
+          // Always update user state and fetch profile for SIGNED_IN event
+          // This ensures we get the correct user from the session
           setUser(session.user);
           setLoading(true);
+          
+          // Add a small delay to ensure the auth trigger has time to create the profile
+          await new Promise(resolve => setTimeout(resolve, 500));
           await fetchProfile(session.user.id);
         } else if (event === 'USER_UPDATED' && session?.user) {
           console.log('AuthProvider: User updated, fetching profile data...');
           setUser(session.user);
-          setLoading(true);
-          await fetchProfile(session.user.id);
+          // Only fetch profile if we don't have one or if user ID changed
+          if (!profile || profile.id !== session.user.id) {
+            setLoading(true);
+            await fetchProfile(session.user.id);
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthProvider: User signed out');
           setUser(null);
           setProfile(null);
           setLoading(false);
+          // Reset refs
+          fetchingProfileRef.current = null;
+          creatingProfileRef.current = null;
+          initialSessionProcessedRef.current = false;
+          lastSignedInUserIdRef.current = null;
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           console.log('AuthProvider: Token refreshed, fetching profile data...');
           setUser(session.user);
+          // Only fetch profile if we don't have one
           if (!profile) {
             setLoading(true);
             await fetchProfile(session.user.id);
@@ -119,6 +162,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(null);
             setProfile(null);
             setLoading(false);
+            // Reset refs
+            fetchingProfileRef.current = null;
+            creatingProfileRef.current = null;
+            initialSessionProcessedRef.current = false;
+            lastSignedInUserIdRef.current = null;
           }
         }
       }
@@ -131,40 +179,127 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [initialLoadComplete]);
 
   const createProfileManually = async (userId: string): Promise<Profile | null> => {
+    // Prevent duplicate profile creation
+    if (creatingProfileRef.current === userId) {
+      console.log('AuthProvider: Profile creation already in progress for:', userId);
+      return null;
+    }
+    
+    creatingProfileRef.current = userId;
+    
     try {
       console.log('AuthProvider: Attempting to create profile manually for:', userId);
       
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: user?.email || '',
-          full_name: user?.user_metadata?.full_name || user?.user_metadata?.full_name || 'User',
-          role: 'user',
-          is_verified: false,
-          is_suspended: false,
-          rating: 0,
-          total_reviews: 0,
-          total_rentals: 0,
-          total_earnings: 0
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('AuthProvider: Error creating profile manually:', error);
+      // Get user data from auth
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        console.error('AuthProvider: No authenticated user found');
         return null;
       }
-
-      console.log('AuthProvider: Profile created manually:', data);
+      
+      // Create profile with direct insert (RLS should allow authenticated users to insert)
+      const profileData = {
+        id: userId,
+        email: authUser.email || '',
+        first_name: authUser.user_metadata?.first_name || authUser.user_metadata?.full_name?.split(' ')[0] || '',
+        last_name: authUser.user_metadata?.last_name || authUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+        full_name: authUser.user_metadata?.full_name || authUser.email || 'User',
+        avatar_url: authUser.user_metadata?.avatar_url || '',
+        location: authUser.user_metadata?.location || '',
+        role: 'user',
+        is_verified: false,
+        is_suspended: false,
+        rating: 0,
+        total_reviews: 0,
+        total_rentals: 0,
+        total_earnings: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('AuthProvider: Inserting profile data:', profileData);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .insert(profileData)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('AuthProvider: Error creating profile via direct insert:', error);
+        
+        // Try RPC function as fallback
+        console.log('AuthProvider: Trying RPC function as fallback...');
+        const { error: rpcError } = await supabase.rpc('ensure_user_profile');
+        
+        if (rpcError) {
+          console.error('AuthProvider: RPC function also failed:', rpcError);
+          return null;
+        }
+        
+        // Try to fetch the profile again
+        const { data: fetchedData, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (fetchError) {
+          console.error('AuthProvider: Still cannot fetch profile after RPC:', fetchError);
+          return null;
+        }
+        
+        console.log('AuthProvider: Profile created via RPC:', fetchedData);
+        return fetchedData;
+      }
+      
+      console.log('AuthProvider: Profile created via direct insert:', data);
       return data;
     } catch (error) {
       console.error('AuthProvider: Exception creating profile manually:', error);
       return null;
+    } finally {
+      creatingProfileRef.current = null;
     }
   };
 
   const fetchProfile = async (userId: string) => {
+    // Prevent duplicate profile fetches
+    if (fetchingProfileRef.current === userId) {
+      console.log('AuthProvider: Profile fetch already in progress for:', userId);
+      return;
+    }
+    
+    // Ensure we have a valid user ID
+    if (!userId) {
+      console.error('AuthProvider: No user ID provided to fetchProfile');
+      return;
+    }
+    
+    fetchingProfileRef.current = userId;
+    
+    // Set a timeout to prevent infinite loading
+    const profileTimeout = setTimeout(() => {
+      console.error('AuthProvider: Profile fetch timeout, creating fallback profile');
+      const fallbackProfile: Profile = {
+        id: userId,
+        email: user?.email || '',
+        full_name: user?.user_metadata?.full_name || 'User',
+        role: 'user',
+        is_verified: false,
+        is_suspended: false,
+        rating: 0,
+        total_reviews: 0,
+        total_rentals: 0,
+        total_earnings: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setProfile(fallbackProfile);
+      setLoading(false);
+      fetchingProfileRef.current = null;
+    }, 10000); // 10 second timeout
+    
     try {
       console.log('AuthProvider: Fetching profile data for:', userId);
       
@@ -178,6 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!error) {
           console.log('AuthProvider: Profile data fetched successfully:', data);
+          clearTimeout(profileTimeout);
           setProfile(data);
           setLoading(false);
           return;
@@ -201,6 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Try to create the profile manually
             const manualProfile = await createProfileManually(userId);
             if (manualProfile) {
+              clearTimeout(profileTimeout);
               setProfile(manualProfile);
               setLoading(false);
               return;
@@ -223,6 +360,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updated_at: new Date().toISOString()
             };
             
+            clearTimeout(profileTimeout);
             setProfile(fallbackProfile);
             setLoading(false);
             return;
@@ -231,25 +369,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // For any other error, just set profile to null and stop loading
         console.error('AuthProvider: Non-retryable error, stopping attempts');
+        clearTimeout(profileTimeout);
         setProfile(null);
         setLoading(false);
         return;
       }
     } catch (error) {
       console.error('AuthProvider: Error in fetchProfile:', error);
+      clearTimeout(profileTimeout);
       setProfile(null);
       setLoading(false);
+      setInitialLoadComplete(true);
+    } finally {
+      clearTimeout(profileTimeout);
+      fetchingProfileRef.current = null;
     }
   };
 
   const login = async (email: string, password: string) => {
     try {
       console.log('AuthProvider: Attempting login for:', email);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         console.error('AuthProvider: Login error:', error);
         return { error: error.message };
       }
+      
       console.log('AuthProvider: Login successful');
       return { error: undefined };
     } catch (error) {
@@ -260,59 +405,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, fullName: string, location: string) => {
     try {
-      console.log('AuthProvider: Attempting signup for:', email);
+      console.log('[DEBUG] signup() called with:', { email, password, fullName, location });
+      
+      // Clear any existing session first to prevent conflicts
+      await supabase.auth.signOut();
+      
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
           data: {
             full_name: fullName,
+            first_name: fullName.split(' ')[0] || fullName,
+            last_name: fullName.split(' ').slice(1).join(' ') || '',
             location: location
           }
         }
       });
+      console.log('[DEBUG] supabase.auth.signUp response:', { data, error });
       if (error) {
-        console.error('AuthProvider: Signup error:', error);
+        console.error('[DEBUG] Signup error:', error);
         return { error: error.message };
       }
 
-      console.log('AuthProvider: User created successfully, auth trigger will create profile');
-      
+      if (data.user) {
+        console.log('[DEBUG] Signup returned user:', data.user);
+        console.log('[DEBUG] user_metadata:', data.user.user_metadata);
+      }
+      if (data.session) {
+        console.log('[DEBUG] Signup returned session:', data.session);
+      }
+
       // If user is immediately confirmed (email confirmation not required), sign them in
       if (data.user && !data.session) {
-        console.log('AuthProvider: User created but no session, attempting sign in...');
-        const { error: signInError } = await supabase.auth.signInWithPassword({ 
+        console.log('[DEBUG] User created but no session, attempting sign in...');
+        
+        // Wait a moment for the user to be fully created in the database
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
           email, 
           password 
         });
         if (signInError) {
-          console.error('AuthProvider: Auto sign-in error:', signInError);
+          console.error('[DEBUG] Auto sign-in error:', signInError);
           return { error: 'Account created but automatic sign-in failed. Please sign in manually.' };
         }
-        console.log('AuthProvider: Auto sign-in successful');
-        
-        // Small delay to ensure auth state change is processed
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Manually set the user and fetch profile to ensure immediate state update
-        setUser(data.user);
-        setLoading(true);
-        await fetchProfile(data.user.id);
+        console.log('[DEBUG] Auto sign-in successful, user ID:', signInData.user?.id);
       } else if (data.user && data.session) {
-        // User was immediately signed in (email confirmation not required)
-        console.log('AuthProvider: User created and immediately signed in');
-        setUser(data.user);
-        setLoading(true);
-        await fetchProfile(data.user.id);
+        console.log('[DEBUG] User created and immediately signed in, user ID:', data.user.id);
       }
       
-      // Store a flag to indicate recent signup for better refresh handling
       localStorage.setItem('recentSignup', 'true');
-      setTimeout(() => localStorage.removeItem('recentSignup'), 10000); // Remove after 10 seconds
-      
+      setTimeout(() => localStorage.removeItem('recentSignup'), 10000);
       return { error: undefined };
     } catch (error) {
-      console.error('AuthProvider: Signup exception:', error);
+      console.error('[DEBUG] Signup exception:', error);
       return { error: 'An unexpected error occurred' };
     }
   };
