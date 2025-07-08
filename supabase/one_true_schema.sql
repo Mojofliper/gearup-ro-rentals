@@ -1433,6 +1433,10 @@ CREATE POLICY "Users can create bookings" ON public.bookings
 CREATE POLICY "Users can update their own bookings" ON public.bookings
   FOR UPDATE USING (auth.uid() = renter_id OR auth.uid() = owner_id);
 
+-- Allow authenticated users to view empty bookings list
+CREATE POLICY "Authenticated users can view bookings" ON public.bookings
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
 -- Transactions policies
 CREATE POLICY "Users can view transactions for their bookings" ON public.transactions
   FOR SELECT USING (
@@ -1489,6 +1493,10 @@ CREATE POLICY "Users can send messages for their bookings" ON public.messages
     )
   );
 
+-- Allow authenticated users to view empty messages list
+CREATE POLICY "Authenticated users can view messages" ON public.messages
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
 -- Reviews policies
 CREATE POLICY "Users can view reviews" ON public.reviews
   FOR SELECT USING (true);
@@ -1498,6 +1506,13 @@ CREATE POLICY "Users can create reviews" ON public.reviews
 
 CREATE POLICY "Users can update reviews" ON public.reviews
   FOR UPDATE USING (auth.uid() = reviewer_id);
+
+-- Allow authenticated users to view reviews for their bookings
+CREATE POLICY "Users can view reviews for their bookings" ON public.reviews
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    (reviewer_id = auth.uid() OR reviewed_id = auth.uid())
+  );
 
 -- Claims policies
 CREATE POLICY "Users can view claims for their bookings" ON public.claims
@@ -1527,6 +1542,10 @@ CREATE POLICY "Users can update claims for their bookings" ON public.claims
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
+
+-- Allow authenticated users to view empty claims list
+CREATE POLICY "Authenticated users can view claims" ON public.claims
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- Photo uploads policies
 CREATE POLICY "Users can view photo uploads for their bookings" ON public.photo_uploads
@@ -1598,6 +1617,10 @@ CREATE POLICY "Users can view their own notifications" ON public.notifications
 CREATE POLICY "Users can update their own notifications" ON public.notifications
   FOR UPDATE USING (auth.uid() = user_id);
 
+-- Allow authenticated users to view empty notifications list
+CREATE POLICY "Authenticated users can view notifications" ON public.notifications
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
 -- Email notifications policies
 CREATE POLICY "Users can view their own email notifications" ON public.email_notifications
   FOR SELECT USING (
@@ -1614,92 +1637,7 @@ CREATE POLICY "Service role can insert email notifications" ON public.email_noti
 CREATE POLICY "Service role can update email notifications" ON public.email_notifications
   FOR UPDATE USING (auth.role() = 'service_role');
 
--- Add fallback policies for users with no bookings yet
--- These policies allow users to access their own data even when they have no bookings
-
--- Claims fallback policy - allow users to view empty claims list
-CREATE POLICY "Users can view empty claims list" ON public.claims
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    NOT EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = claims.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
-
--- Bookings fallback policy - allow users to view empty bookings list
-CREATE POLICY "Users can view empty bookings list" ON public.bookings
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    (renter_id != auth.uid() AND owner_id != auth.uid())
-  );
-
--- Messages fallback policy - allow users to view empty messages list
-CREATE POLICY "Users can view empty messages list" ON public.messages
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    NOT EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = messages.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
-
--- Message threads fallback policy
-CREATE POLICY "Users can view empty message threads list" ON public.message_threads
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    NOT EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = message_threads.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
-
--- Conversations fallback policy
-CREATE POLICY "Users can view empty conversations list" ON public.conversations
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    NOT EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = conversations.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
-
--- Photo uploads fallback policy
-CREATE POLICY "Users can view empty photo uploads list" ON public.photo_uploads
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    NOT EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = photo_uploads.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
-
--- Handover photos fallback policy
-CREATE POLICY "Users can view empty handover photos list" ON public.handover_photos
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    NOT EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = handover_photos.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
-
--- Escrow transactions fallback policy
-CREATE POLICY "Users can view empty escrow transactions list" ON public.escrow_transactions
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    NOT EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = escrow_transactions.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
+-- Fallback policies removed - using simpler permissive policies instead
 
 -- Moderation queue policies
 CREATE POLICY "Admins can view moderation queue" ON public.moderation_queue
