@@ -1282,19 +1282,15 @@ CREATE POLICY "Users can view own profile" ON public.users
 CREATE POLICY "Users can update own profile" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Users can insert own profile" ON public.users
-  FOR INSERT WITH CHECK (auth.uid() = id);
-
 CREATE POLICY "System can manage user profiles" ON public.users
   FOR ALL USING (auth.role() = 'service_role');
-
--- Allow authenticated users to insert profiles (for manual creation fallback)
-CREATE POLICY "Authenticated users can insert profiles" ON public.users
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Allow public access to user profiles for gear queries (essential for gear browsing)
 CREATE POLICY "Public can view user profiles for gear" ON public.users
   FOR SELECT USING (true);
+
+-- Allow auth trigger to insert user profiles (SECURITY DEFINER function bypasses RLS)
+-- No additional policy needed since SECURITY DEFINER functions bypass RLS
 
 -- Categories policies - Allow public read access
 CREATE POLICY "categories_select_policy" ON public.categories
@@ -1373,6 +1369,10 @@ CREATE POLICY "Users can create own connected account" ON public.connected_accou
 
 CREATE POLICY "Users can update own connected account" ON public.connected_accounts
   FOR UPDATE USING (auth.uid() = owner_id);
+
+-- Allow service role to manage connected accounts
+CREATE POLICY "Service role can manage connected accounts" ON public.connected_accounts
+  FOR ALL USING (auth.role() = 'service_role');
 
 -- Messages policies
 CREATE POLICY "Users can view messages for their bookings" ON public.messages
@@ -1754,34 +1754,53 @@ INSERT INTO public.platform_settings (setting_key, setting_value, description) V
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- =============================================================================
--- 22. AUTH TRIGGERS CLEANUP
+-- 22. AUTH TRIGGERS
 -- =============================================================================
 
--- Remove any existing auth triggers that create profiles automatically
--- This prevents profile creation during signin
-
--- Drop the trigger if it exists
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-
--- Drop the function if it exists
-DROP FUNCTION IF EXISTS public.handle_new_user();
-
--- Drop other potential profile creation functions
-DROP FUNCTION IF EXISTS public.ensure_user_profile();
-DROP FUNCTION IF EXISTS public.ensure_user_profile_with_email();
-
--- Log the cleanup
-DO $$
+-- Simple auth trigger to create user profile when user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
 BEGIN
-  RAISE LOG 'Auth triggers and functions removed successfully';
-END $$;
+  -- Log the trigger execution
+  RAISE LOG 'handle_new_user trigger called for user: %', NEW.id;
+  
+  INSERT INTO public.users (id, email, first_name, last_name, avatar_url, location, phone, role, is_verified, is_suspended, rating, total_reviews, total_rentals, total_earnings)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'first_name', NEW.raw_user_meta_data->>'full_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
+    COALESCE(NEW.raw_user_meta_data->>'location', ''),
+    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+    'user',
+    false,
+    false,
+    0.00,
+    0,
+    0,
+    0.00
+  );
+  
+  RAISE LOG 'User profile created successfully for: %', NEW.id;
+  RETURN NEW;
+EXCEPTION
+  WHEN unique_violation THEN
+    -- User already exists, just return
+    RAISE LOG 'User profile already exists for: %', NEW.id;
+    RETURN NEW;
+  WHEN OTHERS THEN
+    -- Log the error but don't fail the signup
+    RAISE LOG 'Error creating user profile for %: %', NEW.id, SQLERRM;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- =============================================================================
--- 23. AUTH TRIGGERS
--- =============================================================================
-
--- Auth trigger removed - profiles will be created manually only during signup
--- This prevents automatic profile creation when users try to sign in with non-existent accounts
+-- Create the trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =============================================================================
 -- 24. FINAL SETUP
@@ -1804,7 +1823,7 @@ BEGIN
   RAISE LOG 'GearUp schema setup completed successfully';
   RAISE LOG 'Tables created: users, categories, gear, gear_photos, gear_specifications, bookings, transactions, connected_accounts, escrow_transactions, messages, message_threads, conversations, reviews, claims, photo_uploads, handover_photos, claim_photos, rate_limits, notifications, email_notifications, moderation_queue, admin_actions, analytics, platform_settings';
   RAISE LOG 'RLS policies enabled for all tables';
-  RAISE LOG 'Auth triggers removed - profiles created manually only during signup';
+  RAISE LOG 'Auth trigger created - profiles created automatically on signup';
   RAISE LOG 'Foreign key relationships established';
   RAISE LOG 'Indexes created for optimal performance';
   RAISE LOG 'Default data inserted (categories, platform settings)';

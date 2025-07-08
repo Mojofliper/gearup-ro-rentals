@@ -1098,7 +1098,7 @@ export const paymentApi = {
         .from('connected_accounts')
         .select('*')
         .eq('owner_id', ownerId)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle no rows gracefully
 
       if (error) throw error;
       return { data, error: null };

@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { useSecureAuth } from '@/hooks/useSecureAuth';
-import { LoadingScreen } from './LoadingScreen';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoadingScreen } from './LoadingScreen';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -15,13 +15,13 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   fallback,
   redirectTo = '/'
 }) => {
-  const { isAuthenticated, loading } = useSecureAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <LoadingScreen />;
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     if (fallback) {
       return <>{fallback}</>;
     }
