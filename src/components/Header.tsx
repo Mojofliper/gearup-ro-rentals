@@ -25,7 +25,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [checkoutItems, setCheckoutItems] = useState<any[]>([]);
-  const { user, profile, logout, loading } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleAuthClick = (mode: 'login' | 'signup') => {
@@ -40,7 +40,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     setIsMobileMenuOpen(false);
     navigate('/');
   };

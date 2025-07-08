@@ -111,3 +111,180 @@ export const isScamContent = (text: string): boolean => {
   const phoneRegex = /\b(\+\d{1,3}[- ]?)?(\d{3}[- ]?){2}\d{4}\b/;
   return emailRegex.test(text) || phoneRegex.test(text);
 };
+
+// Security utilities for authentication and authorization
+
+interface RateLimitEntry {
+  count: number;
+  firstAttempt: number;
+  lastAttempt: number;
+}
+
+class AuthRateLimiter {
+  private attempts: Map<string, RateLimitEntry> = new Map();
+  private readonly maxAttempts = 5;
+  private readonly windowMs = 15 * 60 * 1000; // 15 minutes
+  private readonly lockoutMs = 30 * 60 * 1000; // 30 minutes
+
+  isRateLimited(identifier: string): boolean {
+    const now = Date.now();
+    const entry = this.attempts.get(identifier);
+
+    if (!entry) {
+      return false;
+    }
+
+    // Check if still in lockout period
+    if (entry.count >= this.maxAttempts && (now - entry.lastAttempt) < this.lockoutMs) {
+      return true;
+    }
+
+    // Reset if window has passed
+    if ((now - entry.firstAttempt) > this.windowMs) {
+      this.attempts.delete(identifier);
+      return false;
+    }
+
+    return entry.count >= this.maxAttempts;
+  }
+
+  recordAttempt(identifier: string): void {
+    const now = Date.now();
+    const entry = this.attempts.get(identifier);
+
+    if (!entry) {
+      this.attempts.set(identifier, {
+        count: 1,
+        firstAttempt: now,
+        lastAttempt: now
+      });
+    } else {
+      entry.count++;
+      entry.lastAttempt = now;
+    }
+
+    // Clean up old entries
+    this.cleanup();
+  }
+
+  resetAttempts(identifier: string): void {
+    this.attempts.delete(identifier);
+  }
+
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [identifier, entry] of this.attempts.entries()) {
+      if ((now - entry.firstAttempt) > this.windowMs) {
+        this.attempts.delete(identifier);
+      }
+    }
+  }
+
+  getRemainingTime(identifier: string): number {
+    const entry = this.attempts.get(identifier);
+    if (!entry || entry.count < this.maxAttempts) {
+      return 0;
+    }
+
+    const timeSinceLastAttempt = Date.now() - entry.lastAttempt;
+    return Math.max(0, this.lockoutMs - timeSinceLastAttempt);
+  }
+}
+
+export const authRateLimiter = new AuthRateLimiter();
+
+// Input validation functions
+export const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+export const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  if (password.length < 6) {
+    errors.push('Parola trebuie să aibă cel puțin 6 caractere');
+  }
+  
+  if (password.length > 128) {
+    errors.push('Parola nu poate avea mai mult de 128 de caractere');
+  }
+  
+  // Optional: Add more password strength requirements
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Parola trebuie să conțină cel puțin o literă mare');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('Parola trebuie să conțină cel puțin o literă mică');
+  }
+  
+  if (!/\d/.test(password)) {
+    errors.push('Parola trebuie să conțină cel puțin o cifră');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+export const validatePhoneNumber = (phone: string): boolean => {
+  if (!phone) return true; // Optional field
+  const cleanPhone = phone.replace(/\s/g, '');
+  return /^(\+40|0)[0-9]{9}$/.test(cleanPhone);
+};
+
+export const validateFullName = (name: string): boolean => {
+  if (!name || name.trim().length < 2) return false;
+  if (name.length > 100) return false;
+  return /^[a-zA-ZăâîșțĂÂÎȘȚ\s]+$/.test(name);
+};
+
+export const validateLocation = (location: string): boolean => {
+  if (!location || location.trim().length < 2) return false;
+  if (location.length > 100) return false;
+  return true;
+};
+
+// CSRF protection
+export const generateCSRFToken = (): string => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+export const validateCSRFToken = (token: string, storedToken: string): boolean => {
+  return token === storedToken;
+};
+
+// Session security
+export const validateSession = (session: any): boolean => {
+  if (!session || !session.user || !session.access_token) {
+    return false;
+  }
+  
+  // Check if token is expired
+  const now = Math.floor(Date.now() / 1000);
+  if (session.expires_at && session.expires_at < now) {
+    return false;
+  }
+  
+  return true;
+};
+
+// Sanitize user input
+export const sanitizeInput = (input: string): string => {
+  return input
+    .trim()
+    .replace(/[<>]/g, '') // Remove potential HTML tags
+    .substring(0, 1000); // Limit length
+};
+
+// Generate secure random string
+export const generateSecureTokenWithLength = (length: number = 32): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};

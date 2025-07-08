@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 type Profile = {
   id: string;
@@ -31,7 +32,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ error?: string }>;
   signup: (email: string, password: string, fullName: string, location: string, phoneNumber?: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
-  logout: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
 
@@ -41,10 +41,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Refs to prevent duplicate operations
+  const fetchingProfileRef = useRef<string | null>(null);
+  const lastSignedInUserIdRef = useRef<string | null>(null);
+  const currentProfileRef = useRef<Profile | null>(null);
+  const isLoggingInRef = useRef<boolean>(false);
 
-  // Simple profile fetcher
+  // Profile fetcher with strict error handling
   const fetchProfile = async (userId: string) => {
+    if (fetchingProfileRef.current === userId) {
+      console.log('AuthProvider: Profile fetch already in progress for:', userId);
+      return;
+    }
+    
+    if (!userId) {
+      console.error('AuthProvider: No user ID provided to fetchProfile');
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+    
+    fetchingProfileRef.current = userId;
+    
     try {
+      console.log('AuthProvider: Fetching profile data for:', userId);
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -52,101 +75,245 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        console.log('Profile not found for user:', userId);
+        console.error('AuthProvider: Error fetching profile:', error);
+        
+        // Any database error should sign out the user
+        console.error('AuthProvider: Database error fetching profile, signing out user');
+        await supabase.auth.signOut();
+        
+        toast({
+          title: 'Eroare la încărcarea profilului',
+          description: 'Nu s-a putut încărca profilul. Te rugăm să încerci să te conectezi din nou.',
+          variant: 'destructive',
+        });
+        
+        setUser(null);
         setProfile(null);
+        currentProfileRef.current = null;
+        setLoading(false);
+        fetchingProfileRef.current = null;
         return;
       }
 
-      console.log('Profile loaded:', data);
+      console.log('AuthProvider: Profile loaded successfully:', data);
       setProfile(data);
+      currentProfileRef.current = data;
+      setLoading(false);
+      fetchingProfileRef.current = null;
+      
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('AuthProvider: Exception in fetchProfile:', error);
+      
+      await supabase.auth.signOut();
+      
+      toast({
+        title: 'Eroare la încărcarea profilului',
+        description: 'A apărut o eroare neașteptată. Te rugăm să încerci să te conectezi din nou.',
+        variant: 'destructive',
+      });
+      
+      setUser(null);
       setProfile(null);
+      currentProfileRef.current = null;
+      setLoading(false);
+      fetchingProfileRef.current = null;
     }
   };
 
   // Initialize auth state
   useEffect(() => {
-    console.log('AuthProvider: Initializing...');
+    console.log('AuthProvider: Initializing auth...');
     
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        console.log('Found existing session for user:', session.user.id);
-        setUser(session.user);
-        fetchProfile(session.user.id);
-      }
+    const timeoutId = setTimeout(() => {
+      console.log('AuthProvider: Loading timeout reached, stopping loading');
       setLoading(false);
+      setInitialLoadComplete(true);
+    }, 10000);
+    
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      console.log('AuthProvider: Initial session check:', { session: !!session, error });
+      clearTimeout(timeoutId);
+      
+      if (error) {
+        console.error('AuthProvider: Error getting session:', error);
+        setLoading(false);
+        setInitialLoadComplete(true);
+        return;
+      }
+      
+      if (session?.user) {
+        console.log('AuthProvider: Found existing session, fetching user...');
+        setUser(session.user);
+        setLoading(true);
+        
+        try {
+          await fetchProfile(session.user.id);
+          
+          // If profile fetch failed, sign out the user
+          if (!currentProfileRef.current) {
+            console.error('AuthProvider: No valid profile found for existing session, signing out');
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+            currentProfileRef.current = null;
+          }
+        } catch (error) {
+          console.error('AuthProvider: Error fetching profile for existing session:', error);
+          // fetchProfile will handle signing out the user
+        } finally {
+          setInitialLoadComplete(true);
+        }
+      } else {
+        console.log('AuthProvider: No existing session found');
+        setLoading(false);
+        setInitialLoadComplete(true);
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
+        if (!initialLoadComplete) {
+          console.log('AuthProvider: Skipping auth state change during initial load:', event);
+          return;
+        }
+        
+        console.log('AuthProvider: Auth state change:', event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('AuthProvider: User signed in, fetching profile data...', session.user.id);
+          
+          if (isLoggingInRef.current) {
+            console.log('AuthProvider: Skipping SIGNED_IN event during login attempt');
+            return;
+          }
+          
+          if (lastSignedInUserIdRef.current === session.user.id) {
+            console.log('AuthProvider: Duplicate SIGNED_IN event for same user, skipping');
+            return;
+          }
+          
+          lastSignedInUserIdRef.current = session.user.id;
+          
           setUser(session.user);
           setLoading(true);
-          await fetchProfile(session.user.id);
-          setLoading(false);
+          
+          try {
+            await fetchProfile(session.user.id);
+          } catch (error) {
+            console.error('AuthProvider: Error in auth state change profile fetch:', error);
+          }
+        } else if (event === 'USER_UPDATED' && session?.user) {
+          console.log('AuthProvider: User updated, fetching profile data...');
+          setUser(session.user);
+          if (!currentProfileRef.current || currentProfileRef.current.id !== session.user.id) {
+            setLoading(true);
+            await fetchProfile(session.user.id);
+          }
         } else if (event === 'SIGNED_OUT') {
+          console.log('AuthProvider: User signed out');
           setUser(null);
           setProfile(null);
+          currentProfileRef.current = null;
           setLoading(false);
-        } else if (event === 'USER_UPDATED' && session?.user) {
+          fetchingProfileRef.current = null;
+          lastSignedInUserIdRef.current = null;
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          console.log('AuthProvider: Token refreshed, fetching profile data...');
           setUser(session.user);
-          await fetchProfile(session.user.id);
+          if (!currentProfileRef.current) {
+            setLoading(true);
+            await fetchProfile(session.user.id);
+          }
+        } else {
+          console.log('AuthProvider: Other auth event:', event);
+          if (!session) {
+            setUser(null);
+            setProfile(null);
+            currentProfileRef.current = null;
+            setLoading(false);
+            fetchingProfileRef.current = null;
+            lastSignedInUserIdRef.current = null;
+          }
         }
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
+  }, [initialLoadComplete]);
 
-  // Simple login function
+  // Login function with proper error handling
   const login = async (email: string, password: string) => {
     try {
-      console.log('Attempting login for:', email);
+      console.log('AuthProvider: Attempting login for:', email);
+      isLoggingInRef.current = true;
       
-      const { data, error } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        console.error('Login error:', error);
-        return { error: error.message };
-      }
-
-      // Check if profile exists
-      if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (profileError && profileError.code === 'PGRST116') {
-          // No profile found - user must sign up first
-          await supabase.auth.signOut();
-          return { error: 'You must sign up first. This account does not have a profile.' };
+        console.error('AuthProvider: Login error:', error);
+        isLoggingInRef.current = false;
+        
+        if (error.message.includes('Invalid login credentials')) {
+          return { error: 'Email sau parolă incorectă. Te rugăm să verifici datele și să încerci din nou.' };
+        } else if (error.message.includes('Email not confirmed')) {
+          return { error: 'Contul nu a fost confirmat. Te rugăm să verifici emailul și să confirmi contul.' };
+        } else if (error.message.includes('Too many requests')) {
+          return { error: 'Prea multe încercări de conectare. Te rugăm să aștepți câteva minute înainte de a încerca din nou.' };
+        } else if (error.message.includes('User not found')) {
+          return { error: 'Contul nu există. Te rugăm să verifici emailul sau să creezi un cont nou.' };
+        } else {
+          return { error: error.message };
         }
       }
-
-      console.log('Login successful');
-      return { error: undefined };
-    } catch (error) {
-      console.error('Login exception:', error);
-      return { error: 'An unexpected error occurred' };
+      
+      if (!data.user) {
+        console.error('AuthProvider: Login succeeded but no user returned');
+        isLoggingInRef.current = false;
+        return { error: 'Eroare la conectare. Te rugăm să încerci din nou.' };
+      }
+      
+      console.log('AuthProvider: Login successful for user:', data.user.id);
+      
+      // Fetch profile - if no profile exists, login fails
+      try {
+        console.log('AuthProvider: Fetching profile for user:', data.user.id);
+        await fetchProfile(data.user.id);
+        
+        // Check if profile fetch was successful
+        if (!currentProfileRef.current) {
+          console.error('AuthProvider: No profile found for user');
+          isLoggingInRef.current = false;
+          return { error: 'Contul nu există. Te rugăm să creezi un cont nou.' };
+        }
+        
+        console.log('AuthProvider: Profile fetch completed successfully');
+        return { error: undefined };
+      } catch (profileError) {
+        console.error('AuthProvider: Profile fetch error after login:', profileError);
+        isLoggingInRef.current = false;
+        return { error: 'Contul nu există. Te rugăm să creezi un cont nou.' };
+      }
+    } catch (err) {
+      console.error('AuthProvider: Login exception:', err);
+      return { error: 'A apărut o eroare neașteptată. Te rugăm să încerci din nou.' };
+    } finally {
+      setTimeout(() => {
+        isLoggingInRef.current = false;
+      }, 1000);
     }
   };
 
-  // Simple signup function
+  // Signup function with proper error handling
   const signup = async (email: string, password: string, fullName: string, location: string, phoneNumber?: string) => {
     try {
-      console.log('Attempting signup for:', email);
+      console.log('AuthProvider: Attempting signup for:', email);
       
-      // Create new account - auth trigger will create profile automatically
+      await supabase.auth.signOut();
+      
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -162,48 +329,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
-        console.error('Signup error:', error);
-        return { error: error.message };
-      }
-
-      if (data.user) {
-        console.log('User created:', data.user.id);
+        console.error('AuthProvider: Signup error:', error);
         
-        // Auth trigger will create profile automatically
-        // Wait a moment for the trigger to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      // Auto sign-in if no session
-      if (data.user && !data.session) {
-        console.log('Auto signing in...');
-        const { error: signInError } = await supabase.auth.signInWithPassword({ 
-          email, 
-          password 
-        });
-        
-        if (signInError) {
-          console.error('Auto sign-in failed:', signInError);
-          return { error: 'Account created but automatic sign-in failed. Please sign in manually.' };
+        if (error.message.includes('User already registered')) {
+          return { error: 'Un cont cu acest email există deja. Te rugăm să te conectezi sau să folosești un alt email.' };
+        } else if (error.message.includes('Password should be at least')) {
+          return { error: 'Parola trebuie să aibă cel puțin 6 caractere.' };
+        } else if (error.message.includes('Invalid email')) {
+          return { error: 'Adresa de email nu este validă. Te rugăm să introduci o adresă validă.' };
+        } else if (error.message.includes('Unable to validate email address')) {
+          return { error: 'Nu s-a putut valida adresa de email. Te rugăm să verifici că adresa este corectă.' };
+        } else {
+          return { error: error.message };
         }
       }
 
-      console.log('Signup successful');
+      if (!data.user) {
+        console.error('AuthProvider: Signup succeeded but no user returned');
+        return { error: 'Eroare la crearea contului. Te rugăm să încerci din nou.' };
+      }
+      
+      console.log('AuthProvider: Signup successful for user:', data.user.id);
+      
+      // Wait for the profile to be created by the trigger
+      console.log('AuthProvider: Waiting for profile creation...');
+      let profileCreated = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (!profileCreated && attempts < maxAttempts) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+          attempts++;
+          
+          // Try to fetch the profile
+          const { data: profileData, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+          
+          if (profileData && !profileError) {
+            console.log('AuthProvider: Profile found after signup:', profileData);
+            profileCreated = true;
+            
+            // Set the profile data
+            setProfile(profileData);
+            currentProfileRef.current = profileData;
+            setUser(data.user);
+            setLoading(false);
+            
+            return { error: undefined };
+          }
+        } catch (profileFetchError) {
+          console.log(`AuthProvider: Profile fetch attempt ${attempts} failed:`, profileFetchError);
+        }
+      }
+      
+      if (!profileCreated) {
+        console.error('AuthProvider: Profile was not created after signup');
+        return { error: 'Contul a fost creat dar profilul nu a fost inițializat. Te rugăm să încerci să te conectezi.' };
+      }
+      
       return { error: undefined };
-    } catch (error) {
-      console.error('Signup exception:', error);
-      return { error: 'An unexpected error occurred' };
+    } catch (err) {
+      console.error('AuthProvider: Signup exception:', err);
+      return { error: 'A apărut o eroare neașteptată. Te rugăm să încerci din nou.' };
     }
   };
 
   const signOut = async () => {
     console.log('Signing out...');
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  };
-
-  const logout = async () => {
-    console.log('Logging out...');
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
@@ -220,10 +416,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) throw error;
     setProfile(data);
+    currentProfileRef.current = data;
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, signup, signOut, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, signup, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

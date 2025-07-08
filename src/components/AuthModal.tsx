@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -17,14 +16,6 @@ interface AuthModalProps {
   mode: 'login' | 'signup';
   onSwitchMode: (mode: 'login' | 'signup') => void;
 }
-
-const romanianCounties = [
-  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 
-  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 
-  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 
-  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 
-  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'
-];
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onSwitchMode }) => {
   const [email, setEmail] = useState('');
@@ -43,42 +34,104 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
 
     try {
       let result;
+      
       if (mode === 'login') {
-        result = await login(email, password);
-      } else {
-        if (!fullName || !location) {
+        if (!email || !password) {
           toast({
-            title: 'Eroare',
-            description: 'Te rugăm să completezi toate câmpurile.',
+            title: 'Câmpuri obligatorii',
+            description: 'Te rugăm să completezi emailul și parola.',
             variant: 'destructive',
           });
           setLoading(false);
           return;
         }
+        
+        result = await login(email, password);
+      } else {
+        if (!email || !password || !fullName || !location) {
+          toast({
+            title: 'Câmpuri obligatorii',
+            description: 'Te rugăm să completezi toate câmpurile obligatorii (email, parolă, nume complet, județ).',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+        
+        if (password.length < 6) {
+          toast({
+            title: 'Parolă prea scurtă',
+            description: 'Parola trebuie să aibă cel puțin 6 caractere.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          toast({
+            title: 'Email invalid',
+            description: 'Te rugăm să introduci o adresă de email validă.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+        
+        if (phoneNumber && !/^(\+40|0)[0-9]{9}$/.test(phoneNumber.replace(/\s/g, ''))) {
+          toast({
+            title: 'Număr de telefon invalid',
+            description: 'Te rugăm să introduci un număr de telefon românesc valid (ex: +40 7XX XXX XXX sau 07XX XXX XXX).',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+        
         result = await signup(email, password, fullName, location, phoneNumber);
       }
 
-      if (!result.error) {
-        toast({
-          title: mode === 'login' ? 'Conectare reușită' : 'Cont creat cu succes',
-          description: mode === 'login' 
-            ? 'Bun venit pe GearUp!' 
-            : 'Verifică-ți emailul pentru a confirma contul.',
-        });
-        onClose();
-        resetForm();
-        navigate('/browse');
-      } else {
+      console.log('AuthModal: Result from auth function:', result);
+      
+      if (result && result.error) {
+        console.log('AuthModal: Showing error toast:', result.error);
         toast({
           title: 'Eroare',
           description: result.error,
           variant: 'destructive',
         });
+      } else if (result && result.error === undefined) {
+        console.log('AuthModal: Showing success toast for mode:', mode);
+        
+        if (mode === 'login') {
+          toast({
+            title: 'Conectare reușită',
+            description: 'Bun venit pe GearUp!',
+          });
+          onClose();
+          resetForm();
+          navigate('/browse');
+        } else {
+          // For signup, wait a bit for the auth state to settle
+          toast({
+            title: 'Cont creat cu succes',
+            description: 'Contul tău a fost creat cu succes!',
+          });
+          
+          // Wait for auth state to be fully loaded
+          setTimeout(() => {
+            onClose();
+            resetForm();
+            navigate('/browse');
+          }, 1000);
+        }
       }
     } catch (error) {
+      console.error('Auth modal error:', error);
       toast({
-        title: 'Eroare',
-        description: 'A apărut o eroare neașteptată. Te rugăm să încerci din nou.',
+        title: 'Eroare neașteptată',
+        description: 'A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.',
         variant: 'destructive',
       });
     } finally {
@@ -109,16 +162,45 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
       });
       
       if (error) {
-        toast({
-          title: 'Eroare',
-          description: error.message,
-          variant: 'destructive',
-        });
+        console.error('Google sign-in error:', error);
+        
+        if (error.message.includes('popup_closed_by_user')) {
+          toast({
+            title: 'Conectare anulată',
+            description: 'Fereastra de conectare Google a fost închisă. Te rugăm să încerci din nou.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('access_denied')) {
+          toast({
+            title: 'Acces refuzat',
+            description: 'Ai refuzat accesul la contul Google. Te rugăm să accepți pentru a continua.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('network')) {
+          toast({
+            title: 'Eroare de rețea',
+            description: 'Nu s-a putut conecta la Google. Verifică conexiunea la internet și încearcă din nou.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('timeout')) {
+          toast({
+            title: 'Timeout',
+            description: 'Conectarea cu Google a durat prea mult. Te rugăm să încerci din nou.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Eroare la conectarea cu Google',
+            description: error.message || 'Nu s-a putut conecta cu Google. Te rugăm să încerci din nou.',
+            variant: 'destructive',
+          });
+        }
       }
     } catch (error) {
+      console.error('Google sign-in exception:', error);
       toast({
-        title: 'Eroare',
-        description: 'Nu s-a putut conecta cu Google. Te rugăm să încerci din nou.',
+        title: 'Eroare neașteptată',
+        description: 'A apărut o eroare neașteptată la conectarea cu Google. Te rugăm să încerci din nou.',
         variant: 'destructive',
       });
     } finally {

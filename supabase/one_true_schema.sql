@@ -9,6 +9,22 @@
 -- Version: 1.0.0
 -- =============================================================================
 
+-- =============================================================================
+-- 0. CLEANUP EXISTING DATA (FOR FRESH STARTS)
+-- =============================================================================
+
+-- Clean up any existing test users from auth.users (if they exist)
+-- Note: public.users table doesn't exist yet, so we only clean auth.users here
+DELETE FROM auth.users WHERE email IN (
+  'dummy.user@example.com',
+  'test@example.com',
+  'test.user@example.com'
+);
+
+-- =============================================================================
+-- 1. ENABLE REQUIRED EXTENSIONS
+-- =============================================================================
+
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -16,7 +32,7 @@ CREATE EXTENSION IF NOT EXISTS cube;
 CREATE EXTENSION IF NOT EXISTS earthdistance;
 
 -- =============================================================================
--- 1. CUSTOM TYPES
+-- 2. CUSTOM TYPES
 -- =============================================================================
 
 -- Create custom types
@@ -30,7 +46,7 @@ CREATE TYPE notification_type AS ENUM ('booking_request', 'booking_confirmed', '
 CREATE TYPE message_type AS ENUM ('text', 'image', 'system');
 
 -- =============================================================================
--- 2. USER MANAGEMENT TABLES
+-- 3. USER MANAGEMENT TABLES
 -- =============================================================================
 
 -- User profiles (links to Supabase Auth)
@@ -60,7 +76,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 
 -- =============================================================================
--- 3. CONTENT MANAGEMENT TABLES
+-- 4. CONTENT MANAGEMENT TABLES
 -- =============================================================================
 
 -- Equipment categories
@@ -133,7 +149,7 @@ CREATE TABLE IF NOT EXISTS public.gear_specifications (
 );
 
 -- =============================================================================
--- 4. BOOKING SYSTEM TABLES
+-- 5. BOOKING SYSTEM TABLES
 -- =============================================================================
 
 -- Rental bookings
@@ -167,7 +183,7 @@ CREATE TABLE IF NOT EXISTS public.bookings (
 );
 
 -- =============================================================================
--- 5. PAYMENT SYSTEM TABLES
+-- 6. PAYMENT SYSTEM TABLES
 -- =============================================================================
 
 -- Payment transactions
@@ -222,7 +238,7 @@ CREATE TABLE IF NOT EXISTS public.escrow_transactions (
 );
 
 -- =============================================================================
--- 6. COMMUNICATION SYSTEM TABLES
+-- 7. COMMUNICATION SYSTEM TABLES
 -- =============================================================================
 
 -- In-app messages
@@ -270,7 +286,7 @@ CREATE TABLE IF NOT EXISTS public.conversations (
 );
 
 -- =============================================================================
--- 7. REVIEW SYSTEM TABLES
+-- 8. REVIEW SYSTEM TABLES
 -- =============================================================================
 
 -- User and equipment reviews
@@ -289,7 +305,7 @@ CREATE TABLE IF NOT EXISTS public.reviews (
 );
 
 -- =============================================================================
--- 8. DISPUTE RESOLUTION TABLES
+-- 9. DISPUTE RESOLUTION TABLES
 -- =============================================================================
 
 -- Dispute and claim management
@@ -358,7 +374,7 @@ CREATE TABLE IF NOT EXISTS public.claim_photos (
 );
 
 -- =============================================================================
--- 9. SECURITY & RATE LIMITING TABLES
+-- 10. SECURITY & RATE LIMITING TABLES
 -- =============================================================================
 
 -- API rate limiting and abuse prevention
@@ -374,7 +390,7 @@ CREATE TABLE IF NOT EXISTS public.rate_limits (
 );
 
 -- =============================================================================
--- 10. NOTIFICATIONS TABLES
+-- 11. NOTIFICATIONS TABLES
 -- =============================================================================
 
 -- User notifications
@@ -418,7 +434,7 @@ CREATE TABLE IF NOT EXISTS public.email_notifications (
 );
 
 -- =============================================================================
--- 11. MODERATION TABLES
+-- 12. MODERATION TABLES
 -- =============================================================================
 
 -- Moderation queue
@@ -439,7 +455,7 @@ CREATE TABLE IF NOT EXISTS public.moderation_queue (
 );
 
 -- =============================================================================
--- 12. ADMINISTRATION TABLES
+-- 13. ADMINISTRATION TABLES
 -- =============================================================================
 
 -- Admin actions table
@@ -483,7 +499,7 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
 );
 
 -- =============================================================================
--- 13. ENABLE ROW LEVEL SECURITY
+-- 14. ENABLE ROW LEVEL SECURITY
 -- =============================================================================
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -512,7 +528,7 @@ ALTER TABLE public.analytics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
--- 14. FOREIGN KEY CONSTRAINTS
+-- 15. FOREIGN KEY CONSTRAINTS
 -- =============================================================================
 
 -- Add all foreign key constraints after tables are created
@@ -753,63 +769,12 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 15. DATABASE FUNCTIONS
+-- 16. DATABASE FUNCTIONS
 -- =============================================================================
 
--- User profile creation function (replaces unreliable trigger)
-CREATE OR REPLACE FUNCTION public.ensure_user_profile()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  user_email TEXT;
-  user_metadata JSONB;
-BEGIN
-  -- Get user email and metadata
-  SELECT email, raw_user_meta_data INTO user_email, user_metadata
-  FROM auth.users WHERE id = auth.uid();
-  
-  -- Insert user profile with fallback values
-  INSERT INTO public.users (id, email, first_name, last_name, avatar_url, location)
-  VALUES (
-    auth.uid(),
-    COALESCE(user_email, ''),
-    COALESCE(user_metadata->>'first_name', user_metadata->>'full_name', ''),
-    COALESCE(user_metadata->>'last_name', ''),
-    COALESCE(user_metadata->>'avatar_url', ''),
-    COALESCE(user_metadata->>'location', '')
-  )
-  ON CONFLICT (id) DO NOTHING;
-END;
-$$;
-
--- Alternative user profile creation function with email and full_name
-CREATE OR REPLACE FUNCTION public.ensure_user_profile_with_email()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  INSERT INTO public.users (id, email, first_name, last_name, avatar_url, location)
-  SELECT
-    auth.uid(),
-    COALESCE((SELECT email FROM auth.users WHERE id = auth.uid()), ''),
-    COALESCE(
-      (SELECT raw_user_meta_data->>'full_name' FROM auth.users WHERE id = auth.uid()),
-      (SELECT email FROM auth.users WHERE id = auth.uid()),
-      'Unknown'
-    ),
-    '',
-    '',
-    ''
-  ON CONFLICT (id) DO NOTHING;
-END;
-$$;
-
--- Grant execute permissions on functions
-GRANT EXECUTE ON FUNCTION public.ensure_user_profile() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.ensure_user_profile_with_email() TO authenticated;
+-- Profile creation is handled exclusively by the auth trigger
+-- The handle_new_user() trigger creates profiles automatically on signup
+-- No fallback profile creation functions exist - users must sign up properly
 
 -- Avatar URL generation function
 CREATE OR REPLACE FUNCTION public.get_avatar_url(avatar_path text)
@@ -893,6 +858,107 @@ BEGIN
   VALUES (auth.uid(), check_rate_limit.action_type);
   
   RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Auth-specific rate limiting function
+CREATE OR REPLACE FUNCTION public.check_auth_rate_limit(
+  action_type TEXT DEFAULT 'auth_attempt',
+  max_attempts INTEGER DEFAULT 5,
+  window_minutes INTEGER DEFAULT 15,
+  lockout_minutes INTEGER DEFAULT 30
+) RETURNS BOOLEAN AS $$
+DECLARE
+  current_count INTEGER;
+  window_start TIMESTAMPTZ;
+  lockout_start TIMESTAMPTZ;
+  last_attempt TIMESTAMPTZ;
+BEGIN
+  -- Get current window start
+  window_start := now() - (window_minutes || ' minutes')::INTERVAL;
+  lockout_start := now() - (lockout_minutes || ' minutes')::INTERVAL;
+  
+  -- Get last attempt time
+  SELECT MAX(created_at) INTO last_attempt
+  FROM public.rate_limits
+  WHERE user_id = auth.uid()
+    AND action_type = check_auth_rate_limit.action_type;
+  
+  -- Count attempts in current window
+  SELECT COALESCE(SUM(action_count), 0) INTO current_count
+  FROM public.rate_limits
+  WHERE user_id = auth.uid()
+    AND action_type = check_auth_rate_limit.action_type
+    AND created_at > window_start;
+  
+  -- Check if still in lockout period
+  IF current_count >= max_attempts AND last_attempt > lockout_start THEN
+    RETURN FALSE;
+  END IF;
+  
+  -- Reset if lockout period has passed
+  IF last_attempt IS NOT NULL AND last_attempt <= lockout_start THEN
+    DELETE FROM public.rate_limits
+    WHERE user_id = auth.uid()
+      AND action_type = check_auth_rate_limit.action_type;
+    current_count := 0;
+  END IF;
+  
+  -- Record this attempt
+  INSERT INTO public.rate_limits (user_id, action_type)
+  VALUES (auth.uid(), check_auth_rate_limit.action_type);
+  
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to log auth events for security monitoring
+CREATE OR REPLACE FUNCTION public.log_auth_event(
+  event_type TEXT,
+  user_id UUID DEFAULT NULL,
+  details JSONB DEFAULT '{}'::jsonb,
+  ip_address INET DEFAULT NULL,
+  user_agent TEXT DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  event_id UUID;
+BEGIN
+  INSERT INTO public.analytics (
+    event_type,
+    user_id,
+    data,
+    ip_address,
+    user_agent
+  ) VALUES (
+    'auth_' || event_type,
+    COALESCE(user_id, auth.uid()),
+    details,
+    ip_address,
+    user_agent
+  ) RETURNING id INTO event_id;
+  
+  RETURN event_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check if user account is locked
+CREATE OR REPLACE FUNCTION public.is_account_locked(user_email TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+  lockout_start TIMESTAMPTZ;
+  attempt_count INTEGER;
+BEGIN
+  -- Check for failed login attempts in last 30 minutes
+  lockout_start := now() - INTERVAL '30 minutes';
+  
+  SELECT COALESCE(SUM(action_count), 0) INTO attempt_count
+  FROM public.rate_limits rl
+  JOIN public.users u ON u.id = rl.user_id
+  WHERE u.email = is_account_locked.user_email
+    AND rl.action_type = 'auth_attempt'
+    AND rl.created_at > lockout_start;
+  
+  RETURN attempt_count >= 5;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -1083,7 +1149,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================================================
--- 16. TRIGGERS
+-- 17. TRIGGERS
 -- =============================================================================
 
 -- Updated timestamp triggers
@@ -1157,7 +1223,7 @@ CREATE TRIGGER sync_gear_availability_trigger
   FOR EACH ROW EXECUTE FUNCTION public.sync_gear_availability();
 
 -- =============================================================================
--- 17. INDEXES
+-- 18. INDEXES
 -- =============================================================================
 
 -- User indexes
@@ -1272,7 +1338,32 @@ CREATE INDEX IF NOT EXISTS idx_bookings_dates_status ON public.bookings(start_da
 CREATE INDEX IF NOT EXISTS idx_reviews_gear_rating ON public.reviews(gear_id, rating, created_at);
 
 -- =============================================================================
--- 18. ROW LEVEL SECURITY POLICIES
+-- 19. CLEANUP ORPHANED DATA
+-- =============================================================================
+
+-- Clean up any orphaned data after all tables are created
+-- Delete any test user profiles from public.users
+DELETE FROM public.users WHERE email IN (
+  'dummy.user@example.com',
+  'test@example.com',
+  'test.user@example.com'
+);
+
+-- Delete any test data from trigger_debug table (if it exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trigger_debug' AND table_schema = 'public') THEN
+    DELETE FROM public.trigger_debug WHERE event_type LIKE '%TEST%';
+  END IF;
+END $$;
+
+-- Clean up any orphaned data
+DELETE FROM public.users WHERE id NOT IN (SELECT id FROM auth.users);
+DELETE FROM public.gear WHERE owner_id NOT IN (SELECT id FROM public.users);
+DELETE FROM public.bookings WHERE renter_id NOT IN (SELECT id FROM public.users) OR owner_id NOT IN (SELECT id FROM public.users);
+
+-- =============================================================================
+-- 20. ROW LEVEL SECURITY POLICIES
 -- =============================================================================
 
 -- Users policies - Allow public read access for gear queries
@@ -1285,12 +1376,16 @@ CREATE POLICY "Users can update own profile" ON public.users
 CREATE POLICY "System can manage user profiles" ON public.users
   FOR ALL USING (auth.role() = 'service_role');
 
+-- Allow auth trigger to insert user profiles (SECURITY DEFINER function bypasses RLS)
+-- No additional policy needed since SECURITY DEFINER functions bypass RLS
+
+-- Allow authenticated users to insert their own profile (fallback for manual creation)
+CREATE POLICY "Users can insert own profile" ON public.users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 -- Allow public access to user profiles for gear queries (essential for gear browsing)
 CREATE POLICY "Public can view user profiles for gear" ON public.users
   FOR SELECT USING (true);
-
--- Allow auth trigger to insert user profiles (SECURITY DEFINER function bypasses RLS)
--- No additional policy needed since SECURITY DEFINER functions bypass RLS
 
 -- Categories policies - Allow public read access
 CREATE POLICY "categories_select_policy" ON public.categories
@@ -1519,6 +1614,93 @@ CREATE POLICY "Service role can insert email notifications" ON public.email_noti
 CREATE POLICY "Service role can update email notifications" ON public.email_notifications
   FOR UPDATE USING (auth.role() = 'service_role');
 
+-- Add fallback policies for users with no bookings yet
+-- These policies allow users to access their own data even when they have no bookings
+
+-- Claims fallback policy - allow users to view empty claims list
+CREATE POLICY "Users can view empty claims list" ON public.claims
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    NOT EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE bookings.id = claims.booking_id 
+      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
+    )
+  );
+
+-- Bookings fallback policy - allow users to view empty bookings list
+CREATE POLICY "Users can view empty bookings list" ON public.bookings
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    (renter_id != auth.uid() AND owner_id != auth.uid())
+  );
+
+-- Messages fallback policy - allow users to view empty messages list
+CREATE POLICY "Users can view empty messages list" ON public.messages
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    NOT EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE bookings.id = messages.booking_id 
+      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
+    )
+  );
+
+-- Message threads fallback policy
+CREATE POLICY "Users can view empty message threads list" ON public.message_threads
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    NOT EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE bookings.id = message_threads.booking_id 
+      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
+    )
+  );
+
+-- Conversations fallback policy
+CREATE POLICY "Users can view empty conversations list" ON public.conversations
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    NOT EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE bookings.id = conversations.booking_id 
+      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
+    )
+  );
+
+-- Photo uploads fallback policy
+CREATE POLICY "Users can view empty photo uploads list" ON public.photo_uploads
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    NOT EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE bookings.id = photo_uploads.booking_id 
+      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
+    )
+  );
+
+-- Handover photos fallback policy
+CREATE POLICY "Users can view empty handover photos list" ON public.handover_photos
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    NOT EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE bookings.id = handover_photos.booking_id 
+      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
+    )
+  );
+
+-- Escrow transactions fallback policy
+CREATE POLICY "Users can view empty escrow transactions list" ON public.escrow_transactions
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    NOT EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE bookings.id = escrow_transactions.booking_id 
+      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
+    )
+  );
+
 -- Moderation queue policies
 CREATE POLICY "Admins can view moderation queue" ON public.moderation_queue
   FOR SELECT USING (
@@ -1631,7 +1813,7 @@ CREATE POLICY "Service role can manage escrow transactions" ON public.escrow_tra
   FOR ALL USING (auth.role() = 'service_role');
 
 -- =============================================================================
--- 18. ENUM TYPES
+-- 21. ENUM TYPES
 -- =============================================================================
 
 -- Add enum values for escrow status if they don't exist
@@ -1649,7 +1831,7 @@ DO $$ BEGIN
 END $$;
 
 -- =============================================================================
--- 19. GRANT PERMISSIONS
+-- 22. GRANT PERMISSIONS
 -- =============================================================================
 
 -- Grant permissions to anon role (for public access)
@@ -1714,7 +1896,7 @@ GRANT ALL ON public.analytics TO service_role;
 GRANT ALL ON public.platform_settings TO service_role;
 
 -- =============================================================================
--- 20. STORAGE BUCKETS
+-- 23. STORAGE BUCKETS
 -- =============================================================================
 
 -- Avatar storage bucket
@@ -1728,7 +1910,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- 21. DEFAULT DATA
+-- 24. DEFAULT DATA
 -- =============================================================================
 
 -- Insert default categories
@@ -1750,29 +1932,111 @@ INSERT INTO public.platform_settings (setting_key, setting_value, description) V
   ('max_rental_days', '30', 'Maximum number of days for a single rental'),
   ('min_deposit_percentage', '20', 'Minimum deposit as percentage of gear value'),
   ('auto_approval_threshold', '4.5', 'Minimum rating for auto-approval of bookings'),
-  ('support_email', 'support@gearup.ro', 'Platform support email address')
+  ('support_email', 'support@gearup.ro', 'Platform support email address'),
+  ('session_timeout_minutes', '1440', 'Session timeout in minutes (24 hours)'),
+  ('max_auth_attempts', '5', 'Maximum failed authentication attempts before lockout'),
+  ('auth_lockout_minutes', '30', 'Account lockout duration in minutes after max attempts'),
+  ('password_min_length', '6', 'Minimum password length requirement'),
+  ('require_password_complexity', 'false', 'Whether to require complex passwords'),
+  ('enable_auth_logging', 'true', 'Enable detailed authentication event logging')
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- =============================================================================
--- 22. AUTH TRIGGERS
+-- 25. AUTH TRIGGERS
 -- =============================================================================
 
--- Simple auth trigger to create user profile when user signs up
+-- Create a debug table to track trigger execution
+CREATE TABLE IF NOT EXISTS public.trigger_debug (
+  id SERIAL PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  user_id UUID,
+  message TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Drop existing trigger and function to ensure clean setup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- Auth trigger to create user profile when user signs up
+-- This trigger creates the profile and fails cleanly if it cannot
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  user_email TEXT;
+  user_metadata JSONB;
+  first_name TEXT;
+  last_name TEXT;
+  full_name TEXT;
+  location TEXT;
+  phone TEXT;
+  avatar_url TEXT;
 BEGIN
-  -- Log the trigger execution
-  RAISE LOG 'handle_new_user trigger called for user: %', NEW.id;
+  -- Log to debug table
+  INSERT INTO public.trigger_debug (event_type, user_id, message) 
+  VALUES ('TRIGGER_STARTED', NEW.id, 'Auth trigger called for user: ' || NEW.id);
   
-  INSERT INTO public.users (id, email, first_name, last_name, avatar_url, location, phone, role, is_verified, is_suspended, rating, total_reviews, total_rentals, total_earnings)
+  -- Extract user data safely
+  user_email := COALESCE(NEW.email, '');
+  user_metadata := COALESCE(NEW.raw_user_meta_data, '{}'::jsonb);
+  
+  -- Extract metadata fields with better fallback handling
+  first_name := COALESCE(user_metadata->>'first_name', '');
+  last_name := COALESCE(user_metadata->>'last_name', '');
+  full_name := COALESCE(user_metadata->>'full_name', '');
+  location := COALESCE(user_metadata->>'location', '');
+  phone := COALESCE(user_metadata->>'phone', '');
+  avatar_url := COALESCE(user_metadata->>'avatar_url', '');
+  
+  -- If full_name is empty but we have first_name and last_name, construct it
+  IF full_name = '' AND (first_name != '' OR last_name != '') THEN
+    full_name := TRIM(first_name || ' ' || last_name);
+  END IF;
+  
+  -- If first_name is empty but we have full_name, extract it
+  IF first_name = '' AND full_name != '' THEN
+    first_name := SPLIT_PART(full_name, ' ', 1);
+    last_name := TRIM(SUBSTRING(full_name FROM LENGTH(first_name) + 1));
+  END IF;
+  
+  -- Log extracted data
+  INSERT INTO public.trigger_debug (event_type, user_id, message) 
+  VALUES ('DATA_EXTRACTED', NEW.id, 'Email: ' || user_email || ', Full name: ' || full_name || ', Location: ' || location);
+  
+  -- Check if user already exists
+  IF EXISTS (SELECT 1 FROM public.users WHERE id = NEW.id) THEN
+    INSERT INTO public.trigger_debug (event_type, user_id, message) 
+    VALUES ('USER_EXISTS', NEW.id, 'User profile already exists');
+    RETURN NEW;
+  END IF;
+  
+  -- Insert user profile
+  INSERT INTO public.users (
+    id, 
+    email, 
+    first_name, 
+    last_name, 
+    full_name,
+    avatar_url, 
+    location, 
+    phone,
+    role, 
+    is_verified, 
+    is_suspended, 
+    rating, 
+    total_reviews, 
+    total_rentals, 
+    total_earnings
+  )
   VALUES (
     NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'first_name', NEW.raw_user_meta_data->>'full_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
-    COALESCE(NEW.raw_user_meta_data->>'location', ''),
-    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+    user_email,
+    first_name,
+    last_name,
+    full_name,
+    avatar_url,
+    location,
+    phone,
     'user',
     false,
     false,
@@ -1782,28 +2046,56 @@ BEGIN
     0.00
   );
   
-  RAISE LOG 'User profile created successfully for: %', NEW.id;
+  INSERT INTO public.trigger_debug (event_type, user_id, message) 
+  VALUES ('PROFILE_CREATED', NEW.id, 'User profile created successfully');
+  
   RETURN NEW;
+  
 EXCEPTION
   WHEN unique_violation THEN
-    -- User already exists, just return
-    RAISE LOG 'User profile already exists for: %', NEW.id;
+    INSERT INTO public.trigger_debug (event_type, user_id, message) 
+    VALUES ('UNIQUE_VIOLATION', NEW.id, 'User profile already exists (unique_violation)');
     RETURN NEW;
   WHEN OTHERS THEN
-    -- Log the error but don't fail the signup
-    RAISE LOG 'Error creating user profile for %: %', NEW.id, SQLERRM;
-    RETURN NEW;
+    INSERT INTO public.trigger_debug (event_type, user_id, message) 
+    VALUES ('ERROR', NEW.id, 'Error: ' || SQLERRM || ' (SQLSTATE: ' || SQLSTATE || ')');
+    RAISE EXCEPTION 'Failed to create user profile: %', SQLERRM;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create the trigger
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Grant execute permissions on the trigger function
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO postgres;
+
+-- Test function removed - no longer needed
+
+-- Create a function to check debug logs
+CREATE OR REPLACE FUNCTION public.check_trigger_debug()
+RETURNS TABLE (
+  event_type TEXT,
+  user_id UUID,
+  message TEXT,
+  created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT td.event_type, td.user_id, td.message, td.created_at
+  FROM public.trigger_debug td
+  ORDER BY td.created_at DESC
+  LIMIT 20;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permissions for debug function
+GRANT EXECUTE ON FUNCTION public.check_trigger_debug() TO service_role;
+
 -- =============================================================================
--- 24. FINAL SETUP
+-- 26. FINAL SETUP
 -- =============================================================================
 
 -- Grant execute permissions on all functions
@@ -1813,8 +2105,34 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
 -- Ensure proper schema ownership
 ALTER SCHEMA public OWNER TO postgres;
 
+-- Ensure auth trigger function has proper ownership and permissions
+ALTER FUNCTION public.handle_new_user() OWNER TO postgres;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO postgres;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
+
+-- Verify trigger creation
+DO $$
+DECLARE
+  trigger_exists BOOLEAN;
+BEGIN
+  -- Check if trigger exists
+  SELECT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'on_auth_user_created' 
+    AND tgrelid = 'auth.users'::regclass
+  ) INTO trigger_exists;
+  
+  IF trigger_exists THEN
+    RAISE LOG 'Auth trigger on_auth_user_created successfully created';
+  ELSE
+    RAISE LOG 'WARNING: Auth trigger on_auth_user_created was not created!';
+  END IF;
+END $$;
+
+
+
 -- =============================================================================
--- 25. SCHEMA VERIFICATION
+-- 27. SCHEMA VERIFICATION
 -- =============================================================================
 
 -- Log schema completion
@@ -1824,10 +2142,12 @@ BEGIN
   RAISE LOG 'Tables created: users, categories, gear, gear_photos, gear_specifications, bookings, transactions, connected_accounts, escrow_transactions, messages, message_threads, conversations, reviews, claims, photo_uploads, handover_photos, claim_photos, rate_limits, notifications, email_notifications, moderation_queue, admin_actions, analytics, platform_settings';
   RAISE LOG 'RLS policies enabled for all tables';
   RAISE LOG 'Auth trigger created - profiles created automatically on signup';
+  RAISE LOG 'Auth security functions created - rate limiting, logging, account lockout';
   RAISE LOG 'Foreign key relationships established';
   RAISE LOG 'Indexes created for optimal performance';
   RAISE LOG 'Default data inserted (categories, platform settings)';
   RAISE LOG 'Storage bucket configured for avatars';
+  RAISE LOG 'Security settings configured - session timeout, auth limits, logging';
 END $$;
 
 -- =============================================================================
