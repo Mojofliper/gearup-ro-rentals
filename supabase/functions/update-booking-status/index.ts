@@ -109,7 +109,7 @@ serve(async (req) => {
     }
 
     // Prepare update data
-    const updateData = { status }
+    const updateData: any = { status }
     
     if (status === 'picked_up' && pickupConfirmedAt) {
       updateData.pickup_confirmed_at = pickupConfirmedAt
@@ -138,40 +138,8 @@ serve(async (req) => {
       )
     }
 
-    // If status is being set to 'picked_up', trigger escrow release for rental amount
-    if (status === 'picked_up') {
-      try {
-        // Get the escrow transaction
-        const { data: escrowTransaction } = await supabase
-          .from('escrow_transactions')
-          .select('id, stripe_payment_intent_id, rental_amount, deposit_amount')
-          .eq('booking_id', bookingId)
-          .eq('transaction_type', 'escrow_hold')
-          .single()
-
-        if (escrowTransaction) {
-          // Release rental amount to owner (deposit remains in escrow)
-          const { data: releaseTransaction } = await supabase
-            .from('escrow_transactions')
-            .insert({
-              booking_id: bookingId,
-              transaction_type: 'rental_release',
-              amount: escrowTransaction.rental_amount,
-              stripe_payment_intent_id: escrowTransaction.stripe_payment_intent_id,
-              status: 'pending'
-            })
-            .select()
-            .single()
-
-          // TODO: Call Stripe API to release funds to owner
-          // This would require additional Stripe integration
-          console.log('Rental amount should be released to owner:', escrowTransaction.rental_amount)
-        }
-      } catch (escrowError) {
-        console.error('Error handling escrow release:', escrowError)
-        // Don't fail the booking update if escrow release fails
-      }
-    }
+    // Note: Escrow release is now handled in the BookingStatusFlow component
+    // when both parties confirm return, not at pickup
 
     return new Response(
       JSON.stringify({ 

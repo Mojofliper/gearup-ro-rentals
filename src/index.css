@@ -201,6 +201,25 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
+/* Chat-specific scrollbar */
+.chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: rgba(241, 241, 241, 0.5);
+  border-radius: 3px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.6);
+  border-radius: 3px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.8);
+}
+
 /* Mobile-first responsive design improvements */
 @media (max-width: 768px) {
   .container {

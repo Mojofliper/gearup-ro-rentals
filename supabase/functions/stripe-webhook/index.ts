@@ -96,15 +96,16 @@ async function handleCheckoutSessionCompleted(session: unknown, supabaseClient: 
       return
     }
 
-    // Update booking payment status
+    // Update booking payment status - only if not already confirmed
     const { error: bookingError } = await supabaseClient
       .from('bookings')
       .update({ 
-        payment_status: 'paid',
+        payment_status: 'completed',
         status: 'confirmed', // Auto-confirm booking after payment
         payment_intent_id: session.payment_intent // Update with actual payment intent ID
       })
       .eq('id', bookingId)
+      .neq('status', 'confirmed') // Only update if not already confirmed
 
     if (bookingError) {
       console.error('Error updating booking:', bookingError)
@@ -254,13 +255,15 @@ async function handlePaymentIntentSucceeded(paymentIntent: unknown, supabaseClie
       .single()
 
     if (transaction) {
+      // Only update if booking is not already confirmed to prevent race conditions
       await supabaseClient
         .from('bookings')
         .update({ 
-          payment_status: 'paid',
+          payment_status: 'completed',
           status: 'confirmed' // Auto-confirm booking after payment
         })
         .eq('id', transaction.booking_id)
+        .neq('status', 'confirmed') // Only update if not already confirmed
     }
 
   } catch (error) {

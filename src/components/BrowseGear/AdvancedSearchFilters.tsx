@@ -213,38 +213,40 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
   ].filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Main Search Bar */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-2">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Caută echipament, brand, model..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10 sm:h-11 text-sm"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              Filtre
-              {activeFiltersCount > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {activeFiltersCount}
-                </Badge>
-              )}
-            </Button>
-            {activeFiltersCount > 0 && (
-              <Button variant="outline" onClick={clearFilters}>
-                <X className="h-4 w-4" />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center gap-2 text-sm"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden sm:inline">Filtre</span>
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
               </Button>
-            )}
+              {activeFiltersCount > 0 && (
+                <Button variant="outline" onClick={clearFilters} className="text-sm">
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -252,35 +254,36 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
       {/* Advanced Filters */}
       {isExpanded && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Filtre Avansate</span>
-              <div className="flex gap-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span className="text-base sm:text-lg">Filtre Avansate</span>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowSaveDialog(true)}
+                  className="text-xs sm:text-sm"
                 >
-                  <Save className="h-4 w-4 mr-1" />
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Salvează Căutarea
                 </Button>
                 {savedSearches.length > 0 && (
-                  <Button variant="outline" size="sm">
-                    <History className="h-4 w-4 mr-1" />
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                    <History className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Căutări Salvate ({savedSearches.length})
                   </Button>
                 )}
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             {/* Basic Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {/* Category */}
               <div>
-                <Label>Categorie</Label>
+                <Label className="text-sm">Categorie</Label>
                 <Select value={filters.category || 'all'} onValueChange={(value) => handleFilterChange('category', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue placeholder="Toate categoriile" />
                   </SelectTrigger>
                   <SelectContent>
@@ -296,43 +299,45 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
               {/* Location */}
               <div>
-                <Label>Locație</Label>
+                <Label className="text-sm">Locație</Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Oraș, județ..."
                     value={filters.location}
                     onChange={(e) => handleFilterChange('location', e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-10 sm:h-11 text-sm"
                   />
                 </div>
               </div>
 
               {/* Brand */}
               <div>
-                <Label>Brand</Label>
+                <Label className="text-sm">Brand</Label>
                 <Input
                   placeholder="ex. Sony, Canon, DJI..."
                   value={filters.brand}
                   onChange={(e) => handleFilterChange('brand', e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
                 />
               </div>
 
               {/* Model */}
               <div>
-                <Label>Model</Label>
+                <Label className="text-sm">Model</Label>
                 <Input
                   placeholder="ex. A7 III, EOS R5..."
                   value={filters.model}
                   onChange={(e) => handleFilterChange('model', e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
                 />
               </div>
 
               {/* Sort By */}
               <div>
-                <Label>Sortează după</Label>
+                <Label className="text-sm">Sortează după</Label>
                 <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -347,9 +352,9 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
               {/* Sort Order */}
               <div>
-                <Label>Ordine</Label>
+                <Label className="text-sm">Ordine</Label>
                 <Select value={filters.sortOrder} onValueChange={(value: 'asc' | 'desc') => handleFilterChange('sortOrder', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -364,8 +369,8 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
             {/* Price Range */}
             <div>
-              <Label>Interval Preț (RON/zi)</Label>
-              <div className="space-y-4">
+              <Label className="text-sm">Interval Preț (RON/zi)</Label>
+              <div className="space-y-3 sm:space-y-4">
                 <Slider
                   value={[filters.minPrice, filters.maxPrice]}
                   onValueChange={(value) => {
@@ -377,7 +382,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                   step={10}
                   className="w-full"
                 />
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600">
                   <span>{filters.minPrice} RON</span>
                   <span>{filters.maxPrice} RON</span>
                 </div>
@@ -388,7 +393,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
             {/* Rating */}
             <div>
-              <Label>Rating minim</Label>
+              <Label className="text-sm">Rating minim</Label>
               <div className="flex items-center space-x-2">
                 <Star className="h-4 w-4 text-yellow-400" />
                 <Slider
@@ -399,7 +404,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                   step={0.5}
                   className="flex-1"
                 />
-                <span className="text-sm font-medium">{filters.rating} stele</span>
+                <span className="text-xs sm:text-sm font-medium">{filters.rating} stele</span>
               </div>
             </div>
 
@@ -407,7 +412,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
             {/* Condition */}
             <div>
-              <Label>Stare Echipament</Label>
+              <Label className="text-sm">Stare Echipament</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {conditions.map((condition) => (
                   <Button
@@ -415,6 +420,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                     variant={filters.condition.includes(condition.value) ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleConditionToggle(condition.value)}
+                    className="text-xs sm:text-sm"
                   >
                     {condition.label}
                   </Button>
@@ -426,7 +432,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
             {/* Features */}
             <div>
-              <Label>Caracteristici</Label>
+              <Label className="text-sm">Caracteristici</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {features.map((feature) => (
                   <Button
@@ -434,6 +440,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                     variant={filters.features.includes(feature.value) ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleFeatureToggle(feature.value)}
+                    className="text-xs sm:text-sm"
                   >
                     {feature.label}
                   </Button>
@@ -445,30 +452,33 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
             {/* Availability */}
             <div>
-              <Label>Disponibilitate</Label>
+              <Label className="text-sm">Disponibilitate</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 <Button
                   variant={filters.availability.includes('today') ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleAvailabilityToggle('today')}
+                  className="text-xs sm:text-sm"
                 >
-                  <Calendar className="h-4 w-4 mr-1" />
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Disponibil azi
                 </Button>
                 <Button
                   variant={filters.availability.includes('weekend') ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleAvailabilityToggle('weekend')}
+                  className="text-xs sm:text-sm"
                 >
-                  <Calendar className="h-4 w-4 mr-1" />
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Weekend
                 </Button>
                 <Button
                   variant={filters.availability.includes('long_term') ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleAvailabilityToggle('long_term')}
+                  className="text-xs sm:text-sm"
                 >
-                  <Calendar className="h-4 w-4 mr-1" />
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Termen lung
                 </Button>
               </div>
@@ -477,21 +487,23 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
             <Separator />
 
             {/* Date Range */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label>Data început</Label>
+                <Label className="text-sm">Data început</Label>
                 <Input
                   type="date"
                   value={filters.dateRange.start}
                   onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, start: e.target.value })}
+                  className="h-10 sm:h-11 text-sm"
                 />
               </div>
               <div>
-                <Label>Data sfârșit</Label>
+                <Label className="text-sm">Data sfârșit</Label>
                 <Input
                   type="date"
                   value={filters.dateRange.end}
                   onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, end: e.target.value })}
+                  className="h-10 sm:h-11 text-sm"
                 />
               </div>
             </div>
@@ -503,7 +515,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
       {savedSearches.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Bookmark className="h-4 w-4" />
               Căutări Salvate
             </CardTitle>
@@ -516,6 +528,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => loadSavedSearch(savedSearch)}
+                  className="text-xs sm:text-sm"
                 >
                   {savedSearch.name}
                 </Button>
@@ -528,22 +541,23 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
       {/* Save Search Dialog */}
       {showSaveDialog && (
         <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <Label>Nume căutare</Label>
+                <Label className="text-sm">Nume căutare</Label>
                 <Input
                   placeholder="ex. Camere Sony București"
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={saveCurrentSearch}>
-                  <Save className="h-4 w-4 mr-1" />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={saveCurrentSearch} className="text-sm">
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Salvează
                 </Button>
-                <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+                <Button variant="outline" onClick={() => setShowSaveDialog(false)} className="text-sm">
                   Anulează
                 </Button>
               </div>

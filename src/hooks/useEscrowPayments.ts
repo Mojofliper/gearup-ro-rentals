@@ -157,7 +157,7 @@ export const useEscrowPayments = () => {
   // Release escrow funds
   const releaseEscrowFunds = useCallback(async (
     bookingId: string,
-    releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'pickup_confirmed' | 'completed' = 'automatic',
+    releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'return_confirmed' | 'completed' = 'automatic',
     depositToOwner: boolean = false
   ) => {
     if (!user) {

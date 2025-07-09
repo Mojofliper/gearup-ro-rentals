@@ -14,7 +14,13 @@ import { calculatePlatformFee, formatAmountForDisplay } from '@/integrations/str
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  gear: Record<string, unknown>;
+  gear: {
+    id: string;
+    title: string;
+    owner?: {
+      location: string;
+    };
+  };
   selectedDates: Date[];
   pricePerDay: number;
   depositAmount: number;
@@ -42,7 +48,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     
     const totalDays = selectedDates.length;
     const rentalAmount = totalDays * pricePerDay; // Price is already in RON
-    const totalAmount = rentalAmount + depositAmount;
+    const platformFee = calculatePlatformFee(rentalAmount);
+    const totalAmount = rentalAmount + depositAmount + platformFee;
 
     createBooking({
       gear_id: gear.id,

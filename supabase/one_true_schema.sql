@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS public.bookings (
   end_date DATE NOT NULL,
   total_days INTEGER NOT NULL,
   daily_rate INTEGER NOT NULL, -- in RON cents
+  rental_amount INTEGER NOT NULL, -- in RON cents (actual rental cost without deposit and fees)
   total_amount INTEGER NOT NULL, -- in RON cents
   platform_fee INTEGER NOT NULL, -- in RON cents
   owner_amount INTEGER NOT NULL, -- in RON cents
@@ -178,6 +179,16 @@ CREATE TABLE IF NOT EXISTS public.bookings (
   return_date TIMESTAMPTZ,
   notes TEXT,
   cancellation_reason TEXT,
+  -- Dual confirmation fields for step-by-step booking flow
+
+  pickup_confirmed_by_renter BOOLEAN DEFAULT FALSE,
+  pickup_confirmed_by_renter_at TIMESTAMPTZ,
+  pickup_confirmed_by_owner BOOLEAN DEFAULT FALSE,
+  pickup_confirmed_by_owner_at TIMESTAMPTZ,
+  return_confirmed_by_renter BOOLEAN DEFAULT FALSE,
+  return_confirmed_by_renter_at TIMESTAMPTZ,
+  return_confirmed_by_owner BOOLEAN DEFAULT FALSE,
+  return_confirmed_by_owner_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -1270,6 +1281,7 @@ CREATE INDEX IF NOT EXISTS idx_bookings_status ON public.bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_payment_status ON public.bookings(payment_status);
 CREATE INDEX IF NOT EXISTS idx_bookings_pickup_date ON public.bookings(pickup_date);
 CREATE INDEX IF NOT EXISTS idx_bookings_return_date ON public.bookings(return_date);
+CREATE INDEX IF NOT EXISTS idx_bookings_rental_amount ON public.bookings(rental_amount);
 
 -- Transaction indexes
 CREATE INDEX IF NOT EXISTS idx_transactions_booking_id ON public.transactions(booking_id);

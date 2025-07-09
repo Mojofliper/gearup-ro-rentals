@@ -26,7 +26,7 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
     const checkEligibility = async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select('payment_status, escrow_status')
+        .select('payment_status')
         .eq('id', bookingId)
         .single();
       if (error) {
@@ -34,13 +34,14 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
         setEligible(false);
         return;
       }
-      setEligible(data.payment_status === 'paid' && data.escrow_status === 'held');
+      // Allow claims for completed payments
+      setEligible(data.payment_status === 'completed');
     };
     checkEligibility();
   }, [bookingId]);
 
   if (eligible === false) {
-    return <p className="text-sm text-muted-foreground">Claims can only be submitted after payment and while escrow is held.</p>;
+    return <p className="text-sm text-muted-foreground">Claims can only be submitted after payment is completed.</p>;
   }
   if (eligible === null) return null;
 

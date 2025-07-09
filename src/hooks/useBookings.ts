@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useDeleteConversation } from '@/hooks/useMessages';
 
 type Booking = Record<string, unknown>;
 type BookingInsert = Record<string, unknown>;
@@ -51,6 +52,8 @@ export const useUserBookings = () => {
           console.log('useBookings: Old booking status:', (payload.old as Record<string, unknown>)?.status);
           // Invalidate and refetch bookings when any booking changes
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+          // Also refresh calendar availability when booking status changes
+          queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] });
         }
       )
       .on(
@@ -126,9 +129,11 @@ export const useCreateBooking = () => {
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['gear'] });
+      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       // Send notification to owner and renter
       if (data && data.id && data.gear_id && data.owner_id && data.renter_id) {
-        await notifyBookingCreated(data.id as string, (data.gear_title as string) || '', data.owner_id as string, data.renter_id as string);
+        const gearTitle = (data.gear as { title?: string })?.title || 'Echipament';
+        await notifyBookingCreated(data.id as string, gearTitle, data.owner_id as string, data.renter_id as string);
       }
     },
   });
@@ -144,10 +149,36 @@ export const useAcceptBooking = () => {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       // Send notification to renter and owner
-      if (data && data.id && data.gear_title && data.renter_id && data.owner_id) {
-        await notifyBookingConfirmed(data.id as string, data.gear_title as string, data.renter_id as string);
-        await notifyBookingConfirmedOwner(data.id as string, data.gear_title as string, data.owner_id as string);
+      if (data && data.id && data.renter_id && data.owner_id) {
+        const gearTitle = (data.gear as { title?: string })?.title || 'Echipament';
+        await notifyBookingConfirmed(data.id as string, gearTitle, data.renter_id as string);
+        await notifyBookingConfirmedOwner(data.id as string, gearTitle, data.owner_id as string);
+      }
+    },
+  });
+};
+
+export const useRejectBooking = () => {
+  const queryClient = useQueryClient();
+  const { rejectBooking, loading, error } = useBookingApi();
+  const { mutate: deleteConversation } = useDeleteConversation();
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      return await rejectBooking(bookingId);
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
+      
+      // Delete the conversation after successful rejection
+      if (data && data.id) {
+        try {
+          deleteConversation(data.id as string);
+        } catch (error) {
+          console.error('Failed to delete conversation after rejection:', error);
+        }
       }
     },
   });
@@ -163,6 +194,7 @@ export const useConfirmReturn = () => {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       // Optionally notify owner/renter here if needed
     },
   });
@@ -178,6 +210,7 @@ export const useCompleteReturn = () => {
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       // Optionally notify owner/renter here if needed
     },
   });
@@ -215,6 +248,7 @@ export const useUpdateBooking = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
     },
   });
 };
@@ -231,6 +265,7 @@ export const useCompleteRental = () => {
       // Invalidate all booking-related queries
       queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },

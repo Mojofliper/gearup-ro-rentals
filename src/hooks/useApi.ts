@@ -431,12 +431,13 @@ const useBookingApi = () => {
       const result = await api.booking.createBooking(bookingData);
       if (result.error) {
         setError(result.error);
-        return null;
+        throw result.error;
       }
       return result.data;
     } catch (err: unknown) {
-      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create booking', 'CREATE_ERROR'));
-      return null;
+      const error = err instanceof ApiError ? err : new ApiError(err instanceof Error ? err.message : 'Failed to create booking', 'CREATE_ERROR');
+      setError(error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -450,12 +451,33 @@ const useBookingApi = () => {
       const result = await api.booking.acceptBooking(bookingId, pickupLocation);
       if (result.error) {
         setError(result.error);
-        return null;
+        throw result.error;
       }
       return result.data;
     } catch (err: unknown) {
-      setError(new ApiError(err instanceof Error ? err.message : 'Failed to accept booking', 'UPDATE_ERROR'));
-      return null;
+      const error = err instanceof ApiError ? err : new ApiError(err instanceof Error ? err.message : 'Failed to accept booking', 'UPDATE_ERROR');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const rejectBooking = useCallback(async (bookingId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.booking.rejectBooking(bookingId);
+      if (result.error) {
+        setError(result.error);
+        throw result.error;
+      }
+      return result.data;
+    } catch (err: unknown) {
+      const error = err instanceof ApiError ? err : new ApiError(err instanceof Error ? err.message : 'Failed to reject booking', 'UPDATE_ERROR');
+      setError(error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -596,6 +618,7 @@ const useBookingApi = () => {
   return {
     createBooking,
     acceptBooking,
+    rejectBooking,
     getRentalDashboard,
     confirmReturn,
     completeReturn,

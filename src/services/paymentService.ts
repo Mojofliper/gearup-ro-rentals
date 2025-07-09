@@ -8,7 +8,16 @@ import {
   validatePaymentAmounts 
 } from '@/integrations/stripe/client';
 
-type BookingUpdate = Database['public']['Tables']['bookings']['Update'];
+type BookingUpdate = {
+  id?: string;
+  rental_amount?: number;
+  deposit_amount?: number;
+  total_amount?: number;
+  platform_fee?: number;
+  status?: string;
+  payment_status?: string;
+  [key: string]: unknown;
+};
 
 export class PaymentService {
   /**
@@ -145,8 +154,8 @@ export class PaymentService {
         .select(`
           *,
           gear:gear(*),
-          owner:users!bookings_owner_id_fkey(*),
-          renter:users!bookings_renter_id_fkey(*)
+          owner:users!owner_id(*),
+          renter:users!renter_id(*)
         `)
         .or(`owner_id.eq.${userId},renter_id.eq.${userId}`)
         .order('created_at', { ascending: false });
@@ -316,7 +325,23 @@ export class PaymentService {
   /**
    * Create a transaction for a booking if one does not exist
    */
-  static async getOrCreateTransactionForBooking(booking: Database['public']['Tables']['bookings']['Row']): Promise<Database['public']['Tables']['transactions']['Row']> {
+  static async getOrCreateTransactionForBooking(booking: {
+    id: string;
+    rental_amount: number;
+    deposit_amount: number;
+    total_amount: number;
+    platform_fee?: number;
+    [key: string]: unknown;
+  }): Promise<{
+    id: string;
+    booking_id: string;
+    amount: number;
+    platform_fee: number;
+    deposit_amount: number;
+    rental_amount: number;
+    status: string;
+    [key: string]: unknown;
+  }> {
     // console.log('🔍 FUNCTION CALLED: getOrCreateTransactionForBooking');
     // console.log('=== TRANSACTION DEBUG START ===');
     // Debug: Log current Supabase user/session and booking ID
@@ -349,9 +374,9 @@ export class PaymentService {
     }
     
     // Calculate the correct amounts
-    // The booking.total_amount should be the rental amount (price per day * days)
+    // The booking.rental_amount is the actual rental cost (without deposit and fees)
     // We need to calculate platform fee and total amount
-    const rentalAmount = Number(booking.total_amount) || 0;
+    const rentalAmount = Number(booking.rental_amount) || 0;
     const depositAmount = Number(booking.deposit_amount) || 0;
     const platformFee = Math.round(rentalAmount * 0.13);
     const totalAmount = rentalAmount + depositAmount + platformFee;
@@ -393,7 +418,7 @@ export class PaymentService {
   /**
    * Release escrow funds for a completed booking
    */
-  static async releaseEscrowFunds(bookingId: string, releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'pickup_confirmed' | 'completed' = 'automatic', depositToOwner: boolean = false) {
+  static async releaseEscrowFunds(bookingId: string, releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'return_confirmed' | 'completed' = 'automatic', depositToOwner: boolean = false) {
     try {
       const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release`, {
         method: 'POST',

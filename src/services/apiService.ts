@@ -797,10 +797,11 @@ export const bookingApi = {
       // For multi-day bookings, count the actual difference + 1 (inclusive)
       const totalDays = daysDiff === 0 ? 1 : daysDiff + 1;
       const totalAmount = gear.price_per_day * totalDays;
-      const platformFee = totalAmount * 0.10; // 10% platform fee
+      const platformFee = Math.round(totalAmount * 0.13); // 13% platform fee
       const ownerAmount = totalAmount - platformFee;
 
-      const { data, error } = await supabase
+      // First insert the booking
+      const { data: booking, error: insertError } = await supabase
         .from('bookings')
         .insert({
           gear_id: bookingData.gear_id,
@@ -810,7 +811,8 @@ export const bookingApi = {
           end_date: bookingData.end_date,
           total_days: totalDays,
           daily_rate: gear.price_per_day,
-          total_amount: totalAmount,
+          rental_amount: totalAmount, // The actual rental cost (without deposit)
+          total_amount: totalAmount + gear.deposit_amount + platformFee, // Total including deposit and fees
           platform_fee: platformFee,
           owner_amount: ownerAmount,
           deposit_amount: gear.deposit_amount,
@@ -818,11 +820,25 @@ export const bookingApi = {
           pickup_instructions: bookingData.renter_notes,
           status: 'pending'
         })
-        .select()
+        .select('*')
         .single();
 
-      if (error) throw error;
-      return { data, error: null };
+      if (insertError) throw insertError;
+
+      // Then fetch the gear data separately
+      if (booking && booking.gear_id) {
+        const { data: gearData, error: gearError } = await supabase
+          .from('gear')
+          .select('title')
+          .eq('id', booking.gear_id)
+          .single();
+
+        if (!gearError && gearData) {
+          booking.gear = gearData;
+        }
+      }
+
+      return { data: booking, error: null };
     } catch (error: unknown) {
       return { data: null, error: new ApiError((error as Error).message, 'CREATE_ERROR') };
     }
@@ -831,19 +847,146 @@ export const bookingApi = {
   // Accept booking and set pickup location
   async acceptBooking(bookingId: string, pickupLocation: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
-      const { data, error } = await supabase
+      console.log('acceptBooking: Starting with bookingId:', bookingId);
+      
+      // First check if the booking exists and get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('acceptBooking: Current user:', user?.id);
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+      
+      // Check if booking exists and user has permission
+      const { data: existingBooking, error: checkError } = await supabase
+        .from('bookings')
+        .select('id, owner_id, renter_id, status')
+        .eq('id', bookingId)
+        .single();
+      
+      console.log('acceptBooking: Existing booking:', existingBooking);
+      console.log('acceptBooking: Check error:', checkError);
+      
+      if (checkError) {
+        console.error('acceptBooking: Error checking booking:', checkError);
+        if (checkError.code === 'PGRST116') {
+          throw new Error('Booking not found');
+        }
+        throw checkError;
+      }
+      
+      if (!existingBooking) {
+        throw new Error('Booking not found');
+      }
+      
+      // Check if user is owner or renter
+      if (existingBooking.owner_id !== user.id && existingBooking.renter_id !== user.id) {
+        throw new Error('User not authorized to update this booking');
+      }
+      
+      console.log('acceptBooking: User authorized, proceeding with update');
+      
+      // First update the booking
+      const { data: booking, error: updateError } = await supabase
         .from('bookings')
         .update({
           status: 'confirmed',
           pickup_location: pickupLocation
         })
         .eq('id', bookingId)
-        .select()
+        .select('*')
         .single();
 
-      if (error) throw error;
-      return { data, error: null };
+      console.log('acceptBooking: Update result:', { booking, updateError });
+      
+      if (updateError) {
+        console.error('acceptBooking: Update error:', updateError);
+        throw updateError;
+      }
+
+      // Then fetch the gear data separately
+      if (booking && booking.gear_id) {
+        const { data: gear, error: gearError } = await supabase
+          .from('gear')
+          .select('title')
+          .eq('id', booking.gear_id)
+          .single();
+
+        if (!gearError && gear) {
+          booking.gear = gear;
+        }
+      }
+
+      return { data: booking, error: null };
     } catch (error: unknown) {
+      console.error('acceptBooking: Final error:', error);
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
+    }
+  },
+
+  // Reject booking
+  async rejectBooking(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      console.log('rejectBooking: Starting with bookingId:', bookingId);
+      
+      // First check if the booking exists and get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('rejectBooking: Current user:', user?.id);
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+      
+      // Check if booking exists and user has permission
+      const { data: existingBooking, error: checkError } = await supabase
+        .from('bookings')
+        .select('id, owner_id, renter_id, status')
+        .eq('id', bookingId)
+        .single();
+      
+      console.log('rejectBooking: Existing booking:', existingBooking);
+      console.log('rejectBooking: Check error:', checkError);
+      
+      if (checkError) {
+        console.error('rejectBooking: Error checking booking:', checkError);
+        if (checkError.code === 'PGRST116') {
+          throw new Error('Booking not found');
+        }
+        throw checkError;
+      }
+      
+      if (!existingBooking) {
+        throw new Error('Booking not found');
+      }
+      
+      // Check if user is owner (only owners can reject bookings)
+      if (existingBooking.owner_id !== user.id) {
+        throw new Error('User not authorized to reject this booking');
+      }
+      
+      console.log('rejectBooking: User authorized, proceeding with rejection');
+      
+      // Update the booking status to cancelled
+      const { data: booking, error: updateError } = await supabase
+        .from('bookings')
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString()
+        })
+        .eq('id', bookingId)
+        .select('*')
+        .single();
+
+      console.log('rejectBooking: Update result:', { booking, updateError });
+      
+      if (updateError) {
+        console.error('rejectBooking: Update error:', updateError);
+        throw updateError;
+      }
+
+      return { data: booking, error: null };
+    } catch (error: unknown) {
+      console.error('rejectBooking: Final error:', error);
       return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
@@ -1023,14 +1166,28 @@ export const bookingApi = {
 
       // Send completion notifications
       try {
+        // First get the booking details
         const { data: bookingDetails } = await supabase
           .from('bookings')
-          .select('owner_id, renter_id, gear:gear_id(title)')
+          .select('owner_id, renter_id, gear_id')
           .eq('id', bookingId)
           .single();
 
+        // Then fetch the gear title separately
+        let gearTitle = 'Echipament';
+        if (bookingDetails && bookingDetails.gear_id) {
+          const { data: gear } = await supabase
+            .from('gear')
+            .select('title')
+            .eq('id', bookingDetails.gear_id)
+            .single();
+          
+          if (gear) {
+            gearTitle = gear.title;
+          }
+        }
+
         if (bookingDetails) {
-          const gearTitle = (bookingDetails.gear as unknown as Record<string, unknown>)?.title || 'Echipament';
           
           // Send notifications to both parties
           await supabase
@@ -1813,7 +1970,15 @@ export default api;
 
 // Fetch unavailable dates for a gear item
 export const getGearUnavailableDates = async (gearId: string): Promise<{ unavailable_date: string; booking_id: string; status: string; reason: string }[]> => {
-  const { data, error } = await supabase.rpc('get_gear_unavailable_dates', { gear_id: gearId });
-  if (error) throw error;
-  return data || [];
+  try {
+    const { data, error } = await supabase.rpc('get_gear_unavailable_dates', { gear_id: gearId });
+    if (error) {
+      console.error('Error fetching unavailable dates:', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error in getGearUnavailableDates:', error);
+    return [];
+  }
 }; 

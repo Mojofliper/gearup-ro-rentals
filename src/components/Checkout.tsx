@@ -104,6 +104,8 @@ export const Checkout: React.FC<CheckoutProps> = ({
         const totalDays = item.selectedDates.length;
         const rentalAmount = totalDays * item.gear.price_per_day;
         const depositAmount = item.gear.deposit_amount;
+        const platformFee = calculatePlatformFee(rentalAmount);
+        const totalAmount = rentalAmount + depositAmount + platformFee;
 
         // Create booking directly using Supabase to match the actual schema
         const { data: booking, error: bookingError } = await supabase
@@ -115,7 +117,9 @@ export const Checkout: React.FC<CheckoutProps> = ({
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate.toISOString().split('T')[0],
           total_days: totalDays,
-          total_amount: rentalAmount,
+          rental_amount: rentalAmount,
+          total_amount: totalAmount,
+          platform_fee: platformFee,
             deposit_amount: depositAmount,
             status: 'pending',
             notes: item.notes || null

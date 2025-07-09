@@ -57,13 +57,13 @@ export const BrowseGear: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-4">
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-3 sm:mb-4">
             Descoperă echipamentul perfect
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">Găsește echipamentul de care ai nevoie pentru următorul tău proiect</p>
-          <div className="mt-10">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto px-4">Găsește echipamentul de care ai nevoie pentru următorul tău proiect</p>
+          <div className="mt-6 sm:mt-10">
             <RentOfferToggle />
           </div>
         </div>
@@ -80,21 +80,21 @@ export const BrowseGear: React.FC = () => {
           />
 
           {/* Advanced Search Filters */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <AdvancedSearchFilters 
               onFiltersChange={handleAdvancedFiltersChange}
             />
           </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">
               {isLoading ? 'Se încarcă...' : `${gear.length} echipament${gear.length !== 1 ? 'e' : ''} găsit${gear.length !== 1 ? 'e' : ''}`}
             </h2>
-            <p className="text-gray-600 mt-1">Echipament profesional de la creatori verificați</p>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Echipament profesional de la creatori verificați</p>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Filter className="h-4 w-4" />
+          <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
+            <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>Filtrează rezultatele</span>
           </div>
         </div>
@@ -103,32 +103,32 @@ export const BrowseGear: React.FC = () => {
           {isLoading ? (
             <GridSkeleton count={8} columns={4} />
           ) : error ? (
-            <div className="text-center py-16">
-            <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md mx-auto">
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">Oops! Ceva nu a mers bine</h3>
-              <p className="text-gray-600">Nu am putut încărca echipamentele. Te rugăm să încerci din nou.</p>
+            <div className="text-center py-8 sm:py-16">
+            <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-12 max-w-md mx-auto">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">Oops! Ceva nu a mers bine</h3>
+              <p className="text-sm sm:text-base text-gray-600">Nu am putut încărca echipamentele. Te rugăm să încerci din nou.</p>
             </div>
             </div>
           ) : gear.length === 0 ? (
-            <div className="text-center py-16">
-            <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md mx-auto">
-              <Camera className="h-16 w-16 text-gray-300 mx-auto mb-6" />
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">Nu am găsit echipamente</h3>
-              <p className="text-gray-600 mb-6">Încearcă să modifici criteriile de căutare sau explorează alte categorii</p>
+            <div className="text-center py-8 sm:py-16">
+            <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-12 max-w-md mx-auto">
+              <Camera className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-4 sm:mb-6" />
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">Nu am găsit echipamente</h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Încearcă să modifici criteriile de căutare sau explorează alte categorii</p>
                 <Button 
                   onClick={() => {
             setSearchQuery('');
             setSelectedLocation('all');
             setSelectedCategory('all');
                   }} 
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white w-full sm:w-auto"
                 >
                 Resetează filtrele
               </Button>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {gear.map((item: Record<string, unknown>) => (
                 <GearCard 
                   key={item.id as string} 

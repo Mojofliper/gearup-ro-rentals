@@ -42,21 +42,36 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
 
     setConfirming(true);
     try {
-      const newStatus = type === 'pickup' ? 'active' : 'completed';
+      let updates: Record<string, unknown> = { notes: notes || null };
+      
+      if (type === 'pickup') {
+        if (isOwner) {
+          // Owner confirms pickup - change status to active
+          updates.status = 'active';
+        } else if (isRenter) {
+          // Renter confirms pickup - change status to active
+          updates.status = 'active';
+        }
+      } else {
+        if (isRenter) {
+          // Renter confirms return - change status to returned
+          updates.status = 'returned';
+        } else if (isOwner) {
+          // Owner confirms return - change status to completed
+          updates.status = 'completed';
+        }
+      }
       
       updateBooking({
-        id: booking.id,
-        updates: { 
-          status: newStatus,
-          notes: notes || null
-        }
+        bookingId: booking.id as string,
+        updates
       }, {
         onSuccess: () => {
+          const action = type === 'pickup' ? 'ridicare' : 'returnare';
+          const role = isOwner ? 'proprietar' : 'chiriaș';
           toast({
-            title: type === 'pickup' ? 'Ridicare confirmată!' : 'Returnare confirmată!',
-            description: type === 'pickup' 
-              ? 'Echipamentul a fost predat cu succes.'
-              : 'Echipamentul a fost returnat cu succes.',
+            title: `${action.charAt(0).toUpperCase() + action.slice(1)} confirmată!`,
+            description: `Confirmarea ${role}ului a fost înregistrată.`,
           });
           onClose();
         },
@@ -95,10 +110,25 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
 
   const canConfirm = () => {
     if (type === 'pickup') {
-      return isOwner && booking.status === 'confirmed';
+      // Owner can confirm pickup if booking is confirmed
+      if (isOwner && booking.status === 'confirmed') {
+        return true;
+      }
+      // Renter can confirm pickup if booking is confirmed
+      if (isRenter && booking.status === 'confirmed') {
+        return true;
+      }
     } else {
-      return isRenter && booking.status === 'active';
+      // Renter can confirm return if booking is active
+      if (isRenter && booking.status === 'active') {
+        return true;
+      }
+      // Owner can confirm return if booking is returned
+      if (isOwner && booking.status === 'returned') {
+        return true;
+      }
     }
+    return false;
   };
 
   return (
@@ -126,10 +156,10 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
             <CardContent className="p-4">
               <div className="flex items-start space-x-3">
                 <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                  {booking.gear?.gear_photos && booking.gear.gear_photos.length > 0 ? (
+                  {(booking.gear as any)?.gear_photos && (booking.gear as any).gear_photos.length > 0 ? (
                     <img
-                      src={booking.gear.gear_photos[0]}
-                      alt={booking.gear.title}
+                      src={(booking.gear as any).gear_photos[0]}
+                      alt={(booking.gear as any).title}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -140,20 +170,20 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800">{booking.gear?.title}</h3>
+                  <h3 className="font-semibold text-gray-800">{(booking.gear as any)?.title}</h3>
                   <div className="flex items-center space-x-2 mt-1">
                     <Avatar className="h-5 w-5">
                       <AvatarFallback className="text-xs">
                         {type === 'pickup' 
-                          ? booking.renter?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'
-                          : booking.owner?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'
+                          ? (booking.renter as any)?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'
+                          : (booking.owner as any)?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'
                         }
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-sm text-gray-600">
                       {type === 'pickup' 
-                        ? booking.renter?.full_name 
-                        : booking.owner?.full_name
+                        ? (booking.renter as any)?.full_name 
+                        : (booking.owner as any)?.full_name
                       }
                     </span>
                   </div>
@@ -176,7 +206,7 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
                   {format(new Date(booking.start_date as string), 'dd MMM yyyy')} - {format(new Date(booking.end_date as string), 'dd MMM yyyy')}
                 </div>
                 <div className="text-sm text-gray-600">
-                  {booking.total_days} {booking.total_days === 1 ? 'zi' : 'zile'}
+                  {(booking.total_days as number)} {(booking.total_days as number) === 1 ? 'zi' : 'zile'}
                 </div>
               </div>
             </CardContent>
@@ -188,7 +218,7 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 text-gray-400" />
                 <span className="text-sm text-gray-600">
-                  Locație: {type === 'pickup' ? booking.owner?.location : booking.renter?.location}
+                  Locație: {type === 'pickup' ? (booking.owner as any)?.location : (booking.renter as any)?.location}
                 </span>
               </div>
             </CardContent>

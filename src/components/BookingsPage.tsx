@@ -13,23 +13,33 @@ import { Loader2, CheckCircle, XCircle, MapPin, Eye, Star, CheckCircle2, ArrowLe
 import { toast } from '@/hooks/use-toast';
 import { PickupLocationModal } from '@/components/PickupLocationModal';
 import { ReviewModal } from '@/components/ReviewModal';
-import { useCompleteRental } from '@/hooks/useBookings';
+import { useCompleteRental, useRejectBooking } from '@/hooks/useBookings';
+import { useDeleteConversation } from '@/hooks/useMessages';
 import { PaymentModal } from '@/components/PaymentModal';
 import { ConfirmationSystem } from '@/components/ConfirmationSystem';
+import { BookingStatusFlow } from '@/components/BookingStatusFlow';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import OwnerClaimForm from '@/components/OwnerClaimForm';
+import { RenterClaimForm } from '@/components/RenterClaimForm';
+
 
 export const BookingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: bookings = [], isLoading } = useUserBookings();
   const { mutate: acceptBooking, isPending: acceptingBooking } = useAcceptBooking();
+  const { mutate: rejectBooking, isPending: rejectingBooking } = useRejectBooking();
   const { mutate: completeRental, isPending: completingRental } = useCompleteRental();
   const { mutate: confirmReturn, isPending: confirmingReturn } = useConfirmReturn();
+  const { mutate: deleteConversation } = useDeleteConversation();
   
   const [pickupBooking, setPickupBooking] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [paymentBooking, setPaymentBooking] = useState<any>(null);
   const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
   const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
+  const [claimBooking, setClaimBooking] = useState<any>(null);
+
 
   // Filter bookings using the actual authenticated user ID
   const userBookings = bookings.filter((b: any) => b.renter_id === user?.id);
@@ -53,10 +63,20 @@ export const BookingsPage: React.FC = () => {
         }
       });
     } else {
-      toast({
-        title: 'Funcționalitate în dezvoltare',
-        description: 'Respingerea rezervărilor va fi implementată în curând.',
-        variant: 'destructive',
+      rejectBooking(bookingId, {
+        onSuccess: () => {
+          toast({
+            title: 'Rezervare respinsă!',
+            description: 'Rezervarea a fost respinsă și conversația a fost ștearsă.',
+          });
+        },
+        onError: (error: unknown) => {
+          toast({
+            title: 'Eroare',
+            description: 'Nu s-a putut respinge rezervarea.',
+            variant: 'destructive',
+          });
+        }
       });
     }
   };
@@ -64,9 +84,20 @@ export const BookingsPage: React.FC = () => {
   const handleCompleteRental = (bookingId: string) => {
     completeRental(bookingId, {
       onSuccess: () => {
-        toast({
-          title: 'Închiriere finalizată!',
-          description: 'Închirierea a fost finalizată cu succes.',
+        // Delete the conversation after successful completion
+        deleteConversation(bookingId, {
+          onSuccess: () => {
+            toast({
+              title: 'Închiriere finalizată!',
+              description: 'Închirierea a fost finalizată cu succes și conversația a fost ștearsă.',
+            });
+          },
+          onError: () => {
+            toast({
+              title: 'Închiriere finalizată!',
+              description: 'Închirierea a fost finalizată cu succes.',
+            });
+          }
         });
       },
       onError: (error) => {
@@ -160,18 +191,18 @@ export const BookingsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
-        <div className="flex items-center gap-4 mb-6">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-2 sm:px-4 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-6">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/dashboard')}
-            className="hover:bg-gray-100 transition-colors"
+            className="hover:bg-gray-100 transition-colors w-full sm:w-auto"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Înapoi la Dashboard
           </Button>
-          <h1 className="text-3xl font-bold">Rezervările mele</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold w-full sm:w-auto">Rezervările mele</h1>
         </div>
         {isLoading ? (
           <div className="flex justify-center items-center h-40">
@@ -191,214 +222,232 @@ export const BookingsPage: React.FC = () => {
             
             {userBookings.length > 0 && (
               <section className="mb-10">
-                <h2 className="text-xl font-semibold mb-4">Ca chiriaș</h2>
+                <h2 className="text-lg sm:text-xl font-semibold mb-4">Ca chiriaș</h2>
                 <div className="space-y-4">
-                  {userBookings.map((booking: any) => (
-                    <Card key={booking.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{booking.gear_title}</CardTitle>
-                            <CardDescription>
-                              {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                            </CardDescription>
+                  {userBookings.map((booking: any) => {
+                    return (
+                      <Card key={booking.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader>
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+                            <div>
+                              <CardTitle className="text-base sm:text-lg">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
+                              <CardDescription>
+                                {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
+                              {getStatusBadge(booking.status)}
+                              {getPaymentStatusBadge(booking.payment_status)}
+                            </div>
                           </div>
-                          <div className="flex flex-col gap-2 items-end">
-                            {getStatusBadge(booking.status)}
-                            {getPaymentStatusBadge(booking.payment_status)}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="text-sm text-muted-foreground">
-                            Proprietar: {getUserDisplayName(booking.owner)}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Locație pickup: {booking.pickup_location || 'Nespecificat'}
-                          </div>
-                          <div className="text-sm font-medium text-green-600">
-                            Total: {formatPrice(booking.total_amount)}
-                          </div>
-                          <div className="flex items-center gap-2 mt-4">
-                            {booking.status === 'completed' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => setReviewingBooking(booking)}
-                                className="text-green-600 border-green-200 hover:bg-green-50"
-                              >
-                                <Star className="h-4 w-4 mr-1" />
-                                Lasă recenzie
-                              </Button>
-                            )}
-                            {booking.status === 'returned' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleCompleteRental(booking.id)}
-                                disabled={completingRental}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Finalizează
-                              </Button>
-                            )}
-                            {booking.status === 'confirmed' && (
-                              <>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="text-sm text-muted-foreground">
+                              Proprietar: {getUserDisplayName(booking.owner) || 'Proprietar necunoscut'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Locație pickup: {booking.pickup_location || 'Nespecificat'}
+                            </div>
+                            <div className="text-sm font-medium text-green-600">
+                              Total: {formatPrice(booking.total_amount) || 'N/A'}
+                            </div>
+                            <div className="flex flex-wrap flex-col sm:flex-row gap-2 mt-4 w-full">
+                              {booking.status === 'completed' && (
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  onClick={() => handleConfirmation(booking, 'pickup')}
-                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => setReviewingBooking(booking)}
+                                  className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto"
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Confirmă pickup
+                                  <Star className="h-4 w-4 mr-1" />
+                                  Lasă recenzie
                                 </Button>
-                                {booking.payment_status !== 'completed' && (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => handlePaymentClick(booking)}
-                                    className="text-green-600 border-green-200 hover:bg-green-50"
-                                  >
-                                    <CreditCard className="h-4 w-4 mr-1" />
-                                    Plătește
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                            {booking.status === 'active' && (
+                              )}
+                              {booking.status === 'returned' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleCompleteRental(booking.id)}
+                                  disabled={completingRental}
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                                  Finalizează
+                                </Button>
+                              )}
+                              {(booking.status === 'confirmed' || booking.status === 'active') && user?.id === booking.renter_id && (
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => window.location.reload()} 
+                                    onPaymentClick={handlePaymentClick}
+                                  />
+                                </div>
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                onClick={() => handleConfirmation(booking, 'return')}
-                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                                onClick={() => navigate('/messages')}
+                                className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
                               >
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Confirmă returnarea
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Mesaje
                               </Button>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => navigate('/messages')}
-                              className="text-gray-600 border-gray-200 hover:bg-gray-50"
-                            >
-                              <MessageSquare className="h-4 w-4 mr-1" />
-                              Mesaje
-                            </Button>
+                              {(['confirmed', 'active', 'returned'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.renter_id) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setClaimBooking(booking)}
+                                  className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+                                >
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Revendică daune
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </section>
             )}
             
             {ownerBookings.length > 0 && (
               <section>
-                <h2 className="text-xl font-semibold mb-4">Ca proprietar</h2>
+                <h2 className="text-lg sm:text-xl font-semibold mb-4">Ca proprietar</h2>
                 <div className="space-y-4">
-                  {ownerBookings.map((booking: any) => (
-                    <Card key={booking.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{booking.gear_title}</CardTitle>
-                            <CardDescription>
-                              {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                            </CardDescription>
+                  {ownerBookings.map((booking: any) => {
+                    return (
+                      <Card key={booking.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader>
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+                            <div>
+                              <CardTitle className="text-base sm:text-lg">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
+                              <CardDescription>
+                                {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
+                              {getStatusBadge(booking.status)}
+                              {getPaymentStatusBadge(booking.payment_status)}
+                            </div>
                           </div>
-                          <div className="flex flex-col gap-2 items-end">
-                            {getStatusBadge(booking.status)}
-                            {getPaymentStatusBadge(booking.payment_status)}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="text-sm text-muted-foreground">
-                            Chiriaș: {getUserDisplayName(booking.renter)}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Locație pickup: {booking.pickup_location || 'Nespecificat'}
-                          </div>
-                          <div className="text-sm font-medium text-green-600">
-                            Total: {formatPrice(booking.total_amount)}
-                          </div>
-                          <div className="flex items-center gap-2 mt-4">
-                            {booking.status === 'pending' && (
-                              <>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="text-sm text-muted-foreground">
+                              Chiriaș: {getUserDisplayName(booking.renter) || 'Chiriaș necunoscut'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Locație pickup: {booking.pickup_location || 'Nespecificat'}
+                            </div>
+                            <div className="text-sm font-medium text-green-600">
+                              Total: {formatPrice(booking.total_amount) || 'N/A'}
+                            </div>
+                            <div className="flex flex-wrap flex-col sm:flex-row gap-2 mt-4 w-full">
+                              {booking.status === 'pending' && (
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setPickupBooking(booking)}
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
+                                  >
+                                    <MapPin className="h-4 w-4 mr-1" />
+                                    Setează locația
+                                  </Button>
+                                  <Button 
+                                    variant="default" 
+                                    size="sm" 
+                                    onClick={() => handleBookingAction(booking.id, 'confirmed')}
+                                    disabled={acceptingBooking}
+                                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Confirmă
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleBookingAction(booking.id, 'rejected')}
+                                    disabled={acceptingBooking}
+                                    className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Respinge
+                                  </Button>
+                                </>
+                              )}
+                              {booking.status === 'confirmed' && user?.id === booking.owner_id && (
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setPickupBooking(booking)}
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
+                                  >
+                                    <MapPin className="h-4 w-4 mr-1" />
+                                    Setează locația
+                                  </Button>
+                                  <div className="w-full">
+                                    <BookingStatusFlow 
+                                      booking={booking} 
+                                      onStatusUpdate={() => window.location.reload()} 
+                                      onPaymentClick={handlePaymentClick}
+                                    />
+                                  </div>
+                                </>
+                              )}
+                              {booking.status === 'active' && user?.id === booking.owner_id && (
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => window.location.reload()} 
+                                    onPaymentClick={handlePaymentClick}
+                                  />
+                                </div>
+                              )}
+                              {booking.status === 'returned' && (
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  onClick={() => setPickupBooking(booking)}
-                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => handleCompleteRental(booking.id)}
+                                  disabled={completingRental}
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
                                 >
-                                  <MapPin className="h-4 w-4 mr-1" />
-                                  Setează locația
+                                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                                  Finalizează
                                 </Button>
-                                <Button 
-                                  variant="default" 
-                                  size="sm" 
-                                  onClick={() => handleBookingAction(booking.id, 'confirmed')}
-                                  disabled={acceptingBooking}
-                                  className="bg-green-600 hover:bg-green-700"
+                              )}
+                              {(['confirmed', 'active', 'returned'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.owner_id) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setClaimBooking(booking)}
+                                  className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Confirmă
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Revendică daune
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleBookingAction(booking.id, 'rejected')}
-                                  disabled={acceptingBooking}
-                                  className="text-red-600 border-red-200 hover:bg-red-50"
-                                >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Respinge
-                                </Button>
-                              </>
-                            )}
-                            {booking.status === 'confirmed' && (
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                onClick={() => setPickupBooking(booking)}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                onClick={() => navigate('/messages')}
+                                className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
                               >
-                                <MapPin className="h-4 w-4 mr-1" />
-                                Setează locația
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Mesaje
                               </Button>
-                            )}
-                            {booking.status === 'returned' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleCompleteRental(booking.id)}
-                                disabled={completingRental}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Finalizează
-                              </Button>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => navigate('/messages')}
-                              className="text-gray-600 border-gray-200 hover:bg-gray-50"
-                            >
-                              <MessageSquare className="h-4 w-4 mr-1" />
-                              Mesaje
-                            </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -444,6 +493,43 @@ export const BookingsPage: React.FC = () => {
           onClose={() => setConfirmationBooking(null)}
         />
       )}
+
+      {claimBooking && (
+        <Dialog open={!!claimBooking} onOpenChange={() => setClaimBooking(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Revendicare daune</DialogTitle>
+              <DialogDescription>
+                {user?.id === claimBooking.owner_id 
+                  ? 'Descrie daunele și încarcă dovezi foto.' 
+                  : 'Descrie problema întâlnită și încarcă dovezi foto.'
+                }
+              </DialogDescription>
+            </DialogHeader>
+            {user?.id === claimBooking.owner_id ? (
+              <OwnerClaimForm
+                bookingId={String(claimBooking.id)}
+                onSubmitted={() => {
+                  setClaimBooking(null);
+                  // reload bookings
+                  window.location.reload();
+                }}
+              />
+            ) : (
+              <RenterClaimForm
+                bookingId={String(claimBooking.id)}
+                onSubmitted={() => {
+                  setClaimBooking(null);
+                  // reload bookings
+                  window.location.reload();
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+
     </div>
   );
 };

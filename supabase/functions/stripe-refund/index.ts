@@ -77,8 +77,8 @@ serve(async (req) => {
         *,
         booking:bookings(
           *,
-                  owner:users!bookings_owner_id_fkey(*),
-        renter:users!bookings_renter_id_fkey(*)
+                  owner:users!owner_id(*),
+        renter:users!renter_id(*)
         )
       `)
       .eq('id', transactionId)

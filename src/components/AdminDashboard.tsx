@@ -290,64 +290,64 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   const OverviewPanel = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-600">Total Utilizatori</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.totalUsers}</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-900">{stats.totalUsers}</p>
                 <p className="text-xs text-blue-600">+{stats.newUsers} luna aceasta</p>
               </div>
-              <Users className="h-8 w-8 text-blue-600" />
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-600">Echipamente Active</p>
-                <p className="text-2xl font-bold text-green-900">{stats.activeListings}</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-900">{stats.activeListings}</p>
                 <p className="text-xs text-green-600">Disponibile pentru închiriere</p>
               </div>
-              <Package className="h-8 w-8 text-green-600" />
+              <Package className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-600">Reclamații în Așteptare</p>
-                <p className="text-2xl font-bold text-red-900">{stats.pendingClaims}</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-900">{stats.pendingClaims}</p>
                 <p className="text-xs text-red-600">Necesită atenție</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-purple-600">Venit Total</p>
-                <p className="text-2xl font-bold text-purple-900">{stats.totalRevenue.toLocaleString()} RON</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-900">{stats.totalRevenue.toLocaleString()} RON</p>
                 <p className="text-xs text-purple-600">Toate timpurile</p>
               </div>
-              <DollarSign className="h-8 w-8 text-purple-600" />
+              <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -378,9 +378,9 @@ export const AdminDashboard: React.FC = () => {
                 {recentActivity.map((item) => (
                   <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                     <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{item.action}</p>
-                      <p className="text-xs text-gray-500">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.action}</p>
+                      <p className="text-xs text-gray-500 truncate">
                         {item.user || item.item || item.amount} • {item.time}
                       </p>
                     </div>
@@ -429,22 +429,22 @@ export const AdminDashboard: React.FC = () => {
           <CardTitle>Acțiuni Rapide</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-20 flex-col space-y-2" onClick={() => navigate('/admin/users')}>
-              <Users className="h-6 w-6" />
-              <span className="text-sm">Gestionare Utilizatori</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/users')}>
+              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="text-xs sm:text-sm">Gestionare Utilizatori</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col space-y-2" onClick={() => navigate('/admin/moderation')}>
-              <Flag className="h-6 w-6" />
-              <span className="text-sm">Moderare Conținut</span>
+            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/moderation')}>
+              <Flag className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="text-xs sm:text-sm">Moderare Conținut</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col space-y-2" onClick={() => navigate('/admin/claims')}>
-              <ShieldCheck className="h-6 w-6" />
-              <span className="text-sm">Reclamații</span>
+            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/claims')}>
+              <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="text-xs sm:text-sm">Reclamații</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col space-y-2" onClick={() => navigate('/admin/analytics')}>
-              <BarChart2 className="h-6 w-6" />
-              <span className="text-sm">Rapoarte</span>
+            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/analytics')}>
+              <BarChart2 className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="text-xs sm:text-sm">Rapoarte</span>
             </Button>
           </div>
         </CardContent>
@@ -457,21 +457,37 @@ export const AdminDashboard: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         {/* Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-20">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center space-x-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <ShieldCheck className="h-6 w-6 text-white" />
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <ShieldCheck className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">Gestionare platformă GearUp</p>
+              <div className="hidden sm:block">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-xs sm:text-sm text-gray-600">Gestionare platformă GearUp</p>
+              </div>
+              <div className="sm:hidden">
+                <h1 className="text-lg font-bold text-gray-900">Admin</h1>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="sm" className="hover:bg-gray-100">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Button variant="ghost" size="sm" className="hover:bg-gray-100 p-2">
                 <Bell className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="hover:bg-gray-100">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+                className="hover:bg-gray-100 p-2 sm:hidden"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate('/dashboard')} 
+                className="hover:bg-gray-100 hidden sm:flex"
+              >
                 <Home className="h-4 w-4 mr-2" />
                 Înapoi la Dashboard
               </Button>
@@ -479,15 +495,25 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex">
+        <div className="flex flex-col lg:flex-row">
+          {/* Mobile Navigation Overlay */}
+          {sidebarCollapsed && (
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+              onClick={() => setSidebarCollapsed(false)}
+            />
+          )}
+
           {/* Sidebar */}
-          <aside className={`bg-white/80 backdrop-blur-sm border-r border-gray-200/50 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+          <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-white/95 backdrop-blur-sm border-r border-gray-200/50 transition-all duration-300 transform ${
+            sidebarCollapsed ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          } ${sidebarCollapsed ? 'w-64' : 'w-64'}`}>
             <div className="p-4">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="w-full mb-4"
+                className="w-full mb-4 hidden lg:flex"
               >
                 {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <span>Colapsare</span>}
               </Button>
@@ -502,6 +528,7 @@ export const AdminDashboard: React.FC = () => {
                   <Link
                     key={item.path}
                     to={`/admin/${item.path}`}
+                    onClick={() => setSidebarCollapsed(false)}
                     className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-900 border border-blue-200'
@@ -509,7 +536,7 @@ export const AdminDashboard: React.FC = () => {
                     }`}
                   >
                     <Icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : item.color}`} />
-                    {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+                    <span className="font-medium">{item.label}</span>
                   </Link>
                 );
               })}
@@ -517,7 +544,7 @@ export const AdminDashboard: React.FC = () => {
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-4 sm:p-6 w-full">
             <React.Suspense fallback={
               <div className="flex items-center justify-center h-64">
                 <div className="text-center space-y-4">

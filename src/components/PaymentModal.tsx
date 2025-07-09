@@ -19,7 +19,19 @@ import {
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  booking: Record<string, unknown>;
+  booking: {
+    id: string;
+    rental_amount: number;
+    deposit_amount: number;
+    total_amount: number;
+    total_days: number;
+    start_date: string;
+    end_date: string;
+    owner_id: string;
+    gear?: {
+      title: string;
+    };
+  };
   onPaymentSuccess?: () => void;
 }
 
@@ -48,7 +60,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [showOwnerSetup, setShowOwnerSetup] = useState(false);
 
   // Calculate amounts
-  const rentalAmount = booking.total_amount || 0;
+  const rentalAmount = booking.rental_amount || 0;
   const depositAmount = booking.deposit_amount || 0;
   const platformFee = calculatePlatformFee(rentalAmount);
   const totalAmount = rentalAmount + depositAmount + platformFee;

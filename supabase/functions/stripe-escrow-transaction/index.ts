@@ -46,7 +46,7 @@ serve(async (req) => {
       .select(`
         *,
         gear:gear(*),
-        owner:users!bookings_owner_id_fkey(*)
+        owner:users!owner_id(*)
       `)
       .eq('id', bookingId)
       .single()

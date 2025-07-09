@@ -29,6 +29,7 @@ import { isScamContent } from '@/utils/security';
 import { MapCard } from '@/components/MapCard';
 import { cn } from '@/lib/utils';
 import { useSendMessage } from '@/hooks/useMessages';
+import { messagingApi } from '@/services/apiService';
 import { format } from 'date-fns';
 
 interface Message {
@@ -75,11 +76,26 @@ export const Messages: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectedBookingRef = useRef<string>('');
+  const userRef = useRef<string>('');
+  const subscriptionRef = useRef<any>(null);
   const [unreadConversations, setUnreadConversations] = useState<{[bookingId: string]: boolean}>({});
   const [unreadCounts, setUnreadCounts] = useState<{[bookingId: string]: number}>({});
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { mutateAsync: sendMessageApi } = useSendMessage();
+  
+  // Direct API call for debugging
+  const sendMessageDirect = async (bookingId: string, content: string) => {
+    try {
+      const result = await messagingApi.sendMessage(bookingId, content, 'text');
+      console.log('Direct API result:', result);
+      return result;
+    } catch (error) {
+      console.error('Direct API error:', error);
+      throw error;
+    }
+  };
 
   const [uploading, setUploading] = useState(false);
 
@@ -95,6 +111,7 @@ export const Messages: React.FC = () => {
 
   useEffect(() => {
     if (selectedBooking) {
+      selectedBookingRef.current = selectedBooking;
       fetchMessages();
       markMessagesAsRead();
     }
@@ -104,53 +121,130 @@ export const Messages: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Real-time subscription for messages
+  // Hybrid approach: real-time + polling fallback
   useEffect(() => {
-    if (!user || bookings.length === 0) return;
+    if (!user) return;
     
-    const channels = bookings.map((booking) =>
-      supabase
-        .channel(`messages-${booking.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `booking_id=eq.${booking.id}`,
-          },
-          (payload) => {
-            const newMessage = payload.new as Message;
-            if (String(booking.id) === String(selectedBooking)) {
+    // Update user ref
+    userRef.current = user.id;
+    
+    // Only create subscription if it doesn't exist
+    if (subscriptionRef.current) {
+      console.log('Real-time subscription already exists, skipping setup');
+      return;
+    }
+    
+    console.log('Setting up hybrid real-time subscription for user:', user.id);
+    
+    // Set up polling as fallback
+    const pollInterval = setInterval(async () => {
+      if (selectedBookingRef.current) {
+        try {
+          const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('booking_id', selectedBookingRef.current)
+            .order('created_at', { ascending: true });
+          
+          if (!error && data) {
+            setMessages(currentMessages => {
+              // Separate optimistic and real messages
+              const optimistic = currentMessages.filter(msg => msg.id.startsWith('temp-'));
+              const real = data;
+
+              // Remove optimistic messages that have a real equivalent
+              const realKeys = new Set(real.map(msg => `${msg.content}|${msg.sender_id}|${msg.booking_id}`));
+              const filteredOptimistic = optimistic.filter(msg => !realKeys.has(`${msg.content}|${msg.sender_id}|${msg.booking_id}`));
+
+              // Always set to backend messages + remaining optimistic
+              return [...real, ...filteredOptimistic];
+            });
+          }
+        } catch (error) {
+          console.error('Polling error:', error);
+        }
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    const channel = supabase
+      .channel('hybrid-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('Hybrid real-time message received:', payload);
+          const newMessage = payload.new as Message;
+          
+          // Use current state values instead of dependencies
+          setBookings(currentBookings => {
+            // Check if this message belongs to one of the user's bookings
+            const isUserBooking = currentBookings.some(booking => booking.id === newMessage.booking_id);
+            if (!isUserBooking) return currentBookings;
+            
+            // If this is for the currently selected booking, update messages
+            if (String(newMessage.booking_id) === String(selectedBookingRef.current)) {
               setMessages((prev) => {
                 // Check if message already exists to avoid duplicates
-                if (prev.some((msg) => msg.id === newMessage.id)) return prev;
-                return [...prev, newMessage];
+                if (prev.some((msg) => msg.id === newMessage.id)) {
+                  console.log('Message already exists, skipping');
+                  return prev;
+                }
+                
+                console.log('Adding new message to state:', newMessage);
+                
+                // Remove any optimistic messages with the same content from the same sender
+                const filteredPrev = prev.filter(msg => 
+                  !(msg.id.startsWith('temp-') && 
+                    msg.content === newMessage.content && 
+                    msg.sender_id === newMessage.sender_id)
+                );
+                
+                return [...filteredPrev, newMessage];
               });
+              
               // Mark as read if conversation is open and message is from other user
-              if (newMessage.sender_id !== user.id) {
+              if (newMessage.sender_id !== userRef.current) {
                 markMessagesAsRead();
               }
-            } else if (newMessage.sender_id !== user.id) {
-              setUnreadConversations((prev) => ({ ...prev, [booking.id]: true }));
+            } else if (newMessage.sender_id !== userRef.current) {
+              // Update unread counts for other conversations
+              setUnreadConversations((prev) => ({ ...prev, [newMessage.booking_id]: true }));
               setUnreadCounts((prev) => ({ 
                 ...prev, 
-                [booking.id]: (prev[booking.id] || 0) + 1 
+                [newMessage.booking_id]: (prev[newMessage.booking_id] || 0) + 1 
               }));
-              toast({
-                title: 'Mesaj nou',
-                description: `Ai un mesaj nou la rezervarea "${sanitizeText(booking.gear?.title || 'Echipament')}"!`,
-              });
+              
+              const booking = currentBookings.find(b => b.id === newMessage.booking_id);
+              if (booking) {
+                toast({
+                  title: 'Mesaj nou',
+                  description: `Ai un mesaj nou la rezervarea "${sanitizeText(booking.gear?.title || 'Echipament')}"!`,
+                });
+              }
             }
-          }
-        )
-        .subscribe()
-    );
+            
+            return currentBookings;
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Hybrid subscription status:', status);
+      });
 
+    // Store the channel reference
+    subscriptionRef.current = channel;
+    
+    // Cleanup function for polling
     return () => {
-      channels.forEach((ch) => supabase.removeChannel(ch));
+      clearInterval(pollInterval);
     };
-  }, [user, bookings, selectedBooking]);
+  }, []); // Empty dependency array - only run once
+
+  // Removed separate unread subscription - now handled by global subscription
 
   const fetchBookings = async () => {
     try {
@@ -239,35 +333,57 @@ export const Messages: React.FC = () => {
     if (!newMessage.trim() || !selectedBooking || sending) return;
 
     setSending(true);
-    try {
-      // Optimistically add the message to the local state
-      const optimisticMessage: Message = {
-        id: `temp-${Date.now()}`,
-        content: newMessage.trim(),
-        sender_id: user?.id || '',
-        booking_id: selectedBooking,
-        created_at: new Date().toISOString(),
-        is_read: false,
-        sender: {
-          full_name: profile?.full_name || 'You',
-          avatar_url: profile?.avatar_url
-        },
-        message_type: 'text'
-      };
+    
+    // Optimistically add the message to the local state
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content: newMessage.trim(),
+      sender_id: user?.id || '',
+      booking_id: selectedBooking,
+      created_at: new Date().toISOString(),
+      is_read: false,
+      sender: {
+        full_name: profile?.full_name || 'You',
+        avatar_url: profile?.avatar_url
+      },
+      message_type: 'text'
+    };
 
-      setMessages(prev => [...prev, optimisticMessage]);
-      setNewMessage('');
-      
-      // Send the message via API
-      await sendMessageApi({
+    setMessages(prev => [...prev, optimisticMessage]);
+    setNewMessage('');
+    
+    try {
+      console.log('Sending message via API:', {
         bookingId: selectedBooking,
         content: newMessage.trim(),
       });
       
-      // Remove the optimistic message and let the real-time update handle it
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      // Send the message via API (try direct API first for debugging)
+      const result = await sendMessageDirect(selectedBooking, newMessage.trim());
+      
+      console.log('Message sent successfully:', result);
+      
+      // Keep the optimistic message for a short time to allow real-time update to arrive
+      // The real-time subscription will replace it with the real message
+      setTimeout(() => {
+        setMessages(prev => {
+          const hasRealMessage = prev.some(msg => 
+            !msg.id.startsWith('temp-') && 
+            msg.content === newMessage.trim() && 
+            msg.sender_id === user?.id
+          );
+          
+          if (hasRealMessage) {
+            // Remove the optimistic message if the real one arrived
+            return prev.filter(msg => msg.id !== optimisticMessage.id);
+          }
+          return prev;
+        });
+      }, 2000); // Wait 2 seconds for real-time update
     } catch (error) {
       console.error('Error sending message:', error);
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
       toast({
         title: 'Eroare',
         description: 'Nu am putut trimite mesajul.',
@@ -283,6 +399,12 @@ export const Messages: React.FC = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Debug function to manually refresh messages
+  const debugRefreshMessages = async () => {
+    console.log('Manually refreshing messages...');
+    await fetchMessages();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -339,7 +461,20 @@ export const Messages: React.FC = () => {
     }).format(price);
   };
 
-  const filteredBookings = bookings.filter(booking => {
+  // Filter out cancelled bookings for the sidebar
+  const activeBookings = bookings.filter(b => b.status !== 'cancelled');
+
+  // Auto-deselect if the selected booking is cancelled
+  useEffect(() => {
+    if (selectedBooking) {
+      const selected = bookings.find(b => b.id === selectedBooking);
+      if (selected && selected.status === 'cancelled') {
+        setSelectedBooking('');
+      }
+    }
+  }, [bookings, selectedBooking]);
+
+  const filteredBookings = activeBookings.filter(booking => {
     const matchesSearch = booking.gear?.title?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || booking.status === filterStatus;
     return matchesSearch && matchesFilter;
@@ -398,28 +533,28 @@ export const Messages: React.FC = () => {
       <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <Link to="/dashboard">
-                <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-gray-100">
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-gray-100 p-2">
                   <ArrowLeft className="h-4 w-4" />
                   <span className="hidden sm:inline">Înapoi</span>
                 </Button>
               </Link>
-              <div className="flex items-center space-x-3">
-                <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-white" />
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="h-8 w-8 sm:h-8 sm:w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">Mesaje</h1>
-                  <p className="text-sm text-gray-600 hidden sm:block">Comunică cu proprietarii și chiriașii</p>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">Mesaje</h1>
+                  <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Comunică cu proprietarii și chiriașii</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-blue-200">
-                {bookings.length} conversații
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-blue-200 text-xs sm:text-sm">
+                {activeBookings.length} conversații
               </Badge>
-              <Button variant="ghost" size="sm" className="hover:bg-gray-100">
+              <Button variant="ghost" size="sm" className="hover:bg-gray-100 p-2">
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
@@ -427,25 +562,25 @@ export const Messages: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {bookings.length === 0 ? (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {activeBookings.length === 0 ? (
           <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center space-y-8">
+            <div className="text-center space-y-6 sm:space-y-8">
               <div className="relative">
-                <div className="h-24 w-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
-                  <MessageSquare className="h-12 w-12 text-gray-400" />
+                <div className="h-20 w-20 sm:h-24 sm:w-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
+                  <MessageSquare className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
                 </div>
-                <div className="absolute -top-2 -right-2 h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-semibold">0</span>
+                <div className="absolute -top-2 -right-2 h-6 w-6 sm:h-8 sm:w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs sm:text-sm font-semibold">0</span>
                 </div>
               </div>
               <div className="max-w-md">
-                <h3 className="text-2xl font-bold text-gray-800 mb-3">Nu ai încă conversații</h3>
-                <p className="text-gray-600 mb-8 leading-relaxed">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">Nu ai încă conversații</h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 leading-relaxed">
                   Creează o rezervare pentru a începe să comunici cu proprietarii și să coordonezi închirierile
                 </p>
                 <Link to="/browse">
-                  <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 w-full sm:w-auto">
                     <Search className="h-4 w-4 mr-2" />
                     Caută echipamente
                   </Button>
@@ -454,19 +589,19 @@ export const Messages: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-[calc(100vh-200px)]">
             {/* Modern Conversations Sidebar */}
             <div className="lg:col-span-1">
               <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-                <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30">
-                  <div className="space-y-4">
+                <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30 p-4">
+                  <div className="space-y-3 sm:space-y-4">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         placeholder="Caută conversații..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm"
                       />
                     </div>
                     <div className="flex space-x-2">
@@ -475,7 +610,7 @@ export const Messages: React.FC = () => {
                         size="sm"
                         onClick={() => setFilterStatus('all')}
                         className={cn(
-                          "flex-1 transition-all duration-200",
+                          "flex-1 transition-all duration-200 text-xs sm:text-sm",
                           filterStatus === 'all' 
                             ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md" 
                             : "hover:bg-gray-50"
@@ -488,7 +623,7 @@ export const Messages: React.FC = () => {
                         size="sm"
                         onClick={() => setFilterStatus('pending')}
                         className={cn(
-                          "flex-1 transition-all duration-200",
+                          "flex-1 transition-all duration-200 text-xs sm:text-sm",
                           filterStatus === 'pending' 
                             ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md" 
                             : "hover:bg-gray-50"
@@ -513,28 +648,28 @@ export const Messages: React.FC = () => {
                         <div
                           key={booking.id}
                           className={cn(
-                            "relative p-4 cursor-pointer transition-all duration-300 border-b border-gray-100/50 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50",
+                            "relative p-3 sm:p-4 cursor-pointer transition-all duration-300 border-b border-gray-100/50 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50",
                             isSelected && "bg-gradient-to-r from-blue-100/80 to-purple-100/80 border-blue-200/50 shadow-sm"
                           )}
                           onClick={() => setSelectedBooking(booking.id)}
                         >
-                          <div className="flex items-start space-x-3">
+                          <div className="flex items-start space-x-2 sm:space-x-3">
                             <div className="relative">
-                              <Avatar className="h-12 w-12 ring-2 ring-white shadow-md">
+                              <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-white shadow-md">
                                 <AvatarImage src={gearImage} />
-                                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-xs sm:text-sm">
                                   {booking.gear?.title?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               {hasUnread && (
-                                <div className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                                <div className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
                                   <span className="text-white text-xs font-bold">{unreadCount}</span>
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-semibold text-gray-900 truncate text-sm">
+                                <h4 className="font-semibold text-gray-900 truncate text-xs sm:text-sm">
                                   {sanitizeText(booking.gear?.title || 'Echipament')}
                                 </h4>
                                 <span className="text-xs text-gray-500">
@@ -550,7 +685,7 @@ export const Messages: React.FC = () => {
                                 </Badge>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-blue-600">
+                                <span className="text-xs sm:text-sm font-semibold text-blue-600">
                                   {formatPrice(booking.total_amount)}
                                 </span>
                                 <div className="flex items-center space-x-1 text-xs text-gray-500">
@@ -573,49 +708,49 @@ export const Messages: React.FC = () => {
               {selectedBooking ? (
                 <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg">
                   {/* Enhanced Conversation Header */}
-                  <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30">
+                  <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30 p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3 sm:space-x-4">
                         <div className="relative">
-                          <Avatar className="h-12 w-12 ring-2 ring-white shadow-md">
+                          <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-white shadow-md">
                             <AvatarImage 
                               src={selectedBookingData?.gear?.gear_photos?.find(p => p.is_primary)?.photo_url} 
                             />
-                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-xs sm:text-sm">
                               {selectedBookingData?.gear?.title?.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></div>
+                          <div className="absolute -bottom-1 -right-1 h-3 w-3 sm:h-4 sm:w-4 bg-green-500 rounded-full border-2 border-white"></div>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-gray-900 text-lg">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-gray-900 text-base sm:text-lg truncate">
                             {sanitizeText(selectedBookingData?.gear?.title || 'Echipament')}
                           </h3>
-                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-xs sm:text-sm text-gray-600">
                             <div className="flex items-center space-x-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>
+                              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="truncate">
                                 {format(new Date(selectedBookingData?.start_date || ''), 'dd MMM')} - 
                                 {format(new Date(selectedBookingData?.end_date || ''), 'dd MMM yyyy')}
                               </span>
                             </div>
                             <Badge 
                               variant="outline" 
-                              className={cn("border-0", getStatusColor(selectedBookingData?.status || ''))}
+                              className={cn("border-0 text-xs w-fit", getStatusColor(selectedBookingData?.status || ''))}
                             >
                               {getStatusText(selectedBookingData?.status || '')}
                             </Badge>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
                         <Link to={`/gear/${selectedBookingData?.gear_id}`} target="_blank">
-                          <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600">
-                            <Eye className="h-4 w-4 mr-1" />
-                            Vezi echipament
+                          <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600 text-xs sm:text-sm p-2">
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                            <span className="hidden sm:inline">Vezi echipament</span>
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="sm" className="hover:bg-gray-100">
+                        <Button variant="ghost" size="sm" className="hover:bg-gray-100 p-2">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </div>
@@ -623,10 +758,10 @@ export const Messages: React.FC = () => {
                     
                     {/* Enhanced Pickup Location */}
                     {selectedBookingData?.pickup_lat && selectedBookingData?.pickup_lng && selectedBookingData?.pickup_location && (
-                      <div className="mt-4 p-3 bg-white/60 rounded-lg border border-gray-200/50">
+                      <div className="mt-3 sm:mt-4 p-3 bg-white/60 rounded-lg border border-gray-200/50">
                         <div className="flex items-center space-x-2 mb-2">
                           <MapPin className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium text-gray-800">Locație de ridicare</span>
+                          <span className="font-medium text-gray-800 text-sm">Locație de ridicare</span>
                         </div>
                         <MapCard 
                           lat={selectedBookingData.pickup_lat} 
@@ -639,16 +774,16 @@ export const Messages: React.FC = () => {
 
                   {/* Enhanced Messages */}
                   <CardContent className="flex-1 p-0 flex flex-col">
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50/30 to-white/30">
+                    <div className="h-80 sm:h-96 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gradient-to-b from-gray-50/30 to-white/30 chat-scrollbar">
                       {messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center space-y-4">
-                            <div className="h-16 w-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
-                              <MessageSquare className="h-8 w-8 text-gray-400" />
+                            <div className="h-12 w-12 sm:h-16 sm:w-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
+                              <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                             </div>
                             <div>
-                              <p className="text-gray-600 font-medium">Nu există mesaje încă</p>
-                              <p className="text-sm text-gray-500">Începe conversația!</p>
+                              <p className="text-gray-600 font-medium text-sm sm:text-base">Nu există mesaje încă</p>
+                              <p className="text-xs sm:text-sm text-gray-500">Începe conversația!</p>
                             </div>
                           </div>
                         </div>
@@ -663,7 +798,7 @@ export const Messages: React.FC = () => {
                             
                             return (
                               <div key={message.id} className="my-4 flex justify-center">
-                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 text-blue-800 px-6 py-3 rounded-full text-sm max-w-lg w-fit shadow-sm">
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 text-blue-800 px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm max-w-xs sm:max-w-lg w-fit shadow-sm">
                                   <span dangerouslySetInnerHTML={{ __html: contentWithLinks.replace(/\n/g, '<br/>') }} />
                                 </div>
                               </div>
@@ -679,12 +814,12 @@ export const Messages: React.FC = () => {
                             <div
                               key={message.id}
                               className={cn(
-                                "flex items-end space-x-3",
+                                "flex items-end space-x-2 sm:space-x-3",
                                 isOwnMessage ? "justify-end" : "justify-start"
                               )}
                             >
                               {showAvatar && (
-                                <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
+                                <Avatar className="h-6 w-6 sm:h-8 sm:w-8 ring-2 ring-white shadow-sm">
                                   <AvatarImage src={message.sender?.avatar_url} />
                                   <AvatarFallback className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs">
                                     {message.sender?.full_name?.charAt(0).toUpperCase() || 'U'}
@@ -692,22 +827,22 @@ export const Messages: React.FC = () => {
                                 </Avatar>
                               )}
                               <div className={cn(
-                                "flex flex-col max-w-xs lg:max-w-md",
+                                "flex flex-col max-w-[200px] sm:max-w-xs lg:max-w-md",
                                 isOwnMessage && "items-end"
                               )}>
                                 <div className={cn(
-                                  "px-4 py-3 rounded-2xl shadow-sm",
+                                  "px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-sm",
                                   isOwnMessage 
                                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-md" 
                                     : "bg-white text-gray-900 rounded-bl-md border border-gray-200"
                                 )}>
-                                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                                  <p className="text-xs sm:text-sm whitespace-pre-wrap break-words leading-relaxed">
                                     {sanitizeText(message.content)}
                                   </p>
                                 </div>
                                 {showTime && (
                                   <div className={cn(
-                                    "flex items-center space-x-1 mt-2 text-xs text-gray-500",
+                                    "flex items-center space-x-1 mt-1 sm:mt-2 text-xs text-gray-500",
                                     isOwnMessage && "justify-end"
                                   )}>
                                     <Clock className="h-3 w-3" />
@@ -724,7 +859,7 @@ export const Messages: React.FC = () => {
                                 )}
                               </div>
                               {!showAvatar && isOwnMessage && (
-                                <div className="w-8" /> // Spacer for alignment
+                                <div className="w-6 sm:w-8" /> // Spacer for alignment
                               )}
                             </div>
                           );
@@ -734,8 +869,8 @@ export const Messages: React.FC = () => {
                     </div>
 
                     {/* Enhanced Message Input */}
-                    <div className="border-t border-gray-200/50 p-4 bg-white/80 backdrop-blur-sm">
-                      <div className="flex items-end space-x-3">
+                    <div className="border-t border-gray-200/50 p-3 sm:p-4 bg-white/80 backdrop-blur-sm">
+                      <div className="flex items-end space-x-2 sm:space-x-3">
                         <div className="flex-1 relative">
                           <Input
                             ref={inputRef}
@@ -745,7 +880,7 @@ export const Messages: React.FC = () => {
                             placeholder="Scrie un mesaj..."
                             maxLength={1000}
                             disabled={sending || uploading}
-                            className="pr-24 resize-none bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-full"
+                            className="pr-20 sm:pr-24 resize-none bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-full text-sm"
                           />
                           <div className="absolute right-2 bottom-2 flex items-center space-x-1">
                             <input type="file" accept="image/*" style={{ display: 'none' }} id="message-upload-input" onChange={handleFileChange} />
@@ -762,33 +897,44 @@ export const Messages: React.FC = () => {
                           onClick={handleSendMessage}
                           disabled={!newMessage.trim() || sending || uploading}
                           size="sm"
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300 rounded-full h-10 w-10 p-0"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300 rounded-full h-8 w-8 sm:h-10 sm:w-10 p-0"
                         >
                           {sending ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                            <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-white border-t-transparent" />
                           ) : (
-                            <Send className="h-4 w-4" />
+                            <Send className="h-3 w-3 sm:h-4 sm:w-4" />
                           )}
+                        </Button>
+                        <Button 
+                          onClick={debugRefreshMessages}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full h-8 w-8 sm:h-10 sm:w-10 p-0"
+                          title="Debug: Refresh messages"
+                        >
+                          <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
                         </Button>
                       </div>
                       <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
                         <span>{newMessage.length}/1000 caractere</span>
-                        <span>Apasă Enter pentru a trimite</span>
+                        <span className="hidden sm:inline">Apasă Enter pentru a trimite</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
                 <Card className="h-full flex items-center justify-center bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-                  <CardContent className="text-center space-y-6">
-                    <div className="h-20 w-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
-                      <MessageSquare className="h-10 w-10 text-gray-400" />
+                  <CardContent className="text-center space-y-4 sm:space-y-6 p-4">
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
+                      <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-3">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-3">
                         Selectează o conversație
                       </h3>
-                      <p className="text-gray-600 leading-relaxed">
+                      <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                         Alege o rezervare din lista din stânga pentru a începe să comunici
                       </p>
                     </div>

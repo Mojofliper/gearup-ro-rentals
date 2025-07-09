@@ -111,9 +111,10 @@ serve(async (req) => {
     try {
       // Handle different release types
       switch (release_type) {
-        case 'pickup_confirmed':
-          // Release rental amount to owner (deposit stays in escrow)
+        case 'return_confirmed':
+          // Release both rental amount to owner and deposit back to renter
           if (!booking.rental_amount_released) {
+            // Release rental amount to owner
             transfer = await stripe.transfers.create({
               amount: escrowTransaction.rental_amount * 100, // Convert RON to cents for Stripe
               currency: 'ron',
@@ -155,6 +156,54 @@ serve(async (req) => {
                 data: { 
                   bookingId: booking_id, 
                   amount: escrowTransaction.rental_amount,
+                  gearTitle: booking.gear.title
+                },
+                is_read: false
+              })
+          }
+
+          // Release deposit back to renter
+          if (!booking.deposit_returned) {
+            refundId = await stripe.refunds.create({
+              payment_intent: escrowTransaction.stripe_payment_intent_id,
+              amount: escrowTransaction.deposit_amount * 100, // Convert RON to cents for Stripe
+              metadata: {
+                booking_id: booking_id,
+                refund_type: 'deposit_return',
+                release_type: release_type
+              }
+            })
+
+            // Update escrow transaction
+            await supabaseClient
+              .from('escrow_transactions')
+              .update({
+                deposit_returned_at: new Date().toISOString(),
+                deposit_refund_id: refundId,
+                escrow_status: 'released'
+              })
+              .eq('id', escrowTransaction.id)
+
+            // Update booking
+            await supabaseClient
+              .from('bookings')
+              .update({
+                deposit_returned: true,
+                escrow_release_date: new Date().toISOString()
+              })
+              .eq('id', booking_id)
+            
+            // Send notification to renter about deposit return
+            await supabaseClient
+              .from('notifications')
+              .insert({
+                user_id: booking.renter_id,
+                title: 'Depozit returnat',
+                message: `Depozitul pentru "${booking.gear.title}" a fost returnat`,
+                type: 'payment',
+                data: { 
+                  bookingId: booking_id, 
+                  amount: escrowTransaction.deposit_amount,
                   gearTitle: booking.gear.title
                 },
                 is_read: false

@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserBookings, useUserListings, useUserReviews, useUserStats } from '@/hooks/useUserData';
-import { useAcceptBooking, useConfirmReturn, useCompleteRental } from '@/hooks/useBookings';
+import { useAcceptBooking, useConfirmReturn, useCompleteRental, useRejectBooking } from '@/hooks/useBookings';
 import { EditGearModal } from '@/components/EditGearModal';
 import { ReviewModal } from '@/components/ReviewModal';
 import { useDeleteGear } from '@/hooks/useGear';
@@ -36,6 +36,7 @@ import { useStripeConnect } from '@/hooks/useStripeConnect';
 import { StripeConnectModal } from './StripeConnectModal';
 import { ClaimStatusBadge } from '@/components/ClaimStatusBadge';
 import OwnerClaimForm from '@/components/OwnerClaimForm';
+import { RenterClaimForm } from '@/components/RenterClaimForm';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PickupLocationModal } from '@/components/PickupLocationModal';
 import { BookingFlowGuard } from '@/components/BookingFlowGuard';
@@ -44,6 +45,7 @@ import { PushNotificationSetup } from '@/components/PushNotificationSetup';
 import { RateLimitFeedback } from '@/components/RateLimitFeedback';
 import { PhotoComparison } from '@/components/PhotoComparison';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useDeleteConversation } from '@/hooks/useMessages';
 
 export const Dashboard: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
@@ -76,17 +78,30 @@ export const Dashboard: React.FC = () => {
   const ownerBookingsLoading = bookingsLoading;
   
   const { mutate: acceptBooking, isPending: acceptingBooking } = useAcceptBooking();
+  const { mutate: rejectBooking, isPending: rejectingBooking } = useRejectBooking();
   const { mutate: confirmReturn, isPending: confirmingReturn } = useConfirmReturn();
   const { mutate: completeRental, isPending: completingRental } = useCompleteRental();
   const { mutate: deleteGear, isPending: deleteLoading } = useDeleteGear();
+  const { mutate: deleteConversation } = useDeleteConversation();
   const { notifyBookingConfirmed, notifyGearDeleted } = useNotifications();
 
   const handleCompleteRental = (bookingId: string) => {
     completeRental(bookingId, {
       onSuccess: () => {
-        toast({
-          title: 'Închiriere finalizată!',
-          description: 'Închirierea a fost finalizată cu succes. Conversația a fost ștearsă.',
+        // Delete the conversation after successful completion
+        deleteConversation(bookingId, {
+          onSuccess: () => {
+            toast({
+              title: 'Închiriere finalizată!',
+              description: 'Închirierea a fost finalizată cu succes și conversația a fost ștearsă.',
+            });
+          },
+          onError: () => {
+            toast({
+              title: 'Închiriere finalizată!',
+              description: 'Închirierea a fost finalizată cu succes.',
+            });
+          }
         });
       },
       onError: (error) => {
@@ -286,11 +301,21 @@ export const Dashboard: React.FC = () => {
       }
     });
     } else {
-      // For rejected bookings, we'll need to implement a reject function
-      toast({
-        title: 'Funcționalitate în dezvoltare',
-        description: 'Respingerea rezervărilor va fi implementată în curând.',
-        variant: 'destructive',
+      rejectBooking(bookingId, {
+        onSuccess: () => {
+          toast({
+            title: 'Rezervare respinsă!',
+            description: 'Rezervarea a fost respinsă și conversația a fost ștearsă.',
+          });
+        },
+        onError: (error: unknown) => {
+          toast({
+            title: 'Eroare',
+            description: 'Nu s-a putut respinge rezervarea.',
+            variant: 'destructive',
+          });
+          console.error('Booking rejection error:', error);
+        }
       });
     }
   };
@@ -424,7 +449,7 @@ export const Dashboard: React.FC = () => {
   const recentActivity = [
     ...userBookings.slice(0, 5).map(booking => ({
       type: 'booking' as const,
-      title: `Rezervare ${String(booking.gear_title || 'Necunoscut')}`,
+      title: `Rezervare ${String((booking.gear && typeof booking.gear === 'object' && 'title' in booking.gear) ? (booking.gear as any).title : 'Necunoscut')}`,
       description: `${format(new Date(String(booking.start_date)), 'dd MMM')} - ${format(new Date(String(booking.end_date)), 'dd MMM')}`,
       status: String(booking.status),
       date: new Date(String(booking.created_at)),
@@ -449,27 +474,27 @@ export const Dashboard: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <Header />
         
-        <main className="container mx-auto px-4 py-4 sm:py-8">
+        <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
           {/* Welcome Section */}
           <div className="mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-              <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full">
                 <Avatar className="h-14 w-14 sm:h-16 sm:w-16 mx-auto sm:mx-0">
                   <AvatarImage src={currentAvatarUrl} alt={profile.full_name} />
                   <AvatarFallback className="text-lg">
                     {profile.first_name?.[0]}{profile.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
-                <div className="text-center sm:text-left">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                <div className="text-center sm:text-left w-full min-w-0">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
                     Bună, {profile.first_name}! 👋
                   </h1>
-                  <p className="text-sm sm:text-base text-gray-600">
+                  <p className="text-sm sm:text-base text-gray-600 truncate">
                     {profile.location} • Membru din {format(new Date(profile.created_at || Date.now()), 'MMMM yyyy')}
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
+              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
                   <Edit className="h-4 w-4 mr-2" />
                   Editează profilul
@@ -484,7 +509,8 @@ export const Dashboard: React.FC = () => {
 
           {/* Overview Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow">
+            {/* Each card uses w-full and min-w-0 to prevent overflow */}
+            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow w-full min-w-0">
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -499,7 +525,7 @@ export const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow">
+            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow w-full min-w-0">
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -523,7 +549,7 @@ export const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow">
+            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow w-full min-w-0">
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -541,7 +567,7 @@ export const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow">
+            <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow w-full min-w-0">
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -704,7 +730,7 @@ export const Dashboard: React.FC = () => {
                               <Package className="h-4 w-4 text-blue-600" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm sm:text-base truncate">{booking.gear_title as string}</p>
+                              <p className="font-medium text-sm sm:text-base truncate">{(booking.gear && typeof booking.gear === 'object' && 'title' in booking.gear) ? (booking.gear as any).title : 'Echipament necunoscut'}</p>
                               <p className="text-xs sm:text-sm text-gray-600">
                                 {format(new Date(booking.start_date as string), 'dd MMM')} - {format(new Date(booking.end_date as string), 'dd MMM')}
                               </p>
@@ -727,7 +753,7 @@ export const Dashboard: React.FC = () => {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                onClick={() => handleCompleteRental(booking.id as string)}
+                                onClick={() => handleCompleteRental(String(booking.id))}
                                 disabled={completingRental}
                                 className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
                               >
@@ -1085,23 +1111,36 @@ export const Dashboard: React.FC = () => {
               <DialogHeader>
                 <DialogTitle>Revendicare daune</DialogTitle>
                 <DialogDescription>
-                  Descrie daunele și încarcă dovezi foto.
+                  {user?.id === claimBooking.owner_id 
+                    ? 'Descrie daunele și încarcă dovezi foto.' 
+                    : 'Descrie problema întâlnită și încarcă dovezi foto.'
+                  }
                 </DialogDescription>
               </DialogHeader>
-              <OwnerClaimForm
-                bookingId={claimBooking.id}
-                onSubmitted={() => {
-                  setClaimBooking(null);
-                  // reload claims list
-                }}
-              />
+              {user?.id === claimBooking.owner_id ? (
+                <OwnerClaimForm
+                  bookingId={String(claimBooking.id)}
+                  onSubmitted={() => {
+                    setClaimBooking(null);
+                    // reload claims list
+                  }}
+                />
+              ) : (
+                <RenterClaimForm
+                  bookingId={String(claimBooking.id)}
+                  onSubmitted={() => {
+                    setClaimBooking(null);
+                    // reload claims list
+                  }}
+                />
+              )}
             </DialogContent>
           </Dialog>
         )}
 
         {pickupBooking && (
           <PickupLocationModal
-            bookingId={pickupBooking.id}
+            bookingId={String(pickupBooking.id)}
             isOpen={!!pickupBooking}
             onClose={() => setPickupBooking(null)}
             onSaved={() => {/* reload bookings */}}
@@ -1136,10 +1175,10 @@ export const Dashboard: React.FC = () => {
                 const isOwner = booking.owner_id === user?.id;
                 return (
                   <BookingFlowGuard
-                    bookingId={booking.id}
-                    gearId={booking.gear_id}
+                    bookingId={String(booking.id)}
+                    gearId={String(booking.gear_id)}
                     isOwner={isOwner}
-                    currentStatus={booking.status}
+                    currentStatus={String(booking.status)}
                     onStatusUpdate={(newStatus) => {
                       // Update local state and close modal
                       setShowBookingFlow(null);

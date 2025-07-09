@@ -1,27 +1,16 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  CheckCircle, 
-  Clock, 
-  Package, 
-  Truck, 
-  Home, 
-  Shield,
-  AlertTriangle,
-  Loader2
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { formatAmountForDisplay } from '@/integrations/stripe/client';
-import { useNotifications } from '@/hooks/useNotifications';
+import { toast } from '@/hooks/use-toast';
 
 interface BookingStatusFlowProps {
-  booking: Record<string, unknown>;
+  booking: any;
   onStatusUpdate?: () => void;
+  onPaymentClick?: (booking: any) => void;
 }
 
 const statusConfig = {
@@ -35,42 +24,42 @@ const statusConfig = {
   confirmed: {
     label: 'Confirmat',
     description: 'Rezervarea a fost confirmată, plata în escrow',
-    icon: Shield,
+    icon: CheckCircle,
     color: 'bg-blue-100 text-blue-800',
     badge: 'default'
   },
   pickup_confirmed: {
     label: 'Ridicare confirmată',
-    description: 'Echipamentul a fost ridicat, suma de închiriere eliberată proprietarului',
-    icon: Package,
+    description: 'Ambele părți au confirmat ridicarea, plata închirierii eliberată',
+    icon: CheckCircle2,
     color: 'bg-green-100 text-green-800',
     badge: 'default'
   },
   active: {
     label: 'În curs',
     description: 'Închirierea este activă',
-    icon: Truck,
-    color: 'bg-purple-100 text-purple-800',
+    icon: CheckCircle2,
+    color: 'bg-green-100 text-green-800',
     badge: 'default'
   },
   return_confirmed: {
     label: 'Returnare confirmată',
-    description: 'Echipamentul a fost returnat, așteaptă finalizare',
-    icon: Home,
-    color: 'bg-orange-100 text-orange-800',
+    description: 'Ambele părți au confirmat returnarea, depozitul va fi returnat',
+    icon: CheckCircle2,
+    color: 'bg-purple-100 text-purple-800',
     badge: 'default'
   },
   completed: {
     label: 'Finalizat',
-    description: 'Închirierea a fost finalizată, garanția returnată',
-    icon: CheckCircle,
+    description: 'Închirierea a fost finalizată cu succes',
+    icon: CheckCircle2,
     color: 'bg-green-100 text-green-800',
-    badge: 'default'
+    badge: 'outline'
   },
   cancelled: {
     label: 'Anulat',
     description: 'Rezervarea a fost anulată',
-    icon: AlertTriangle,
+    icon: XCircle,
     color: 'bg-red-100 text-red-800',
     badge: 'destructive'
   }
@@ -78,103 +67,46 @@ const statusConfig = {
 
 export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
   booking,
-  onStatusUpdate
+  onStatusUpdate,
+  onPaymentClick
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const { notifyBookingConfirmed } = useNotifications();
 
   const isOwner = user?.id === booking.owner_id;
   const isRenter = user?.id === booking.renter_id;
-  const currentStatus = booking.status as string;
+  const currentStatus = booking.status;
   const config = statusConfig[currentStatus as keyof typeof statusConfig];
 
-  const canConfirmPickup = isOwner && currentStatus === 'confirmed';
-  const canStartRental = isRenter && currentStatus === 'pickup_confirmed';
-  const canConfirmReturn = isRenter && currentStatus === 'active';
-  const canCompleteRental = isOwner && currentStatus === 'return_confirmed';
+  // Dual confirmation states
+  const pickupConfirmedByOwner = booking.pickup_confirmed_by_owner;
+  const pickupConfirmedByRenter = booking.pickup_confirmed_by_renter;
+  const returnConfirmedByRenter = booking.return_confirmed_by_renter;
+  const returnConfirmedByOwner = booking.return_confirmed_by_owner;
 
-  // Add dual confirmation logic
-  const pickupConfirmedByOwner = booking.pickup_confirmed_by_owner as boolean;
-  const pickupConfirmedByRenter = booking.pickup_confirmed_by_renter as boolean;
-  const returnConfirmedByRenter = booking.return_confirmed_by_renter as boolean;
-  const returnConfirmedByOwner = booking.return_confirmed_by_owner as boolean;
-
-  const canOwnerConfirmPickup = isOwner && !pickupConfirmedByOwner && currentStatus === 'confirmed';
-  const canRenterConfirmPickup = isRenter && !pickupConfirmedByRenter && currentStatus === 'confirmed';
-  const canOwnerConfirmReturn = isOwner && !returnConfirmedByOwner && currentStatus === 'return_confirmed';
+  // Check if current user can confirm - ONLY if payment is completed
+  const canOwnerConfirmPickup = isOwner && !pickupConfirmedByOwner && currentStatus === 'confirmed' && booking.payment_status === 'completed';
+  const canRenterConfirmPickup = isRenter && !pickupConfirmedByRenter && currentStatus === 'confirmed' && booking.payment_status === 'completed';
+  const canOwnerConfirmReturn = isOwner && !returnConfirmedByOwner && currentStatus === 'active';
   const canRenterConfirmReturn = isRenter && !returnConfirmedByRenter && currentStatus === 'active';
 
+  // Check if both parties have confirmed
   const bothPickupConfirmed = pickupConfirmedByOwner && pickupConfirmedByRenter;
   const bothReturnConfirmed = returnConfirmedByOwner && returnConfirmedByRenter;
 
-  const handleStatusUpdate = async (newStatus: string) => {
-    if (!user) {
-      toast.error('Trebuie să fii autentificat');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: newStatus })
-        .eq('id', booking.id);
-
-      if (error) {
-        console.error('Error updating booking status:', error);
-        toast.error('Eroare la actualizarea statusului: ' + error.message);
-      } else {
-        toast.success('Status actualizat cu succes');
-        onStatusUpdate?.();
-      }
-    } catch (error) {
-      console.error('Error updating booking status:', error);
-      toast.error('Eroare la actualizarea statusului');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEscrowRelease = async (releaseType: string) => {
-    if (!user) {
-      toast.error('Trebuie să fii autentificat');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch('/api/escrow-release', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-        body: JSON.stringify({
-          booking_id: booking.id,
-          release_type: releaseType,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to release escrow funds');
-      }
-
-      toast.success('Escrow eliberat cu succes');
-      onStatusUpdate?.();
-    } catch (error) {
-      console.error('Error releasing escrow:', error);
-      toast.error('Eroare la eliberarea escrow: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePickupConfirm = async (by: 'owner' | 'renter') => {
+    if (!user) {
+      toast({
+        title: 'Eroare',
+        description: 'Trebuie să fii autentificat',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const update: Record<string, unknown> = {};
+      const update: any = {};
       if (by === 'owner') {
         update.pickup_confirmed_by_owner = true;
         update.pickup_confirmed_by_owner_at = new Date().toISOString();
@@ -182,25 +114,50 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         update.pickup_confirmed_by_renter = true;
         update.pickup_confirmed_by_renter_at = new Date().toISOString();
       }
-      const { error } = await supabase.from('bookings').update(update).eq('id', booking.id);
+
+      const { error } = await supabase
+        .from('bookings')
+        .update(update)
+        .eq('id', booking.id);
+
       if (error) {
-        toast.error('Eroare la confirmarea ridicării: ' + error.message);
+        toast({
+          title: 'Eroare',
+          description: 'Eroare la confirmarea ridicării: ' + error.message,
+          variant: 'destructive',
+        });
       } else {
-        toast.success('Ridicarea a fost confirmată');
-        // Notify both parties
-        await notifyBookingConfirmed(booking.id as string, booking.gear_title as string, booking.owner_id as string);
-        await notifyBookingConfirmed(booking.id as string, booking.gear_title as string, booking.renter_id as string);
+        const role = by === 'owner' ? 'proprietar' : 'chiriaș';
+        toast({
+          title: 'Ridicare confirmată',
+          description: `Confirmarea ${role}ului a fost înregistrată.`,
+        });
         onStatusUpdate?.();
       }
+    } catch (error) {
+      toast({
+        title: 'Eroare',
+        description: 'A apărut o eroare neașteptată.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleReturnConfirm = async (by: 'owner' | 'renter') => {
+    if (!user) {
+      toast({
+        title: 'Eroare',
+        description: 'Trebuie să fii autentificat',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const update: Record<string, unknown> = {};
+      const update: any = {};
       if (by === 'owner') {
         update.return_confirmed_by_owner = true;
         update.return_confirmed_by_owner_at = new Date().toISOString();
@@ -208,159 +165,284 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         update.return_confirmed_by_renter = true;
         update.return_confirmed_by_renter_at = new Date().toISOString();
       }
-      const { error } = await supabase.from('bookings').update(update).eq('id', booking.id);
+
+      const { error } = await supabase
+        .from('bookings')
+        .update(update)
+        .eq('id', booking.id);
+
       if (error) {
-        toast.error('Eroare la confirmarea returnării: ' + error.message);
+        toast({
+          title: 'Eroare',
+          description: 'Eroare la confirmarea returnării: ' + error.message,
+          variant: 'destructive',
+        });
       } else {
-        toast.success('Returnarea a fost confirmată');
-        // Notify both parties
-        await notifyBookingConfirmed(booking.id as string, booking.gear_title as string, booking.owner_id as string);
-        await notifyBookingConfirmed(booking.id as string, booking.gear_title as string, booking.renter_id as string);
+        const role = by === 'owner' ? 'proprietar' : 'chiriaș';
+        toast({
+          title: 'Returnare confirmată',
+          description: `Confirmarea ${role}ului a fost înregistrată.`,
+        });
+        
+        // Check if both parties have confirmed return
+        const newReturnConfirmedByOwner = by === 'owner' ? true : returnConfirmedByOwner;
+        const newReturnConfirmedByRenter = by === 'renter' ? true : returnConfirmedByRenter;
+        
+        if (newReturnConfirmedByOwner && newReturnConfirmedByRenter) {
+          // Both parties confirmed return - database trigger will handle escrow release
+          toast({
+            title: 'Returnare confirmată',
+            description: 'Ambele părți au confirmat returnarea. Plățile vor fi procesate automat.',
+          });
+        }
+        
         onStatusUpdate?.();
       }
+    } catch (error) {
+      toast({
+        title: 'Eroare',
+        description: 'A apărut o eroare neașteptată.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const getStatusMessage = () => {
+    if (currentStatus === 'confirmed') {
+      if (pickupConfirmedByOwner && !pickupConfirmedByRenter) {
+        return 'Așteaptă confirmarea chiriașului pentru ridicare';
+      } else if (pickupConfirmedByRenter && !pickupConfirmedByOwner) {
+        return 'Așteaptă confirmarea proprietarului pentru ridicare';
+      } else if (!pickupConfirmedByOwner && !pickupConfirmedByRenter) {
+        return 'Ambele părți trebuie să confirme ridicarea';
+      }
+    } else if (currentStatus === 'active') {
+      if (returnConfirmedByRenter && !returnConfirmedByOwner) {
+        return 'Așteaptă confirmarea proprietarului pentru returnare';
+      } else if (returnConfirmedByOwner && !returnConfirmedByRenter) {
+        return 'Așteaptă confirmarea chiriașului pentru returnare';
+      } else if (!returnConfirmedByOwner && !returnConfirmedByRenter) {
+        return 'Ambele părți trebuie să confirme returnarea';
+      }
+    }
+    return config?.description || 'Status necunoscut';
   };
 
   if (!config) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Status rezervare</CardTitle>
+          <CardTitle>Status Rezervare</CardTitle>
         </CardHeader>
         <CardContent>
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Status necunoscut: {currentStatus}
-            </AlertDescription>
-          </Alert>
+          <p>Status necunoscut: {currentStatus}</p>
         </CardContent>
       </Card>
     );
   }
 
-  const StatusIcon = config.icon;
+  const IconComponent = config.icon;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <StatusIcon className="h-5 w-5" />
-          Status rezervare
+          <IconComponent className="h-5 w-5" />
+          Status Rezervare
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Current Status */}
         <div className="flex items-center justify-between">
           <div>
-            <Badge variant={config.badge as string} className={config.color}>
+            <Badge variant={config.badge as any} className={config.color}>
               {config.label}
             </Badge>
             <p className="text-sm text-muted-foreground mt-1">
-              {config.description}
+              {getStatusMessage()}
             </p>
           </div>
         </div>
 
-        {/* Escrow Status */}
-        {booking.payment_status === 'paid' && (
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4 text-blue-600" />
-              <span className="font-medium text-blue-800">Status escrow</span>
+        {/* Payment Required Section */}
+        {currentStatus === 'confirmed' && booking.payment_status !== 'completed' && (
+          <div className="border rounded-lg p-4 space-y-3 bg-yellow-50 border-yellow-200">
+            <h4 className="font-medium text-yellow-800">Plată necesară</h4>
+            <p className="text-sm text-yellow-700">
+              Plata trebuie finalizată înainte de a putea confirma ridicarea echipamentului.
+            </p>
+            <div className="text-xs text-yellow-600 space-y-1">
+              <p><strong>Fluxul corect:</strong></p>
+              <p>1. Chiriașul finalizează plata (închiriere + 13% taxă platformă + depozit)</p>
+              <p>2. Proprietarul setează locația de ridicare</p>
+              <p>3. Ambele părți se întâlnesc și confirmă ridicarea</p>
+              <p>4. După returnarea echipamentului:</p>
+              <p>   • Plata închirierii → proprietarul</p>
+              <p>   • Taxa platformă (13%) → platforma</p>
+              <p>   • Depozitul → înapoi la chiriaș</p>
             </div>
-            <div className="space-y-1 text-sm text-blue-700">
-              <div className="flex justify-between">
-                <span>Suma închiriere:</span>
-                <span>{formatAmountForDisplay(booking.total_amount as number)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Garanție:</span>
-                <span>{formatAmountForDisplay(booking.deposit_amount as number)}</span>
-              </div>
-              {booking.rental_amount_released && (
-                <div className="flex justify-between text-green-700">
-                  <span>✓ Suma închiriere eliberată</span>
-                  <span>{booking.pickup_confirmed_at ? new Date(booking.pickup_confirmed_at as string).toLocaleDateString() : ''}</span>
-                </div>
-              )}
-              {booking.deposit_returned && (
-                <div className="flex justify-between text-green-700">
-                  <span>✓ Garanție returnată</span>
-                  <span>{booking.escrow_release_date ? new Date(booking.escrow_release_date as string).toLocaleDateString() : ''}</span>
-                </div>
-              )}
-            </div>
+            {isRenter && (
+              <Button
+                onClick={() => onPaymentClick?.(booking)}
+                className="w-full bg-yellow-600 hover:bg-yellow-700"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Finalizează plata
+              </Button>
+            )}
+            {isOwner && (
+              <p className="text-sm text-yellow-600">
+                Așteaptă ca chiriașul să finalizeze plata, apoi setează locația de ridicare.
+              </p>
+            )}
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          {canOwnerConfirmPickup && (
-            <Button onClick={() => handlePickupConfirm('owner')} disabled={loading} className="w-full">
-              {loading ? <Loader2 className="animate-spin mr-2" /> : <Package className="mr-2" />}
-              Proprietar: Confirmă predarea echipamentului
-            </Button>
-          )}
-          {canRenterConfirmPickup && (
-            <Button onClick={() => handlePickupConfirm('renter')} disabled={loading} className="w-full">
-              {loading ? <Loader2 className="animate-spin mr-2" /> : <Package className="mr-2" />}
-              Chiriaș: Confirmă primirea echipamentului
-            </Button>
-          )}
-          {currentStatus === 'confirmed' && (pickupConfirmedByOwner || pickupConfirmedByRenter) && !bothPickupConfirmed && (
-            <Alert className="bg-yellow-50 border-yellow-200">
-              <AlertDescription>
-                Așteaptă ca cealaltă parte să confirme ridicarea.
-              </AlertDescription>
-            </Alert>
-          )}
-          {bothPickupConfirmed && currentStatus === 'confirmed' && (
-            <Button onClick={() => handleStatusUpdate('active')} disabled={loading} className="w-full">
-              {loading ? <Loader2 className="animate-spin mr-2" /> : <Truck className="mr-2" />}
-              Începe închirierea (ambele părți au confirmat)
-            </Button>
-          )}
+        {/* Pickup Confirmation Section - Only show if payment is completed */}
+        {currentStatus === 'confirmed' && booking.payment_status === 'completed' && (
+          <>
+            {/* Location Setup Reminder */}
+            {isOwner && !booking.pickup_location && (
+              <div className="border rounded-lg p-4 space-y-3 bg-blue-50 border-blue-200">
+                <h4 className="font-medium text-blue-800">Setează locația de ridicare</h4>
+                <p className="text-sm text-blue-700">
+                  Plata a fost finalizată. Acum trebuie să setezi locația de ridicare înainte de confirmări.
+                </p>
+              </div>
+            )}
+            
+            {/* Pickup Confirmation */}
+            {booking.pickup_location && (
+          <div className="border rounded-lg p-4 space-y-3">
+            <h4 className="font-medium">Confirmare Ridicare</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between p-3 border rounded">
+                <span className="text-sm">Proprietar</span>
+                {pickupConfirmedByOwner ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                )}
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded">
+                <span className="text-sm">Chiriaș</span>
+                {pickupConfirmedByRenter ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                )}
+              </div>
+            </div>
+            
+            {canOwnerConfirmPickup && (
+              <Button
+                onClick={() => handlePickupConfirm('owner')}
+                disabled={loading}
+                className="w-full"
+              >
+                Confirmă predarea
+              </Button>
+            )}
+            
+            {canRenterConfirmPickup && (
+              <Button
+                onClick={() => handlePickupConfirm('renter')}
+                disabled={loading}
+                className="w-full"
+                variant="outline"
+              >
+                Confirmă ridicarea
+              </Button>
+            )}
 
-          {canRenterConfirmReturn && (
-            <Button onClick={() => handleReturnConfirm('renter')} disabled={loading} className="w-full">
-              {loading ? <Loader2 className="animate-spin mr-2" /> : <Home className="mr-2" />}
-              Chiriaș: Confirmă returnarea echipamentului
-            </Button>
-          )}
-          {canOwnerConfirmReturn && (
-            <Button onClick={() => handleReturnConfirm('owner')} disabled={loading} className="w-full">
-              {loading ? <Loader2 className="animate-spin mr-2" /> : <Home className="mr-2" />}
-              Proprietar: Confirmă primirea echipamentului
-            </Button>
-          )}
-          {currentStatus === 'return_confirmed' && (returnConfirmedByOwner || returnConfirmedByRenter) && !bothReturnConfirmed && (
-            <Alert className="bg-yellow-50 border-yellow-200">
-              <AlertDescription>
-                Așteaptă ca cealaltă parte să confirme returnarea.
-              </AlertDescription>
-            </Alert>
-          )}
-          {bothReturnConfirmed && currentStatus === 'return_confirmed' && (
-            <Button onClick={() => handleStatusUpdate('completed')} disabled={loading} className="w-full">
-              {loading ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle className="mr-2" />}
-              Finalizează închirierea (ambele părți au confirmat)
-            </Button>
-          )}
-        </div>
+            {bothPickupConfirmed && (
+              <div className="text-center p-3 bg-green-50 border border-green-200 rounded">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+                <p className="text-sm text-green-800">
+                  Ambele părți au confirmat ridicarea. Echipamentul este acum în posesia chiriașului.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+          </>
+        )}
 
-        {/* Status Flow Explanation */}
-        <div className="text-xs text-muted-foreground">
-          <p className="font-medium mb-1">Fluxul escrow:</p>
-          <ol className="list-decimal list-inside space-y-1">
-            <li>Plata → Fondurile sunt în escrow</li>
-            <li>Ridicare confirmată → Suma închiriere eliberată proprietarului</li>
-            <li>Returnare confirmată → Garanția rămâne în escrow</li>
-            <li>Finalizare → Garanția returnată chiriașului</li>
-          </ol>
-        </div>
+        {/* Return Confirmation Section */}
+        {currentStatus === 'active' && (
+          <div className="border rounded-lg p-4 space-y-3">
+            <h4 className="font-medium">Confirmare Returnare</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between p-3 border rounded">
+                <span className="text-sm">Proprietar</span>
+                {returnConfirmedByOwner ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                )}
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded">
+                <span className="text-sm">Chiriaș</span>
+                {returnConfirmedByRenter ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                )}
+              </div>
+            </div>
+            
+            {canOwnerConfirmReturn && (
+              <Button
+                onClick={() => handleReturnConfirm('owner')}
+                disabled={loading}
+                className="w-full"
+              >
+                Confirmă returnarea
+              </Button>
+            )}
+            
+            {canRenterConfirmReturn && (
+              <Button
+                onClick={() => handleReturnConfirm('renter')}
+                disabled={loading}
+                className="w-full"
+                variant="outline"
+              >
+                Confirmă returnarea
+              </Button>
+            )}
+
+            {bothReturnConfirmed && (
+              <div className="text-center p-3 bg-green-50 border border-green-200 rounded">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+                <p className="text-sm text-green-800">
+                  Ambele părți au confirmat returnarea. Plata închirierii va fi eliberată proprietarului și depozitul va fi returnat chiriașului.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Escrow Status */}
+        {booking.rental_amount_released && (
+          <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded">
+            <CheckCircle2 className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+            <p className="text-sm text-blue-800">
+              Plata închirierii a fost eliberată proprietarului
+            </p>
+          </div>
+        )}
+
+        {booking.deposit_returned && (
+          <div className="text-center p-3 bg-green-50 border border-green-200 rounded">
+            <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+            <p className="text-sm text-green-800">
+              Depozitul a fost returnat chiriașului
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

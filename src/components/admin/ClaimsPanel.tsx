@@ -106,6 +106,43 @@ export const ClaimsPanel: React.FC = () => {
         return;
       }
 
+      // If claim is approved or rejected, trigger escrow release
+      if (status === 'approved' || status === 'rejected') {
+        try {
+          // Get the booking_id from the claim
+          const { data: claimData } = await supabase
+            .from('claims')
+            .select('booking_id')
+            .eq('id', claimId)
+            .single();
+
+          if (claimData?.booking_id) {
+            // Call escrow release function
+            const response = await fetch('https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              },
+              body: JSON.stringify({
+                booking_id: claimData.booking_id,
+                release_type: status === 'approved' ? 'claim_owner' : 'claim_denied',
+              }),
+            });
+
+            if (!response.ok) {
+              console.error('Escrow release failed:', await response.text());
+              toast.error('Eroare la eliberarea fondurilor din escrow');
+            } else {
+              console.log('Escrow release successful');
+            }
+          }
+        } catch (escrowError) {
+          console.error('Error triggering escrow release:', escrowError);
+          toast.error('Eroare la eliberarea fondurilor din escrow');
+        }
+      }
+
       toast.success(`Reclamația a fost ${status === 'approved' ? 'aprobată' : status === 'rejected' ? 'respinsă' : 'actualizată'} cu succes`);
       loadClaims();
     } catch (error) {

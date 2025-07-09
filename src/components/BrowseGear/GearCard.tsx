@@ -37,8 +37,25 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   
-  // Price is already in RON, no need to convert from cents
-      const price = gear.price_per_day;
+  // Convert from cents to RON if price is in cents (price > 1000)
+  const priceInRON = gear.price_per_day > 1000 ? gear.price_per_day / 100 : gear.price_per_day;
+  
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ro-RO', {
+      style: 'currency',
+      currency: 'RON',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Calculate review stats from the reviews array
+  const reviews = Array.isArray(reviewsData) ? reviewsData : [];
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews > 0 
+    ? reviews.reduce((sum, review) => sum + (review.rating as number || 0), 0) / totalReviews 
+    : 0;
+
   const imageUrl = gear.gear_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
 
   const handleImageClick = () => {
@@ -174,10 +191,10 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
               {gear.title}
             </h3>
             <div className="text-xs text-gray-500">
-              {reviewsData?.totalReviews ? (
+              {totalReviews > 0 ? (
                 <div className="flex items-center space-x-1">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews})</span>
+                  <span>{averageRating.toFixed(1)} ({totalReviews})</span>
                 </div>
               ) : (
                 'Fără recenzii'
@@ -204,7 +221,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
 
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-2xl font-bold text-gray-800">{price} RON</span>
+              <span className="text-2xl font-bold text-gray-800">{formatPrice(priceInRON)}</span>
               <span className="text-sm text-gray-500 ml-1">/zi</span>
             </div>
             <Button 
