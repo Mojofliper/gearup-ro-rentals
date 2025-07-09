@@ -1,31 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUserBookings } from '@/hooks/useBookings';
-import { useAcceptBooking, useConfirmReturn } from '@/hooks/useBookings';
-import { useAuth } from '@/contexts/AuthContext';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
-import { Loader2, CheckCircle, XCircle, MapPin, Eye, Star, CheckCircle2, ArrowLeft, CreditCard, MessageSquare, AlertCircle, DollarSign } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle, CreditCard, Package, MessageSquare, MapPin, Calendar, DollarSign, User, Truck, Home, Loader2, ArrowLeft, Eye, Star } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserBookings } from '@/hooks/useBookings';
+import { useAcceptBooking, useRejectBooking, useCompleteRental, useConfirmReturn } from '@/hooks/useBookings';
+import { BookingStatusFlow } from '@/components/BookingStatusFlow';
+import { PaymentModal } from '@/components/PaymentModal';
 import { PickupLocationModal } from '@/components/PickupLocationModal';
 import { ReviewModal } from '@/components/ReviewModal';
-import { useCompleteRental, useRejectBooking } from '@/hooks/useBookings';
+import { BookingFlowGuard } from '@/components/BookingFlowGuard';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import { useDeleteConversation } from '@/hooks/useMessages';
-import { PaymentModal } from '@/components/PaymentModal';
-import { ConfirmationSystem } from '@/components/ConfirmationSystem';
-import { BookingStatusFlow } from '@/components/BookingStatusFlow';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import OwnerClaimForm from '@/components/OwnerClaimForm';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import { RenterClaimForm } from '@/components/RenterClaimForm';
 
 
 export const BookingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: bookings = [], isLoading } = useUserBookings();
   const { mutate: acceptBooking, isPending: acceptingBooking } = useAcceptBooking();
   const { mutate: rejectBooking, isPending: rejectingBooking } = useRejectBooking();
@@ -152,7 +155,7 @@ export const BookingsPage: React.FC = () => {
         </Badge>;
       case 'processing':
         return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 flex items-center gap-1">
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <Clock className="h-3 w-3 animate-spin" />
           Procesare
         </Badge>;
       case 'failed':
@@ -162,7 +165,7 @@ export const BookingsPage: React.FC = () => {
         </Badge>;
       case 'refunded':
         return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200 flex items-center gap-1">
-          <ArrowLeft className="h-3 w-3" />
+          <Package className="h-3 w-3" />
           Rambursat
         </Badge>;
       default:
@@ -280,7 +283,12 @@ export const BookingsPage: React.FC = () => {
                                 <div className="w-full">
                                   <BookingStatusFlow 
                                     booking={booking} 
-                                    onStatusUpdate={() => window.location.reload()} 
+                                    onStatusUpdate={() => {
+                                      // Invalidate queries to trigger real-time updates
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
                                     onPaymentClick={handlePaymentClick}
                                   />
                                 </div>
@@ -395,7 +403,11 @@ export const BookingsPage: React.FC = () => {
                                   <div className="w-full">
                                     <BookingStatusFlow 
                                       booking={booking} 
-                                      onStatusUpdate={() => window.location.reload()} 
+                                      onStatusUpdate={() => {
+                                        queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                        queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                        queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                      }} 
                                       onPaymentClick={handlePaymentClick}
                                     />
                                   </div>
@@ -405,7 +417,11 @@ export const BookingsPage: React.FC = () => {
                                 <div className="w-full">
                                   <BookingStatusFlow 
                                     booking={booking} 
-                                    onStatusUpdate={() => window.location.reload()} 
+                                    onStatusUpdate={() => {
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
                                     onPaymentClick={handlePaymentClick}
                                   />
                                 </div>
@@ -486,11 +502,16 @@ export const BookingsPage: React.FC = () => {
       )}
 
       {confirmationBooking && (
-        <ConfirmationSystem
-          isOpen={!!confirmationBooking}
+        <BookingStatusFlow
           booking={confirmationBooking}
-          type={confirmationType}
-          onClose={() => setConfirmationBooking(null)}
+          onStatusUpdate={() => {
+            setConfirmationBooking(null);
+            // Invalidate queries to trigger real-time updates
+            queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+            queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+          }}
+          onPaymentClick={handlePaymentClick}
         />
       )}
 
@@ -511,8 +532,10 @@ export const BookingsPage: React.FC = () => {
                 bookingId={String(claimBooking.id)}
                 onSubmitted={() => {
                   setClaimBooking(null);
-                  // reload bookings
-                  window.location.reload();
+                  // Invalidate queries to trigger real-time updates
+                  queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                  queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                  queryClient.invalidateQueries({ queryKey: ['user-listings'] });
                 }}
               />
             ) : (
@@ -520,8 +543,10 @@ export const BookingsPage: React.FC = () => {
                 bookingId={String(claimBooking.id)}
                 onSubmitted={() => {
                   setClaimBooking(null);
-                  // reload bookings
-                  window.location.reload();
+                  // Invalidate queries to trigger real-time updates
+                  queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                  queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                  queryClient.invalidateQueries({ queryKey: ['user-listings'] });
                 }}
               />
             )}

@@ -181,6 +181,10 @@ export const Checkout: React.FC<CheckoutProps> = ({
             });
 
             // Create payment intent
+            const sortedDates = [...item.selectedDates].sort((a, b) => a.getTime() - b.getTime());
+            const startDate = sortedDates[0];
+            const endDate = sortedDates[sortedDates.length - 1];
+            
             const paymentResult = await PaymentService.createPaymentIntent({
               bookingId: booking.id,
               transactionId: transaction.id,
@@ -188,8 +192,11 @@ export const Checkout: React.FC<CheckoutProps> = ({
               rentalAmount: transaction.rental_amount,
               depositAmount: transaction.deposit_amount,
               platformFee: transaction.platform_fee,
+              gearTitle: item.gear.title || 'Unknown Gear',
+              startDate: startDate.toISOString().split('T')[0],
+              endDate: endDate.toISOString().split('T')[0],
               metadata: {
-                gear_name: item.gear.title || 'Unknown Gear'
+                gearTitle: item.gear.title || 'Unknown Gear'
               }
             });
 

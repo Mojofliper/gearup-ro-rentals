@@ -1,4 +1,8 @@
--- Fix trigger_escrow_release to use http_post with correct argument order and valid JSON string
+-- Fix trigger_escrow_release to use http_post with valid double-quoted JSON
+-- Test: This should output valid JSON with double quotes
+-- SELECT json_build_object('booking_id', 'test', 'release_type', 'return_confirmed')::text;
+-- Expected: {"booking_id": "test", "release_type": "return_confirmed"}
+
 CREATE OR REPLACE FUNCTION public.trigger_escrow_release(booking_id UUID, release_type TEXT)
 RETURNS VOID AS $$
 BEGIN
@@ -6,10 +10,10 @@ BEGIN
   PERFORM http_post(
     'https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release',
     'application/json',
-    to_jsonb(json_build_object(
+    json_build_object(
       'booking_id', booking_id,
       'release_type', release_type
-    ))::text
+    )::text
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

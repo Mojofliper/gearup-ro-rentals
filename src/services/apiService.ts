@@ -782,23 +782,11 @@ export const bookingApi = {
         return { data: null, error: new ApiError('Gear not found', 'RESOURCE_NOT_FOUND', 404) };
       }
 
-      // Calculate booking details
-      const startDate = new Date(bookingData.start_date);
-      const endDate = new Date(bookingData.end_date);
-      // Set both dates to midnight for accurate comparison
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(0, 0, 0, 0);
-      
-      // Calculate the difference in days
-      const timeDiff = endDate.getTime() - startDate.getTime();
-      const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
-      
-      // For single-day bookings (same start and end date), count as 1 day
-      // For multi-day bookings, count the actual difference + 1 (inclusive)
-      const totalDays = daysDiff === 0 ? 1 : daysDiff + 1;
-      const totalAmount = gear.price_per_day * totalDays;
-      const platformFee = Math.round(totalAmount * 0.13); // 13% platform fee
-      const ownerAmount = totalAmount - platformFee;
+      // Calculate amounts correctly
+      const totalDays = Math.ceil((new Date(bookingData.end_date).getTime() - new Date(bookingData.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const totalAmount = gear.price_per_day * totalDays; // This is the rental amount
+      const platformFee = Math.round(totalAmount * 0.13); // 13% platform fee on rental amount only
+      const ownerAmount = totalAmount; // Owner gets full rental amount
 
       // First insert the booking
       const { data: booking, error: insertError } = await supabase
@@ -814,7 +802,7 @@ export const bookingApi = {
           rental_amount: totalAmount, // The actual rental cost (without deposit)
           total_amount: totalAmount + gear.deposit_amount + platformFee, // Total including deposit and fees
           platform_fee: platformFee,
-          owner_amount: ownerAmount,
+          owner_amount: ownerAmount, // Owner gets full rental amount
           deposit_amount: gear.deposit_amount,
           pickup_location: bookingData.pickup_location,
           pickup_instructions: bookingData.renter_notes,

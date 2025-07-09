@@ -69,13 +69,13 @@ export const PaymentSuccess: React.FC = () => {
         }
 
         // Update booking status to confirmed if payment was successful
-        if (booking && booking.payment_status !== 'paid') {
+        if (booking && booking.payment_status !== 'completed') {
           try {
             const { error: updateError } = await supabase
               .from('bookings')
               .update({
                 status: 'confirmed',
-                payment_status: 'paid'
+                payment_status: 'completed'
               })
               .eq('id', booking.id);
 

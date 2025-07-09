@@ -180,6 +180,17 @@ serve(async (req) => {
     // Create Stripe Checkout Session instead of PaymentIntent
     let session;
     try {
+      // Get gear information for better product description
+      const { data: gearInfo } = await supabaseClient
+        .from('gear')
+        .select('title')
+        .eq('id', transaction.booking.gear_id)
+        .single();
+
+      const gearTitle = metadata?.gearTitle || gearInfo?.title || 'Echipament';
+      const startDate = metadata?.startDate || transaction.booking.start_date;
+      const endDate = metadata?.endDate || transaction.booking.end_date;
+      
       session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -187,14 +198,8 @@ serve(async (req) => {
             price_data: {
               currency: currency,
               product_data: {
-                name: metadata?.gearTitle
-                  ? `Inchiriere: ${metadata.gearTitle}`
-                  : `Rental for booking ${transaction.booking_id}`,
-                description: [
-                  metadata?.startDate && metadata?.endDate ? `Perioada: ${metadata.startDate} - ${metadata.endDate}` : null,
-                  `Suma totală: RON ${amount.toFixed(2)}`,
-                  'Include chirie, garanție și taxă platformă.'
-                ].filter(Boolean).join(' | '),
+                name: `Inchiriere: ${gearTitle}`,
+                description: `Perioada: ${startDate} - ${endDate}`,
               },
               unit_amount: amount * 100, // Convert RON to cents for Stripe
             },
@@ -209,6 +214,13 @@ serve(async (req) => {
           transaction_id: transactionId,
           booking_id: transaction.booking_id,
           user_id: user.id,
+          rental_amount: transaction.rental_amount.toString(),
+          deposit_amount: transaction.deposit_amount.toString(),
+          platform_fee: transaction.platform_fee.toString(),
+          owner_stripe_account_id: transaction.booking.owner_id, // Will be updated by webhook to actual Stripe account ID
+          gearTitle: gearTitle,
+          startDate: startDate,
+          endDate: endDate,
           ...metadata,
         },
       });

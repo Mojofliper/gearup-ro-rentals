@@ -123,10 +123,32 @@ export const Dashboard: React.FC = () => {
   const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
 
   const [claimStatuses, setClaimStatuses] = useState<Record<string, 'pending' | 'approved' | 'rejected'>>({});
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [claimBooking, setClaimBooking] = useState<Record<string, unknown> | null>(null);
 
   const [pickupBooking, setPickupBooking] = useState<Record<string, unknown> | null>(null);
   const [showBookingFlow, setShowBookingFlow] = useState<string | null>(null);
+
+  // Load claim statuses for user bookings
+  const loadClaims = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('claims')
+      .select('id, booking_id, claim_status')
+      .in('booking_id', [
+        ...bookings.map(b => b.id),
+      ]);
+    if (error) {
+      console.error('Error loading claims', error);
+      return;
+    }
+    const map: Record<string, 'pending' | 'approved' | 'rejected'> = {};
+    (data || []).forEach(c => {
+      map[c.booking_id] = c.claim_status;
+    });
+    setClaimStatuses(map);
+  };
 
   // Sync local state with profile data
   useEffect(() => {
@@ -192,52 +214,94 @@ export const Dashboard: React.FC = () => {
     }
   }, [searchParams, queryClient, setSearchParams]);
 
-  // Load claim statuses for user bookings
   useEffect(() => {
-    const loadClaims = async () => {
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('claims')
-        .select('id, booking_id, claim_status')
-        .in('booking_id', [
-          ...bookings.map(b => b.id),
-        ]);
-      if (error) {
-        console.error('Error loading claims', error);
-        return;
-      }
-      const map: Record<string, 'pending' | 'approved' | 'rejected'> = {};
-      (data || []).forEach(c => {
-        map[c.booking_id] = c.claim_status;
-      });
-      setClaimStatuses(map);
-    };
     loadClaims();
 
-    // Realtime subscription for claims
-    const claimsChannel = supabase.channel('claims_updates');
-    claimsChannel.on('broadcast', { event: 'claim_status_changed' }, payload => {
-      const claim = payload.payload as { booking_id: string; claim_status: 'pending' | 'approved' | 'rejected' };
-      setClaimStatuses(prev => ({ ...prev, [claim.booking_id]: claim.claim_status }));
-    });
-    claimsChannel.subscribe();
+    // Real-time subscription for claims using database changes
+    const claimsChannel = supabase
+      .channel('claims_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'claims',
+          filter: `booking_id=in.(${bookings.map(b => `"${b.id}"`).join(',')})`
+        },
+        (payload) => {
+          console.log('Dashboard: Claim update received:', payload);
+          const claim = payload.new as { booking_id: string; claim_status: 'pending' | 'approved' | 'rejected' };
+          if (claim) {
+            setClaimStatuses(prev => ({ ...prev, [claim.booking_id]: claim.claim_status }));
+          }
+        }
+      )
+      .subscribe();
 
-    // Realtime subscription for booking status updates
-    const bookingChannel = supabase.channel('booking_status_updates');
-    bookingChannel.on('broadcast', { event: 'booking_status_updated' }, payload => {
-      console.log('Booking status update received:', payload);
-      // Refresh booking data when status changes
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-    });
-    bookingChannel.subscribe();
+    // Real-time subscription for booking status updates using database changes
+    const bookingChannel = supabase
+      .channel('booking_status_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `renter_id=eq.${user?.id} OR owner_id=eq.${user?.id}`
+        },
+        (payload) => {
+          console.log('Dashboard: Booking status update received:', payload);
+          console.log('Dashboard: New status:', (payload.new as Record<string, unknown>)?.status);
+          console.log('Dashboard: Old status:', (payload.old as Record<string, unknown>)?.status);
+          
+          // Update last update time
+          setLastUpdateTime(new Date());
+          
+          // Refresh booking data when status changes
+          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+          queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+          
+          // Also refresh claims when booking status changes
+          loadClaims();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'escrow_transactions'
+        },
+        (payload) => {
+          console.log('Dashboard: Escrow transaction update received:', payload);
+          // Update last update time
+          setLastUpdateTime(new Date());
+          // Refresh booking data when escrow status changes
+          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+          queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Dashboard: Real-time subscription status:', status);
+        setIsRealtimeConnected(status === 'SUBSCRIBED');
+      });
 
     return () => {
       claimsChannel.unsubscribe();
       bookingChannel.unsubscribe();
     };
   }, [user, bookings, queryClient]);
+
+  const handleManualRefresh = () => {
+    console.log('Dashboard: Manual refresh triggered');
+    setLastUpdateTime(new Date());
+    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+    loadClaims();
+  };
 
   // Ensure auth state is fully loaded before rendering
   if (!user || !profile) {

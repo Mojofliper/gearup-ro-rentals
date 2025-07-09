@@ -273,6 +273,28 @@ class NotificationService {
   // Helper method to send notification to a user
   private async sendToUser(userId: string, notification: { title: string; body: string; data: NotificationData }) {
     try {
+      // Map notification type to database enum
+      const getNotificationType = (type: string): string => {
+        switch (type) {
+          case 'booking':
+            return 'booking_confirmed';
+          case 'payment':
+            return 'payment_received';
+          case 'message':
+            return 'admin_message';
+          case 'claim':
+            return 'claim_submitted';
+          case 'gear':
+            return 'admin_message';
+          case 'system':
+            return 'admin_message';
+          case 'review':
+            return 'admin_message';
+          default:
+            return 'admin_message';
+        }
+      };
+
       // Save to database
       const { error } = await supabase
         .from('notifications')
@@ -280,7 +302,7 @@ class NotificationService {
           user_id: userId,
           title: notification.title,
           message: notification.body,
-          type: notification.data.type,
+          type: getNotificationType(notification.data.type),
           data: notification.data,
           is_read: false
         });

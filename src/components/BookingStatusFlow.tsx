@@ -6,6 +6,7 @@ import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle, CreditCard, Pac
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface BookingStatusFlowProps {
   booking: any;
@@ -72,6 +73,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const isOwner = user?.id === booking.owner_id;
   const isRenter = user?.id === booking.renter_id;
@@ -134,6 +136,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
           description: `Confirmarea ${role}ului pentru ${action} a fost înregistrată.`,
         });
         onStatusUpdate?.();
+        queryClient.invalidateQueries({ queryKey: ['bookings', booking.id] });
       }
     } catch (error) {
       toast({
@@ -198,6 +201,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         }
         
         onStatusUpdate?.();
+        queryClient.invalidateQueries({ queryKey: ['bookings', booking.id] });
       }
     } catch (error) {
       toast({

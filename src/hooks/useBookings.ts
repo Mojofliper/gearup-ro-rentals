@@ -36,6 +36,8 @@ export const useUserBookings = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    console.log('useBookings: Setting up real-time subscriptions for user:', user.id);
+
     const channel = supabase
       .channel('booking-updates')
       .on(
@@ -64,7 +66,7 @@ export const useUserBookings = () => {
           table: 'escrow_transactions'
         },
         (payload) => {
-          console.log('Escrow transaction update received:', payload);
+          console.log('useBookings: Escrow transaction update received:', payload);
           // Invalidate and refetch bookings when escrow status changes
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
         }
@@ -77,6 +79,7 @@ export const useUserBookings = () => {
           table: 'transactions'
         },
         () => {
+          console.log('useBookings: Transaction update received');
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
@@ -88,6 +91,7 @@ export const useUserBookings = () => {
           table: 'claims'
         },
         () => {
+          console.log('useBookings: Claim update received');
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
@@ -99,13 +103,29 @@ export const useUserBookings = () => {
           table: 'reviews'
         },
         () => {
+          console.log('useBookings: Review update received');
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('useBookings: Real-time subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('useBookings: Real-time subscription active');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('useBookings: Real-time subscription error');
+        }
+      });
+
+    // Polling fallback - refresh every 30 seconds as backup
+    const pollInterval = setInterval(() => {
+      console.log('useBookings: Polling fallback - refreshing bookings');
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+    }, 30000);
 
     return () => {
+      console.log('useBookings: Cleaning up real-time subscriptions');
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [user?.id, queryClient]);
 
