@@ -16,6 +16,8 @@ interface Claim {
   id: string;
   booking_id: string;
   claimant_id: string;
+  owner_id?: string;
+  renter_id?: string;
   claim_type: string;
   claim_status: string;
   description: string;
@@ -109,32 +111,62 @@ export const ClaimsPanel: React.FC = () => {
       // If claim is approved or rejected, trigger escrow release
       if (status === 'approved' || status === 'rejected') {
         try {
-          // Get the booking_id from the claim
+          // Get the claim details including who filed it
           const { data: claimData } = await supabase
             .from('claims')
-            .select('booking_id')
+            .select('booking_id, claimant_id, owner_id, renter_id')
             .eq('id', claimId)
             .single();
 
           if (claimData?.booking_id) {
-            // Call escrow release function
-            const response = await fetch('https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-              },
-              body: JSON.stringify({
-                booking_id: claimData.booking_id,
-                release_type: status === 'approved' ? 'claim_owner' : 'claim_denied',
-              }),
-            });
+            // Get the booking to determine who filed the claim
+            const { data: bookingData } = await supabase
+              .from('bookings')
+              .select('owner_id, renter_id')
+              .eq('id', claimData.booking_id)
+              .single();
 
-            if (!response.ok) {
-              console.error('Escrow release failed:', await response.text());
-              toast.error('Eroare la eliberarea fondurilor din escrow');
-            } else {
-              console.log('Escrow release successful');
+            if (bookingData) {
+              // Determine who filed the claim by checking claimant_id against owner_id and renter_id
+              const isOwnerClaim = claimData.claimant_id === bookingData.owner_id;
+              const isRenterClaim = claimData.claimant_id === bookingData.renter_id;
+              
+              // Determine the correct release type based on who filed and admin decision
+              let releaseType: string;
+              
+              if (isOwnerClaim) {
+                // Owner filed the claim
+                releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
+              } else if (isRenterClaim) {
+                // Renter filed the claim
+                releaseType = status === 'approved' ? 'claim_renter' : 'claim_owner';
+              } else {
+                // Fallback: use the old logic if claimant_id doesn't match either
+                console.warn('Claimant ID does not match owner or renter ID, using fallback logic');
+                releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
+              }
+
+              console.log(`Claim resolution: ${isOwnerClaim ? 'Owner' : isRenterClaim ? 'Renter' : 'Unknown'} filed claim, Admin ${status}, Release type: ${releaseType}`);
+
+              // Call escrow release function with correct release type
+              const response = await fetch('https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                },
+                body: JSON.stringify({
+                  booking_id: claimData.booking_id,
+                  release_type: releaseType,
+                }),
+              });
+
+              if (!response.ok) {
+                console.error('Escrow release failed:', await response.text());
+                toast.error('Eroare la eliberarea fondurilor din escrow');
+              } else {
+                console.log('Escrow release successful');
+              }
             }
           }
         } catch (escrowError) {

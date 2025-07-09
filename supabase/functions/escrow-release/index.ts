@@ -636,6 +636,87 @@ serve(async (req) => {
           }
           break
 
+        case 'claim_renter':
+          console.log('Processing claim_renter release (renter wins - gets everything back except platform fee)')
+          // Renter wins claim - return rental and deposit to renter, keep platform fee
+          
+          try {
+            // Calculate total amount to refund to renter (rental + deposit)
+            const totalAmountToRenter = escrowTransaction.rental_amount + escrowTransaction.deposit_amount
+            
+            // Create full refund to renter (rental + deposit)
+            const fullRefund = await stripe.refunds.create({
+              payment_intent: escrowTransaction.stripe_payment_intent_id,
+              amount: Math.round(totalAmountToRenter * 100), // Convert RON to cents for Stripe
+              metadata: {
+                booking_id: booking_id,
+                refund_type: 'full_refund_renter_win',
+                release_type: release_type,
+                platform_fee: escrowTransaction.platform_fee || 0
+              }
+            })
+
+            refundId = fullRefund.id;
+            console.log('Renter claim win refund created:', JSON.stringify(fullRefund, null, 2))
+
+            // Update escrow transaction
+            await supabaseClient
+              .from('escrow_transactions')
+              .update({
+                escrow_status: 'released',
+                released_at: new Date().toISOString(),
+                refund_id: fullRefund.id,
+                release_reason: 'Renter claim approved - full refund to renter, platform fee kept'
+              })
+              .eq('id', escrowTransaction.id)
+
+            // Update booking
+            await supabaseClient
+              .from('bookings')
+              .update({
+                status: 'completed',
+                rental_amount_released: true,
+                deposit_returned: true,
+                escrow_release_date: new Date().toISOString()
+              })
+              .eq('id', booking_id)
+              
+            // Send notification to owner about claim loss
+            await supabaseClient
+              .from('notifications')
+              .insert({
+                user_id: booking.owner_id,
+                title: 'Cerere respinsă',
+                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Renterul a primit înapoi plata și depozitul.`,
+                type: 'claim_denied',
+                data: { 
+                  bookingId: booking_id, 
+                  gearTitle: booking.gear.title
+                },
+                is_read: false
+              })
+              
+            // Send notification to renter about claim win
+            await supabaseClient
+              .from('notifications')
+              .insert({
+                user_id: booking.renter_id,
+                title: 'Cerere aprobată',
+                message: `Cererea ta pentru "${booking.gear.title}" a fost aprobată. Ai primit înapoi plata și depozitul.`,
+                type: 'claim_approved',
+                data: { 
+                  bookingId: booking_id, 
+                  amount: totalAmountToRenter,
+                  gearTitle: booking.gear.title
+                },
+                is_read: false
+              })
+          } catch (error) {
+            console.error('Error creating renter claim win refund:', JSON.stringify(error, null, 2))
+            throw new Error(`Failed to create renter claim win refund: ${error.message}`)
+          }
+          break
+
         default:
           console.error('Invalid release type:', release_type)
           return new Response(
