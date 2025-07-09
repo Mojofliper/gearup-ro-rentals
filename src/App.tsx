@@ -23,6 +23,7 @@ import { PaymentCancel } from './pages/PaymentCancel';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { MyListings } from '@/components/MyListings';
 import { ReviewsPage } from '@/components/ReviewsPage';
+import { BookingsPage } from '@/components/BookingsPage';
 
 // Industry-standard QueryClient configuration with auth error handling
 const queryClient = new QueryClient({
@@ -111,6 +112,7 @@ const AppRoutes = () => {
       <Route path="/reviews" element={user ? <ReviewsPage /> : <Navigate to="/" />} />
       <Route path="/add-gear" element={user ? <AddGear /> : <Navigate to="/" />} />
       <Route path="/messages" element={user ? <Messages /> : <Navigate to="/" />} />
+      <Route path="/bookings" element={user ? <BookingsPage /> : <Navigate to="/" />} />
       <Route path="/admin/*" element={user && profile?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />

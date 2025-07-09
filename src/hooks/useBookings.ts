@@ -137,16 +137,17 @@ export const useCreateBooking = () => {
 export const useAcceptBooking = () => {
   const queryClient = useQueryClient();
   const { acceptBooking, loading, error } = useBookingApi();
-  const { notifyBookingConfirmed } = useNotifications();
+  const { notifyBookingConfirmed, notifyBookingConfirmedOwner } = useNotifications();
   return useMutation({
     mutationFn: async ({ bookingId, pickupLocation }: { bookingId: string; pickupLocation: string }) => {
       return await acceptBooking(bookingId, pickupLocation);
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      // Send notification to renter
-      if (data && data.id && data.gear_title && data.renter_id) {
+      // Send notification to renter and owner
+      if (data && data.id && data.gear_title && data.renter_id && data.owner_id) {
         await notifyBookingConfirmed(data.id as string, data.gear_title as string, data.renter_id as string);
+        await notifyBookingConfirmedOwner(data.id as string, data.gear_title as string, data.owner_id as string);
       }
     },
   });

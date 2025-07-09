@@ -40,6 +40,15 @@ class NotificationService {
     await this.sendToUser(renterId, notification);
   }
 
+  async notifyBookingConfirmedOwner(bookingId: string, gearTitle: string, ownerId: string) {
+    const notification = {
+      title: 'Rezervare confirmată',
+      body: `Rezervarea pentru "${gearTitle}" a fost confirmată de către chiriaș.`,
+      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+    };
+    await this.sendToUser(ownerId, notification);
+  }
+
   async notifyBookingCancelled(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
     const notification = {
       title: 'Rezervare anulată',

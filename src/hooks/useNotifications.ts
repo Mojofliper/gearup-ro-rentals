@@ -25,6 +25,15 @@ export const useNotifications = () => {
     await notificationService.notifyBookingConfirmed(bookingId, gearTitle, renterId);
   }, [user]);
 
+  const notifyBookingConfirmedOwner = useCallback(async (
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string
+  ) => {
+    if (!user) return;
+    await notificationService.notifyBookingConfirmedOwner(bookingId, gearTitle, ownerId);
+  }, [user]);
+
   const notifyBookingCancelled = useCallback(async (
     bookingId: string, 
     gearTitle: string, 
@@ -200,6 +209,7 @@ export const useNotifications = () => {
     // Booking notifications
     notifyBookingCreated,
     notifyBookingConfirmed,
+    notifyBookingConfirmedOwner,
     notifyBookingCancelled,
     
     // Payment notifications

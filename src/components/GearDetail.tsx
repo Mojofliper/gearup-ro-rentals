@@ -585,7 +585,16 @@ export const GearDetail: React.FC = () => {
                       <Calendar
                         mode="range"
                         selected={selectedDates}
-                        onSelect={range => setSelectedDates({ from: range?.from, to: range?.to })}
+                        onSelect={range => {
+                          if (range?.from && !range.to) {
+                            // If only from is selected, set both from and to to the same day (single-day selection)
+                            setSelectedDates({ from: range.from, to: range.from });
+                          } else if (range?.from && range?.to) {
+                            setSelectedDates({ from: range.from, to: range.to });
+                          } else {
+                            setSelectedDates({ from: undefined, to: undefined });
+                          }
+                        }}
                         className="rounded-md border"
                         disabled={(date) => {
                           const today = new Date();

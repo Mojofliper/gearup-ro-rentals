@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { 
   Search, Plus, User, MessageSquare, Camera, Menu, X, ShoppingBag, 
   Shield, Bell, Compass, Star, Home, Package, Settings, LogOut,
-  ChevronDown, Sparkles
+  ChevronDown, Sparkles, Calendar
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -311,6 +311,10 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                         <Star className="h-4 w-4 mr-2" />
                         Recenzii
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/bookings')} className="cursor-pointer">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Rezervările mele
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-700">
                         <LogOut className="h-4 w-4 mr-2" />
@@ -475,6 +479,19 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                     >
                       <Star className="h-5 w-5" />
                       <span className="font-medium">Recenzii</span>
+                    </Link>
+
+                    <Link 
+                      to="/bookings" 
+                      className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                        isActiveRoute('/bookings') 
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Calendar className="h-5 w-5" />
+                      <span className="font-medium">Rezervările mele</span>
                     </Link>
 
                     <Link 

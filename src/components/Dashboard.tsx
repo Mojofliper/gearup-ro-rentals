@@ -739,6 +739,76 @@ export const Dashboard: React.FC = () => {
                 </CardContent>
               </Card>
 
+              {/* Owner Bookings - Pending Reservations */}
+              {ownerBookings.filter(b => b.status === 'pending').length > 0 && (
+                <Card className="bg-white shadow-sm border-0">
+                  <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 pb-4">
+                    <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                      <AlertCircle className="h-5 w-5 text-orange-600" />
+                      Rezervări în așteptare
+                    </CardTitle>
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/bookings')} className="w-full sm:w-auto">
+                      Vezi toate <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 sm:space-y-4">
+                      {ownerBookings
+                        .filter(booking => booking.status === 'pending')
+                        .slice(0, 3)
+                        .map((booking) => (
+                        <div key={booking.id as string} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg bg-orange-50 border-orange-200 space-y-3 sm:space-y-0">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className="p-2 bg-orange-100 rounded-full">
+                              <AlertCircle className="h-4 w-4 text-orange-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm sm:text-base truncate">{booking.gear_title as string}</p>
+                              <p className="text-xs sm:text-sm text-gray-600">
+                                {format(new Date(booking.start_date as string), 'dd MMM')} - {format(new Date(booking.end_date as string), 'dd MMM')}
+                              </p>
+                              <p className="text-xs text-orange-600">Chiriaș: {String(booking.renter_name || booking.renter_id)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {getStatusBadge(booking.status as string)}
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => setPickupBooking(booking)}
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
+                            >
+                              <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                              Setează locația
+                            </Button>
+                            <Button 
+                              variant="default" 
+                              size="sm" 
+                              onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
+                              disabled={acceptingBooking}
+                              className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
+                            >
+                              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                              Confirmă
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleBookingAction(String(booking.id), 'rejected')}
+                              disabled={acceptingBooking}
+                              className="text-red-600 border-red-200 hover:bg-red-50 text-xs sm:text-sm"
+                            >
+                              <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                              Respinge
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* My Listings */}
               <Card className="bg-white shadow-sm border-0">
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 pb-4">
