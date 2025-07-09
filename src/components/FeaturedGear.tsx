@@ -49,8 +49,8 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
   const categoryObj = category as Record<string, any>;
   const categoryName = categoryObj?.name || 'Echipament';
 
-  // Convert price from cents to RON (or use as is)
-  const priceInRON = (gear.price_per_day as number) / 100 || gear.price_per_day || 0;
+  // Price is already in RON
+  const priceInRON = gear.price_per_day as number || 0;
 
   const averageRating = safeReviewsData.length > 0 
     ? (safeReviewsData.reduce((sum: number, review: Record<string, unknown>) => sum + (review.rating as number || 0), 0) / safeReviewsData.length).toFixed(1)

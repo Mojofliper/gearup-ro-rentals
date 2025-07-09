@@ -7,30 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
-  Send, 
   MessageSquare, 
-  ArrowLeft, 
-  Calendar, 
-  MapPin, 
+  Send, 
+  Search, 
+  Filter, 
   Clock, 
-  User,
-  Search,
-  Filter,
+  CheckCheck, 
+  MapPin, 
+  Eye, 
   MoreVertical,
-  Image as ImageIcon,
-  Paperclip,
-  Mic,
-  Check,
-  CheckCheck,
-  Star,
-  Eye,
-  Phone,
-  Video,
-  Settings,
-  Archive,
-  Trash2,
-  Heart,
-  Smile
+  ArrowLeft,
+  Calendar,
+  Settings
 } from 'lucide-react';
 import { sanitizeHtml, sanitizeText } from '@/utils/htmlSanitizer';
 import { toast } from '@/hooks/use-toast';
@@ -135,11 +123,14 @@ export const Messages: React.FC = () => {
             const newMessage = payload.new as Message;
             if (String(booking.id) === String(selectedBooking)) {
               setMessages((prev) => {
+                // Check if message already exists to avoid duplicates
                 if (prev.some((msg) => msg.id === newMessage.id)) return prev;
                 return [...prev, newMessage];
               });
-              // Mark as read if conversation is open
-              markMessagesAsRead();
+              // Mark as read if conversation is open and message is from other user
+              if (newMessage.sender_id !== user.id) {
+                markMessagesAsRead();
+              }
             } else if (newMessage.sender_id !== user.id) {
               setUnreadConversations((prev) => ({ ...prev, [booking.id]: true }));
               setUnreadCounts((prev) => ({ 
@@ -249,11 +240,32 @@ export const Messages: React.FC = () => {
 
     setSending(true);
     try {
+      // Optimistically add the message to the local state
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        content: newMessage.trim(),
+        sender_id: user?.id || '',
+        booking_id: selectedBooking,
+        created_at: new Date().toISOString(),
+        is_read: false,
+        sender: {
+          full_name: profile?.full_name || 'You',
+          avatar_url: profile?.avatar_url
+        },
+        message_type: 'text'
+      };
+
+      setMessages(prev => [...prev, optimisticMessage]);
+      setNewMessage('');
+      
+      // Send the message via API
       await sendMessageApi({
         bookingId: selectedBooking,
         content: newMessage.trim(),
       });
-      setNewMessage('');
+      
+      // Remove the optimistic message and let the real-time update handle it
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -643,10 +655,16 @@ export const Messages: React.FC = () => {
                       ) : (
                         messages.map((message, index) => {
                           if (message.message_type === 'system') {
+                            // Convert markdown links to clickable HTML links
+                            const contentWithLinks = message.content.replace(
+                              /\[([^\]]+)\]\(([^)]+)\)/g,
+                              '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">$1</a>'
+                            );
+                            
                             return (
                               <div key={message.id} className="my-4 flex justify-center">
                                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 text-blue-800 px-6 py-3 rounded-full text-sm max-w-lg w-fit shadow-sm">
-                                  <span dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br/>') }} />
+                                  <span dangerouslySetInnerHTML={{ __html: contentWithLinks.replace(/\n/g, '<br/>') }} />
                                 </div>
                               </div>
                             );
@@ -732,13 +750,12 @@ export const Messages: React.FC = () => {
                           <div className="absolute right-2 bottom-2 flex items-center space-x-1">
                             <input type="file" accept="image/*" style={{ display: 'none' }} id="message-upload-input" onChange={handleFileChange} />
                             <label htmlFor="message-upload-input">
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100" asChild>
-                                <Paperclip className="h-4 w-4" />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100" asChild>
+                                <svg className="h-3 w-3 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
                               </Button>
                             </label>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100">
-                              <Smile className="h-4 w-4" />
-                            </Button>
                           </div>
                         </div>
                         <Button 

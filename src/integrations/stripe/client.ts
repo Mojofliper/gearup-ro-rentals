@@ -54,7 +54,7 @@ export const formatAmountForDisplay = (amount: number): string => {
 };
 
 export const formatAmountForStripe = (amount: number): number => {
-  return Math.round(amount);
+  return Math.round(amount * 100); // Convert RON to cents for Stripe
 };
 
 export const calculatePlatformFee = (rentalAmount: number): number => {

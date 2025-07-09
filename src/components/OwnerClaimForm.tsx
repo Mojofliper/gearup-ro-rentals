@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -16,6 +17,7 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
   const { user } = useAuth();
   const { notifyClaimSubmitted } = useNotifications();
   const [description, setDescription] = useState('');
+  const [claimType, setClaimType] = useState<string>('');
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [eligible, setEligible] = useState<boolean | null>(null);
@@ -44,7 +46,7 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !claimType) return;
 
     try {
       setLoading(true);
@@ -53,9 +55,9 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
       if (files && files.length > 0) {
         const uploadPromises = Array.from(files).map(async (file) => {
           const path = `${user.id}/${Date.now()}_${file.name}`;
-          const { error } = await supabase.storage.from('claim_evidence').upload(path, file);
+          const { error } = await supabase.storage.from('claim-photos').upload(path, file);
           if (error) throw error;
-          const { data } = supabase.storage.from('claim_evidence').getPublicUrl(path);
+          const { data } = supabase.storage.from('claim-photos').getPublicUrl(path);
           evidenceUrls.push(data.publicUrl);
         });
         await Promise.all(uploadPromises);
@@ -63,10 +65,11 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
 
       const { error: insertError } = await supabase.from('claims').insert({
         booking_id: bookingId,
-        owner_id: user.id,
-        renter_id: null,
+        claimant_id: user.id, // Use claimant_id instead of owner_id
+        claim_type: claimType, // Add required claim_type
         description,
         evidence_urls: evidenceUrls,
+        claim_status: 'pending' // Set initial status
       });
       if (insertError) throw insertError;
 
@@ -80,9 +83,12 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
           .single();
 
         if (booking) {
+          const gearData = booking.gear as unknown as Record<string, unknown>;
+          const gearTitle = gearData?.title as string;
+          
           await notifyClaimSubmitted(
             bookingId,
-            (booking.gear as Record<string, unknown>)?.title || 'Echipament',
+            gearTitle || 'Echipament',
             booking.owner_id,
             booking.renter_id
           );
@@ -91,8 +97,9 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
         console.error('Error sending claim notification:', notificationError);
       }
 
-      toast.success('Claim submitted');
+      toast.success('Claim submitted successfully');
       setDescription('');
+      setClaimType('');
       setFiles(null);
       onSubmitted?.();
     } catch (err: unknown) {
@@ -105,15 +112,46 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Textarea
-        placeholder="Describe the damage or issue"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        required
-      />
-      <input type="file" multiple onChange={(e) => setFiles(e.target.files)} />
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Uploading…' : 'Submit claim'}
+      <div>
+        <label className="text-sm font-medium mb-2 block">Claim Type</label>
+        <Select value={claimType} onValueChange={setClaimType} required>
+          <SelectTrigger>
+            <SelectValue placeholder="Select claim type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="damage">Damage</SelectItem>
+            <SelectItem value="late_return">Late Return</SelectItem>
+            <SelectItem value="missing_item">Missing Item</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div>
+        <label className="text-sm font-medium mb-2 block">Description</label>
+        <Textarea
+          placeholder="Describe the damage or issue in detail"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+          rows={4}
+        />
+      </div>
+      
+      <div>
+        <label className="text-sm font-medium mb-2 block">Evidence Photos</label>
+        <input 
+          type="file" 
+          multiple 
+          accept="image/*"
+          onChange={(e) => setFiles(e.target.files)} 
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500 mt-1">Upload photos as evidence (optional)</p>
+      </div>
+      
+      <Button type="submit" disabled={loading || !claimType} className="w-full">
+        {loading ? 'Submitting...' : 'Submit Claim'}
       </Button>
     </form>
   );

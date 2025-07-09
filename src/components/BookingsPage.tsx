@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { Loader2, CheckCircle, XCircle, MapPin, Eye, Star, CheckCircle2, ArrowLeft, CreditCard, MessageSquare } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, MapPin, Eye, Star, CheckCircle2, ArrowLeft, CreditCard, MessageSquare, AlertCircle, DollarSign } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { PickupLocationModal } from '@/components/PickupLocationModal';
 import { ReviewModal } from '@/components/ReviewModal';
@@ -107,11 +107,54 @@ export const BookingsPage: React.FC = () => {
     }
   };
 
+  const getPaymentStatusBadge = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'completed':
+        return <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
+          <DollarSign className="h-3 w-3" />
+          Plătit
+        </Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          În așteptare
+        </Badge>;
+      case 'processing':
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Procesare
+        </Badge>;
+      case 'failed':
+        return <Badge variant="destructive" className="flex items-center gap-1">
+          <XCircle className="h-3 w-3" />
+          Eșuat
+        </Badge>;
+      case 'refunded':
+        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200 flex items-center gap-1">
+          <ArrowLeft className="h-3 w-3" />
+          Rambursat
+        </Badge>;
+      default:
+        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
+          {paymentStatus || 'Necunoscut'}
+        </Badge>;
+    }
+  };
+
   const getUserDisplayName = (userData: any) => {
     if (userData?.full_name) return userData.full_name;
     if (userData?.first_name && userData?.last_name) return `${userData.first_name} ${userData.last_name}`;
     if (userData?.email) return userData.email.split('@')[0];
     return 'Utilizator necunoscut';
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ro-RO', {
+      style: 'currency',
+      currency: 'RON',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
   };
 
   return (
@@ -160,7 +203,10 @@ export const BookingsPage: React.FC = () => {
                               {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
                             </CardDescription>
                           </div>
-                          {getStatusBadge(booking.status)}
+                          <div className="flex flex-col gap-2 items-end">
+                            {getStatusBadge(booking.status)}
+                            {getPaymentStatusBadge(booking.payment_status)}
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -170,6 +216,9 @@ export const BookingsPage: React.FC = () => {
                           </div>
                           <div className="text-sm text-muted-foreground">
                             Locație pickup: {booking.pickup_location || 'Nespecificat'}
+                          </div>
+                          <div className="text-sm font-medium text-green-600">
+                            Total: {formatPrice(booking.total_amount)}
                           </div>
                           <div className="flex items-center gap-2 mt-4">
                             {booking.status === 'completed' && (
@@ -206,15 +255,17 @@ export const BookingsPage: React.FC = () => {
                                   <CheckCircle className="h-4 w-4 mr-1" />
                                   Confirmă pickup
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handlePaymentClick(booking)}
-                                  className="text-green-600 border-green-200 hover:bg-green-50"
-                                >
-                                  <CreditCard className="h-4 w-4 mr-1" />
-                                  Plătește
-                                </Button>
+                                {booking.payment_status !== 'completed' && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handlePaymentClick(booking)}
+                                    className="text-green-600 border-green-200 hover:bg-green-50"
+                                  >
+                                    <CreditCard className="h-4 w-4 mr-1" />
+                                    Plătește
+                                  </Button>
+                                )}
                               </>
                             )}
                             {booking.status === 'active' && (
@@ -260,7 +311,10 @@ export const BookingsPage: React.FC = () => {
                               {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
                             </CardDescription>
                           </div>
-                          {getStatusBadge(booking.status)}
+                          <div className="flex flex-col gap-2 items-end">
+                            {getStatusBadge(booking.status)}
+                            {getPaymentStatusBadge(booking.payment_status)}
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -270,6 +324,9 @@ export const BookingsPage: React.FC = () => {
                           </div>
                           <div className="text-sm text-muted-foreground">
                             Locație pickup: {booking.pickup_location || 'Nespecificat'}
+                          </div>
+                          <div className="text-sm font-medium text-green-600">
+                            Total: {formatPrice(booking.total_amount)}
                           </div>
                           <div className="flex items-center gap-2 mt-4">
                             {booking.status === 'pending' && (
@@ -328,6 +385,15 @@ export const BookingsPage: React.FC = () => {
                                 Finalizează
                               </Button>
                             )}
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => navigate('/messages')}
+                              className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Mesaje
+                            </Button>
                           </div>
                         </div>
                       </CardContent>

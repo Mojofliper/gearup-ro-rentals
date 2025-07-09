@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, Image as ImageIcon, Paperclip } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -59,6 +59,36 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
       initializeConversation();
     }
   }, [isOpen, user, gearId]);
+
+  // Real-time subscription for messages
+  useEffect(() => {
+    if (!bookingId || !user) return;
+    
+    const channel = supabase
+      .channel(`messages-${bookingId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `booking_id=eq.${bookingId}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          setMessages((prev) => {
+            // Check if message already exists to avoid duplicates
+            if (prev.some((msg) => msg.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bookingId, user]);
 
   const initializeConversation = async () => {
     setLoading(true);
@@ -131,7 +161,7 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
         .from('messages')
         .select(`
           *,
-          sender:profiles!messages_sender_id_fkey (full_name, avatar_url)
+          sender:users!messages_sender_id_fkey (full_name, avatar_url)
         `)
         .eq('booking_id', bookingId)
         .order('created_at', { ascending: true });
@@ -148,14 +178,30 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
 
     setSending(true);
     try {
+      // Optimistically add the message to the local state
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        content: newMessage.trim(),
+        sender_id: user.id,
+        created_at: new Date().toISOString(),
+        message_type: 'text',
+        sender: {
+          full_name: user.user_metadata?.full_name || 'You',
+          avatar_url: user.user_metadata?.avatar_url || ''
+        }
+      };
+
+      setMessages(prev => [...prev, optimisticMessage]);
+      setNewMessage('');
+      
       await sendMessageApi({ 
         bookingId: bookingId, 
         content: newMessage.trim(), 
         messageType: 'text' 
       });
 
-      setNewMessage('');
-      await fetchMessages(bookingId);
+      // Remove the optimistic message and let the real-time update handle it
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
       toast({ title: 'Mesaj trimis', description: 'Mesajul a fost trimis cu succes.' });
     } catch (error) {
       console.error('Error sending message:', error);
@@ -235,10 +281,16 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
                 const isSystemMessage = message.message_type === 'system';
                 
                 if (isSystemMessage) {
+                  // Convert markdown links to clickable HTML links
+                  const contentWithLinks = message.content.replace(
+                    /\[([^\]]+)\]\(([^)]+)\)/g,
+                    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">$1</a>'
+                  );
+                  
                   return (
                     <div key={message.id} className="text-center">
                       <div className="inline-block bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
-                        {message.content}
+                        <span dangerouslySetInnerHTML={{ __html: contentWithLinks.replace(/\n/g, '<br/>') }} />
                       </div>
                     </div>
                   );
@@ -297,8 +349,10 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
                     className="hidden"
                     disabled={sending || loading || uploading}
                   />
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <Paperclip className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                    <svg className="h-3 w-3 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
                   </Button>
                 </label>
               </div>

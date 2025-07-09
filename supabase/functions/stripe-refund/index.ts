@@ -151,7 +151,7 @@ serve(async (req) => {
     // Create Stripe refund
     const refund = await stripe.refunds.create({
       payment_intent: transaction.stripe_payment_intent_id,
-      amount: amount,
+      amount: amount * 100, // Convert RON to cents for Stripe
       reason: reason === 'fraudulent' ? 'fraudulent' : 'requested_by_customer',
       metadata: {
         transaction_id: transactionId,

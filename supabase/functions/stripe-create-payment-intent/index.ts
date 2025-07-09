@@ -128,7 +128,7 @@ serve(async (req) => {
                 name: `Rental for booking ${transaction.booking_id}`,
                 description: `Gear rental payment`,
               },
-              unit_amount: amount,
+              unit_amount: amount * 100, // Convert RON to cents for Stripe
             },
             quantity: 1,
           },

@@ -115,7 +115,7 @@ serve(async (req) => {
           // Release rental amount to owner (deposit stays in escrow)
           if (!booking.rental_amount_released) {
             transfer = await stripe.transfers.create({
-              amount: escrowTransaction.rental_amount,
+              amount: escrowTransaction.rental_amount * 100, // Convert RON to cents for Stripe
               currency: 'ron',
               destination: connectedAccount.stripe_account_id,
               source_transaction: escrowTransaction.stripe_charge_id,
@@ -167,7 +167,7 @@ serve(async (req) => {
           if (!booking.deposit_returned) {
             refundId = await stripe.refunds.create({
               payment_intent: escrowTransaction.stripe_payment_intent_id,
-              amount: escrowTransaction.deposit_amount,
+              amount: escrowTransaction.deposit_amount * 100, // Convert RON to cents for Stripe
               metadata: {
                 booking_id: booking_id,
                 refund_type: 'deposit_return',
@@ -215,7 +215,7 @@ serve(async (req) => {
         case 'claim_owner':
           // Owner wins claim - release rental amount and deposit to owner
           transfer = await stripe.transfers.create({
-            amount: escrowTransaction.rental_amount + escrowTransaction.deposit_amount,
+            amount: (escrowTransaction.rental_amount + escrowTransaction.deposit_amount) * 100, // Convert RON to cents for Stripe
             currency: 'ron',
             destination: connectedAccount.stripe_account_id,
             source_transaction: escrowTransaction.stripe_charge_id,
@@ -254,7 +254,7 @@ serve(async (req) => {
         case 'claim_denied':
           // Owner loses claim - return deposit to renter, rental amount to owner
           rentalTransfer = await stripe.transfers.create({
-            amount: escrowTransaction.rental_amount,
+            amount: escrowTransaction.rental_amount * 100, // Convert RON to cents for Stripe
             currency: 'ron',
             destination: connectedAccount.stripe_account_id,
             source_transaction: escrowTransaction.stripe_charge_id,
@@ -267,7 +267,7 @@ serve(async (req) => {
 
           depositRefund = await stripe.refunds.create({
             payment_intent: escrowTransaction.stripe_payment_intent_id,
-            amount: escrowTransaction.deposit_amount,
+            amount: escrowTransaction.deposit_amount * 100, // Convert RON to cents for Stripe
             metadata: {
               booking_id: booking_id,
               refund_type: 'deposit_return',
