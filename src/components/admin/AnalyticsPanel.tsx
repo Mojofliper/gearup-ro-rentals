@@ -14,32 +14,59 @@ export const AnalyticsPanel: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      // Load escrow transactions (released)
-      const { data: tx } = await supabase
-        .from('escrow_transactions')
-        .select('rental_amount, created_at')
-        .eq('escrow_status', 'released');
-      if (tx) {
-        const map: Record<string, number> = {};
-        tx.forEach((t: any) => {
-          const month = format(new Date(t.created_at), 'yyyy-MM');
-          map[month] = (map[month] || 0) + (t.rental_amount as number);
-        });
-        setRevenue(Object.entries(map).map(([m, v]) => ({ x: m, y: v })));
+      try {
+        setLoading(true);
+        
+        // Load escrow transactions (released) - handle if table doesn't exist
+        let revenue: SeriesPoint[] = [];
+        try {
+          const { data: tx } = await supabase
+            .from('escrow_transactions')
+            .select('rental_amount, created_at')
+            .eq('escrow_status', 'released');
+          
+          if (tx) {
+            const map: Record<string, number> = {};
+            tx.forEach((t: Record<string, unknown>) => {
+              const month = format(new Date(t.created_at as string), 'yyyy-MM');
+              map[month] = (map[month] || 0) + (t.rental_amount as number);
+            });
+            revenue = Object.entries(map).map(([m, v]) => ({ x: m, y: v }));
+          }
+        } catch (error) {
+          console.log('Escrow transactions table not available:', error);
+          revenue = [];
+        }
+        setRevenue(revenue);
+
+        // Load users
+        let users: SeriesPoint[] = [];
+        try {
+          const { data: us } = await supabase
+            .from('users')
+            .select('created_at');
+          
+          if (us) {
+            const m: Record<string, number> = {};
+            us.forEach((u: Record<string, unknown>) => {
+              const month = format(new Date(u.created_at as string), 'yyyy-MM');
+              m[month] = (m[month] || 0) + 1;
+            });
+            users = Object.entries(m).map(([mo, c]) => ({ x: mo, y: c }));
+          }
+        } catch (error) {
+          console.log('Users table not available:', error);
+          users = [];
+        }
+        setUsers(users);
+
+      } catch (error) {
+        console.error('Error loading analytics:', error);
+        setRevenue([]);
+        setUsers([]);
+      } finally {
+        setLoading(false);
       }
-      // Load users
-      const { data: us } = await supabase
-        .from('users')
-        .select('created_at');
-      if (us) {
-        const m: Record<string, number> = {};
-        us.forEach((u: any) => {
-          const month = format(new Date(u.created_at), 'yyyy-MM');
-          m[month] = (m[month] || 0) + 1;
-        });
-        setUsers(Object.entries(m).map(([mo, c]) => ({ x: mo, y: c })));
-      }
-      setLoading(false);
     };
     load();
   }, []);

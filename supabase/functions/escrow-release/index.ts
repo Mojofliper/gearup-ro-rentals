@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { booking_id, release_type = 'automatic', deposit_to_owner = false } = await req.json()
+    const { booking_id, release_type, deposit_to_owner = false } = await req.json()
 
     if (!booking_id || !release_type) {
       return new Response(
@@ -73,6 +73,17 @@ serve(async (req) => {
       )
     }
 
+    // Validate escrow status
+    if (escrowTransaction.escrow_status !== 'held') {
+      return new Response(
+        JSON.stringify({ error: 'Escrow is not in held status' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     // Get owner's connected account
     const { data: connectedAccount } = await supabaseClient
       .from('connected_accounts')
@@ -80,7 +91,7 @@ serve(async (req) => {
       .eq('owner_id', booking.owner_id)
       .single()
 
-    if (!connectedAccount || !connectedAccount.payouts_enabled) {
+    if (!connectedAccount || !connectedAccount.charges_enabled) {
       return new Response(
         JSON.stringify({ error: 'Owner account not ready for transfers' }),
         { 
@@ -90,97 +101,248 @@ serve(async (req) => {
       )
     }
 
+    // Before the switch statement, declare variables used in case blocks
+    let transfer;
+    let rentalTransfer;
+    let depositRefund;
+    let refundId;
+    let transferId;
+
     try {
-      // Calculate amount for owner (include deposit if deposit_to_owner true)
-      const baseAmount = escrowTransaction.rental_amount - escrowTransaction.platform_fee
-      const ownerAmount = deposit_to_owner ? baseAmount + escrowTransaction.deposit_amount : baseAmount
+      // Handle different release types
+      switch (release_type) {
+        case 'pickup_confirmed':
+          // Release rental amount to owner (deposit stays in escrow)
+          if (!booking.rental_amount_released) {
+            transfer = await stripe.transfers.create({
+              amount: escrowTransaction.rental_amount,
+              currency: 'ron',
+              destination: connectedAccount.stripe_account_id,
+              source_transaction: escrowTransaction.stripe_charge_id,
+              metadata: {
+                booking_id: booking_id,
+                transfer_type: 'rental_payment',
+                release_type: release_type
+              }
+            })
+            transferId = transfer.id
 
-      // Release rental amount to owner
-      const transfer = await stripe.transfers.create({
-        amount: ownerAmount,
-        currency: 'ron',
-        destination: connectedAccount.stripe_account_id,
-        source_transaction: escrowTransaction.stripe_payment_intent_id,
-        metadata: {
-          booking_id: booking_id,
-          transfer_type: 'rental_payment',
-          release_type: release_type
-        }
-      })
+            // Update escrow transaction
+            await supabaseClient
+              .from('escrow_transactions')
+              .update({
+                rental_released_at: new Date().toISOString(),
+                rental_transfer_id: transfer.id
+              })
+              .eq('id', escrowTransaction.id)
 
-      let refundId: string | null = null
-
-      if (!deposit_to_owner) {
-        // Return deposit to renter
-        const refund = await stripe.refunds.create({
-          payment_intent: escrowTransaction.stripe_payment_intent_id,
-          amount: escrowTransaction.deposit_amount,
-          metadata: {
-            booking_id: booking_id,
-            refund_type: 'deposit_return',
-            release_type: release_type
+            // Update booking
+            await supabaseClient
+              .from('bookings')
+              .update({
+                rental_amount_released: true
+              })
+              .eq('id', booking_id)
+            
+            // Send notification to owner about rental payment
+            await supabaseClient
+              .from('notifications')
+              .insert({
+                user_id: booking.owner_id,
+                title: 'Plată închiriere primită',
+                message: `Ai primit plata pentru închirierea "${booking.gear.title}"`,
+                type: 'payment',
+                data: { 
+                  bookingId: booking_id, 
+                  amount: escrowTransaction.rental_amount,
+                  gearTitle: booking.gear.title
+                },
+                is_read: false
+              })
           }
-        })
-        refundId = refund.id
+          break
+
+        case 'completed':
+          // Release deposit back to renter
+          if (!booking.deposit_returned) {
+            refundId = await stripe.refunds.create({
+              payment_intent: escrowTransaction.stripe_payment_intent_id,
+              amount: escrowTransaction.deposit_amount,
+              metadata: {
+                booking_id: booking_id,
+                refund_type: 'deposit_return',
+                release_type: release_type
+              }
+            })
+
+            // Update escrow transaction
+            await supabaseClient
+              .from('escrow_transactions')
+              .update({
+                deposit_returned_at: new Date().toISOString(),
+                deposit_refund_id: refundId,
+                escrow_status: 'released'
+              })
+              .eq('id', escrowTransaction.id)
+
+            // Update booking
+            await supabaseClient
+              .from('bookings')
+              .update({
+                deposit_returned: true,
+                escrow_release_date: new Date().toISOString()
+              })
+              .eq('id', booking_id)
+            
+            // Send notification to renter about deposit return
+            await supabaseClient
+              .from('notifications')
+              .insert({
+                user_id: booking.renter_id,
+                title: 'Depozit returnat',
+                message: `Depozitul pentru "${booking.gear.title}" a fost returnat`,
+                type: 'payment',
+                data: { 
+                  bookingId: booking_id, 
+                  amount: escrowTransaction.deposit_amount,
+                  gearTitle: booking.gear.title
+                },
+                is_read: false
+              })
+          }
+          break
+
+        case 'claim_owner':
+          // Owner wins claim - release rental amount and deposit to owner
+          transfer = await stripe.transfers.create({
+            amount: escrowTransaction.rental_amount + escrowTransaction.deposit_amount,
+            currency: 'ron',
+            destination: connectedAccount.stripe_account_id,
+            source_transaction: escrowTransaction.stripe_charge_id,
+            metadata: {
+              booking_id: booking_id,
+              transfer_type: 'claim_owner_win',
+              release_type: release_type
+            }
+          })
+          transferId = transfer.id;
+
+          // Update escrow transaction
+          await supabaseClient
+            .from('escrow_transactions')
+            .update({
+              escrow_status: 'released',
+              rental_released_at: new Date().toISOString(),
+              deposit_returned_at: new Date().toISOString(),
+              rental_transfer_id: transfer.id,
+              release_reason: 'Owner claim approved'
+            })
+            .eq('id', escrowTransaction.id)
+
+          // Update booking
+          await supabaseClient
+            .from('bookings')
+            .update({
+              status: 'completed',
+              rental_amount_released: true,
+              deposit_returned: true,
+              escrow_release_date: new Date().toISOString()
+            })
+            .eq('id', booking_id)
+          break
+
+        case 'claim_denied':
+          // Owner loses claim - return deposit to renter, rental amount to owner
+          rentalTransfer = await stripe.transfers.create({
+            amount: escrowTransaction.rental_amount,
+            currency: 'ron',
+            destination: connectedAccount.stripe_account_id,
+            source_transaction: escrowTransaction.stripe_charge_id,
+            metadata: {
+              booking_id: booking_id,
+              transfer_type: 'rental_payment',
+              release_type: release_type
+            }
+          })
+
+          depositRefund = await stripe.refunds.create({
+            payment_intent: escrowTransaction.stripe_payment_intent_id,
+            amount: escrowTransaction.deposit_amount,
+            metadata: {
+              booking_id: booking_id,
+              refund_type: 'deposit_return',
+              release_type: release_type
+            }
+          })
+
+          transferId = rentalTransfer.id;
+          refundId = depositRefund.id;
+
+          // Update escrow transaction
+          await supabaseClient
+            .from('escrow_transactions')
+            .update({
+              escrow_status: 'released',
+              rental_released_at: new Date().toISOString(),
+              deposit_returned_at: new Date().toISOString(),
+              rental_transfer_id: rentalTransfer.id,
+              deposit_refund_id: depositRefund.id,
+              release_reason: 'Owner claim denied'
+            })
+            .eq('id', escrowTransaction.id)
+
+          // Update booking
+          await supabaseClient
+            .from('bookings')
+            .update({
+              status: 'completed',
+              rental_amount_released: true,
+              deposit_returned: true,
+              escrow_release_date: new Date().toISOString()
+            })
+            .eq('id', booking_id)
+          break
+
+        default:
+          return new Response(
+            JSON.stringify({ error: 'Invalid release type' }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
       }
-
-      // If auto_refund, set escrow_status accordingly
-      const newEscrowStatus = release_type === 'auto_refund' ? 'auto_refunded' : 'released'
-
-      // Update escrow transaction status
-      await supabaseClient
-        .from('escrow_transactions')
-        .update({
-          escrow_status: newEscrowStatus,
-          transfer_id: transfer.id,
-          refund_id: refundId,
-          release_date: new Date().toISOString(),
-          release_type: release_type
-        })
-        .eq('id', escrowTransaction.id)
-
-      // Update booking status
-      await supabaseClient
-        .from('bookings')
-        .update({
-          status: release_type === 'auto_refund' ? 'cancelled' : 'completed',
-          payment_status: 'completed',
-          escrow_status: newEscrowStatus,
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', booking_id)
 
       return new Response(
         JSON.stringify({
           success: true,
-          transfer_id: transfer.id,
+          booking_id: booking_id,
+          release_type: release_type,
+          transfer_id: transferId,
           refund_id: refundId,
-          rental_amount: ownerAmount,
-          deposit_amount: escrowTransaction.deposit_amount,
           message: 'Escrow funds released successfully'
         }),
         { 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
 
-    } catch (stripeError: any) {
-      console.error('Stripe error during escrow release:', stripeError)
+    } catch (stripeError) {
+      console.error('Stripe error:', stripeError)
       
-      // Update escrow transaction with error
+      // Update escrow transaction with failure
       await supabaseClient
         .from('escrow_transactions')
         .update({
-          escrow_status: 'release_failed',
-          transfer_failure_reason: stripeError.message,
-          updated_at: new Date().toISOString()
+          transfer_failure_reason: stripeError instanceof Error ? stripeError.message : 'Unknown error'
         })
         .eq('id', escrowTransaction.id)
 
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to release escrow funds',
-          details: stripeError.message
+          error: 'Failed to process escrow release',
+          details: stripeError instanceof Error ? stripeError.message : 'Unknown error'
         }),
         { 
           status: 500, 
@@ -193,7 +355,7 @@ serve(async (req) => {
     console.error('Escrow release error:', error)
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to process escrow release',
+        error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 

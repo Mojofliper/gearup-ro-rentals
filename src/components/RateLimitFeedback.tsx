@@ -19,7 +19,7 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
   showProgress = true
 }) => {
   const { getRateLimitStatus, resetRateLimit } = useRateLimit();
-  const [rateLimitStatus, setRateLimitStatus] = useState<any>(null);
+  const [rateLimitStatus, setRateLimitStatus] = useState<unknown>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   useEffect(() => {
@@ -159,7 +159,7 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
 // Hook for rate limit status
 export const useRateLimitStatus = (endpoint: string) => {
   const { getRateLimitStatus } = useRateLimit();
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

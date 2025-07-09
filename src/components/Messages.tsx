@@ -19,10 +19,18 @@ import {
   MoreVertical,
   Image as ImageIcon,
   Paperclip,
-  Smile,
   Mic,
   Check,
-  CheckCheck
+  CheckCheck,
+  Star,
+  Eye,
+  Phone,
+  Video,
+  Settings,
+  Archive,
+  Trash2,
+  Heart,
+  Smile
 } from 'lucide-react';
 import { sanitizeHtml, sanitizeText } from '@/utils/htmlSanitizer';
 import { toast } from '@/hooks/use-toast';
@@ -32,6 +40,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { isScamContent } from '@/utils/security';
 import { MapCard } from '@/components/MapCard';
 import { cn } from '@/lib/utils';
+import { useSendMessage } from '@/hooks/useMessages';
+import { format } from 'date-fns';
 
 interface Message {
   id: string;
@@ -44,6 +54,7 @@ interface Message {
     full_name: string;
     avatar_url?: string;
   };
+  message_type?: 'text' | 'image' | 'system';
 }
 
 interface Booking {
@@ -80,6 +91,9 @@ export const Messages: React.FC = () => {
   const [unreadCounts, setUnreadCounts] = useState<{[bookingId: string]: number}>({});
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { mutateAsync: sendMessageApi } = useSendMessage();
+
+  const [uploading, setUploading] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -193,13 +207,16 @@ export const Messages: React.FC = () => {
         .from('messages')
         .select(`
           *,
-          sender:users!messages_sender_id_fkey (full_name, avatar_url)
+          sender:users!messages_sender_id_fkey (
+            full_name,
+            avatar_url
+          )
         `)
         .eq('booking_id', selectedBooking)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      setMessages(data as unknown as Message[]);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -214,14 +231,12 @@ export const Messages: React.FC = () => {
     if (!selectedBooking || !user) return;
 
     try {
-      const { error } = await supabase
+      await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('booking_id', selectedBooking)
         .neq('sender_id', user.id);
 
-      if (error) throw error;
-      
       setUnreadConversations((prev) => ({ ...prev, [selectedBooking]: false }));
       setUnreadCounts((prev) => ({ ...prev, [selectedBooking]: 0 }));
     } catch (error) {
@@ -229,60 +244,16 @@ export const Messages: React.FC = () => {
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedBooking || !user) return;
-
-    const sanitizedContent = sanitizeText(newMessage.trim());
-    
-    // Scam guard
-    const booking = bookings.find(b => b.id === selectedBooking);
-    const bookingSafe = booking && (booking.status === 'active' || booking.status === 'completed');
-    if (!bookingSafe && isScamContent(sanitizedContent)) {
-      toast({
-        title: 'Informații de contact blocate',
-        description: 'Nu poți partaja email/telefon până când rezervarea este confirmată.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (sanitizedContent.length === 0) {
-      toast({
-        title: 'Mesaj invalid',
-        description: 'Mesajul nu poate fi gol.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (sanitizedContent.length > 1000) {
-      toast({
-        title: 'Mesaj prea lung',
-        description: 'Mesajul nu poate depăși 1000 de caractere.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedBooking || sending) return;
 
     setSending(true);
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          content: sanitizedContent,
-          booking_id: selectedBooking,
-          sender_id: user.id,
-        });
-
-      if (error) throw error;
-
-      setNewMessage('');
-      inputRef.current?.focus();
-      
-      toast({
-        title: 'Mesaj trimis',
-        description: 'Mesajul a fost trimis cu succes.',
+      await sendMessageApi({
+        bookingId: selectedBooking,
+        content: newMessage.trim(),
       });
+      setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -298,16 +269,39 @@ export const Messages: React.FC = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedBooking) return;
+
+    setUploading(true);
+    try {
+      // File upload logic would go here
+      toast({
+        title: 'Funcționalitate în dezvoltare',
+        description: 'Încărcarea imaginilor va fi disponibilă în curând.',
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: 'Eroare',
+        description: 'Nu am putut încărca fișierul.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'bg-green-100 text-green-800 border-green-200';
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'confirmed': return 'bg-green-100 text-green-800 border-green-200';
       case 'active': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'completed': return 'bg-gray-100 text-gray-800 border-gray-200';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -315,13 +309,22 @@ export const Messages: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'Confirmată';
       case 'pending': return 'În așteptare';
+      case 'confirmed': return 'Confirmată';
       case 'active': return 'Activă';
       case 'completed': return 'Finalizată';
       case 'cancelled': return 'Anulată';
       default: return status;
     }
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ro-RO', {
+      style: 'currency',
+      currency: 'RON',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
   };
 
   const filteredBookings = bookings.filter(booking => {
@@ -336,10 +339,18 @@ export const Messages: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="text-gray-600 text-lg">Se încarcă conversațiile...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-6">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-600 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Se încarcă conversațiile...</h3>
+              <p className="text-gray-600">Pregătim mesajele tale</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -347,38 +358,58 @@ export const Messages: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <MessageSquare className="h-16 w-16 text-gray-400 mx-auto" />
-          <h3 className="text-xl font-semibold text-gray-700">Trebuie să fii conectat</h3>
-          <p className="text-gray-600">Conectează-te pentru a vedea mesajele tale.</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-6">
+            <div className="relative">
+              <MessageSquare className="h-20 w-20 text-gray-400 mx-auto" />
+              <div className="absolute -top-2 -right-2 h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-semibold">!</span>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Trebuie să fii conectat</h3>
+              <p className="text-gray-600 mb-6">Conectează-te pentru a vedea mesajele tale</p>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                Conectează-te
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Modern Header */}
+      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <Link to="/browse">
-                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+              <Link to="/dashboard">
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:bg-gray-100">
                   <ArrowLeft className="h-4 w-4" />
-                  <span>Înapoi</span>
+                  <span className="hidden sm:inline">Înapoi</span>
                 </Button>
               </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Mesaje</h1>
-                <p className="text-sm text-gray-600">Comunică cu proprietarii și chiriașii</p>
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Mesaje</h1>
+                  <p className="text-sm text-gray-600 hidden sm:block">Comunică cu proprietarii și chiriașii</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+            <div className="flex items-center space-x-3">
+              <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-blue-200">
                 {bookings.length} conversații
               </Badge>
+              <Button variant="ghost" size="sm" className="hover:bg-gray-100">
+                <Settings className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -387,18 +418,23 @@ export const Messages: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {bookings.length === 0 ? (
           <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center space-y-6">
+            <div className="text-center space-y-8">
               <div className="relative">
-                <MessageSquare className="h-20 w-20 text-gray-300 mx-auto" />
-                <div className="absolute -top-2 -right-2 h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 text-sm font-semibold">0</span>
+                <div className="h-24 w-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
+                  <MessageSquare className="h-12 w-12 text-gray-400" />
+                </div>
+                <div className="absolute -top-2 -right-2 h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-semibold">0</span>
                 </div>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">Nu ai încă conversații</h3>
-                <p className="text-gray-600 mb-6">Creează o rezervare pentru a începe să comunici</p>
+              <div className="max-w-md">
+                <h3 className="text-2xl font-bold text-gray-800 mb-3">Nu ai încă conversații</h3>
+                <p className="text-gray-600 mb-8 leading-relaxed">
+                  Creează o rezervare pentru a începe să comunici cu proprietarii și să coordonezi închirierile
+                </p>
                 <Link to="/browse">
-                  <Button className="bg-purple-600 hover:bg-purple-700">
+                  <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Search className="h-4 w-4 mr-2" />
                     Caută echipamente
                   </Button>
                 </Link>
@@ -407,10 +443,10 @@ export const Messages: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
-            {/* Conversations Sidebar */}
+            {/* Modern Conversations Sidebar */}
             <div className="lg:col-span-1">
-              <Card className="h-full flex flex-col">
-                <CardHeader className="border-b border-gray-200">
+              <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+                <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30">
                   <div className="space-y-4">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -418,7 +454,7 @@ export const Messages: React.FC = () => {
                         placeholder="Caută conversații..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                     <div className="flex space-x-2">
@@ -426,7 +462,12 @@ export const Messages: React.FC = () => {
                         variant={filterStatus === 'all' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilterStatus('all')}
-                        className="flex-1"
+                        className={cn(
+                          "flex-1 transition-all duration-200",
+                          filterStatus === 'all' 
+                            ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md" 
+                            : "hover:bg-gray-50"
+                        )}
                       >
                         Toate
                       </Button>
@@ -434,7 +475,12 @@ export const Messages: React.FC = () => {
                         variant={filterStatus === 'pending' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilterStatus('pending')}
-                        className="flex-1"
+                        className={cn(
+                          "flex-1 transition-all duration-200",
+                          filterStatus === 'pending' 
+                            ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md" 
+                            : "hover:bg-gray-50"
+                        )}
                       >
                         În așteptare
                       </Button>
@@ -448,49 +494,57 @@ export const Messages: React.FC = () => {
                       const unreadCount = unreadCounts[booking.id] || 0;
                       const isSelected = selectedBooking === booking.id;
                       const gearImage = booking.gear?.gear_photos?.find(p => p.is_primary)?.photo_url;
+                      const lastMessageDate = new Date(booking.start_date);
+                      const isToday = new Date().toDateString() === lastMessageDate.toDateString();
 
                       return (
                         <div
                           key={booking.id}
                           className={cn(
-                            "relative p-4 cursor-pointer transition-all duration-200 border-b border-gray-100 hover:bg-gray-50",
-                            isSelected && "bg-purple-50 border-purple-200"
+                            "relative p-4 cursor-pointer transition-all duration-300 border-b border-gray-100/50 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50",
+                            isSelected && "bg-gradient-to-r from-blue-100/80 to-purple-100/80 border-blue-200/50 shadow-sm"
                           )}
                           onClick={() => setSelectedBooking(booking.id)}
                         >
                           <div className="flex items-start space-x-3">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={gearImage} />
-                              <AvatarFallback className="bg-purple-100 text-purple-600">
-                                {booking.gear?.title?.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                              <Avatar className="h-12 w-12 ring-2 ring-white shadow-md">
+                                <AvatarImage src={gearImage} />
+                                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                                  {booking.gear?.title?.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              {hasUnread && (
+                                <div className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                                  <span className="text-white text-xs font-bold">{unreadCount}</span>
+                                </div>
+                              )}
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-semibold text-gray-900 truncate">
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-semibold text-gray-900 truncate text-sm">
                                   {sanitizeText(booking.gear?.title || 'Echipament')}
                                 </h4>
-                                {hasUnread && (
-                                  <Badge className="bg-red-500 text-white text-xs">
-                                    {unreadCount}
-                                  </Badge>
-                                )}
+                                <span className="text-xs text-gray-500">
+                                  {isToday ? 'Astăzi' : format(lastMessageDate, 'dd MMM')}
+                                </span>
                               </div>
-                              <div className="flex items-center space-x-2 mt-1">
+                              <div className="flex items-center space-x-2 mb-2">
                                 <Badge 
                                   variant="outline" 
-                                  className={cn("text-xs", getStatusColor(booking.status))}
+                                  className={cn("text-xs border-0", getStatusColor(booking.status))}
                                 >
                                   {getStatusText(booking.status)}
                                 </Badge>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(booking.start_date).toLocaleDateString()}
-                                </span>
                               </div>
-                              <div className="flex items-center space-x-1 mt-1">
-                                <span className="text-sm font-medium text-purple-600">
-                                  {booking.total_amount} RON
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-blue-600">
+                                  {formatPrice(booking.total_amount)}
                                 </span>
+                                <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{format(new Date(booking.start_date), 'dd MMM')}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -502,37 +556,40 @@ export const Messages: React.FC = () => {
               </Card>
             </div>
 
-            {/* Messages Area */}
+            {/* Modern Messages Area */}
             <div className="lg:col-span-3">
               {selectedBooking ? (
-                <Card className="h-full flex flex-col">
-                  {/* Conversation Header */}
-                  <CardHeader className="border-b border-gray-200 bg-gray-50">
+                <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+                  {/* Enhanced Conversation Header */}
+                  <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage 
-                            src={selectedBookingData?.gear?.gear_photos?.find(p => p.is_primary)?.photo_url} 
-                          />
-                          <AvatarFallback className="bg-purple-100 text-purple-600">
-                            {selectedBookingData?.gear?.title?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="h-12 w-12 ring-2 ring-white shadow-md">
+                            <AvatarImage 
+                              src={selectedBookingData?.gear?.gear_photos?.find(p => p.is_primary)?.photo_url} 
+                            />
+                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                              {selectedBookingData?.gear?.title?.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></div>
+                        </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">
+                          <h3 className="font-bold text-gray-900 text-lg">
                             {sanitizeText(selectedBookingData?.gear?.title || 'Echipament')}
                           </h3>
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-4 w-4" />
                               <span>
-                                {new Date(selectedBookingData?.start_date || '').toLocaleDateString()} - 
-                                {new Date(selectedBookingData?.end_date || '').toLocaleDateString()}
+                                {format(new Date(selectedBookingData?.start_date || ''), 'dd MMM')} - 
+                                {format(new Date(selectedBookingData?.end_date || ''), 'dd MMM yyyy')}
                               </span>
                             </div>
                             <Badge 
                               variant="outline" 
-                              className={getStatusColor(selectedBookingData?.status || '')}
+                              className={cn("border-0", getStatusColor(selectedBookingData?.status || ''))}
                             >
                               {getStatusText(selectedBookingData?.status || '')}
                             </Badge>
@@ -541,19 +598,24 @@ export const Messages: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-2">
                         <Link to={`/gear/${selectedBookingData?.gear_id}`} target="_blank">
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600">
+                            <Eye className="h-4 w-4 mr-1" />
                             Vezi echipament
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" className="hover:bg-gray-100">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                     
-                    {/* Pickup Location */}
+                    {/* Enhanced Pickup Location */}
                     {selectedBookingData?.pickup_lat && selectedBookingData?.pickup_lng && selectedBookingData?.pickup_location && (
-                      <div className="mt-4">
+                      <div className="mt-4 p-3 bg-white/60 rounded-lg border border-gray-200/50">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <MapPin className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium text-gray-800">Locație de ridicare</span>
+                        </div>
                         <MapCard 
                           lat={selectedBookingData.pickup_lat} 
                           lng={selectedBookingData.pickup_lng} 
@@ -563,19 +625,32 @@ export const Messages: React.FC = () => {
                     )}
                   </CardHeader>
 
-                  {/* Messages */}
+                  {/* Enhanced Messages */}
                   <CardContent className="flex-1 p-0 flex flex-col">
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50/30 to-white/30">
                       {messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center space-y-4">
-                            <MessageSquare className="h-12 w-12 text-gray-300 mx-auto" />
-                            <p className="text-gray-500">Nu există mesaje încă.</p>
-                            <p className="text-sm text-gray-400">Începe conversația!</p>
+                            <div className="h-16 w-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
+                              <MessageSquare className="h-8 w-8 text-gray-400" />
+                            </div>
+                            <div>
+                              <p className="text-gray-600 font-medium">Nu există mesaje încă</p>
+                              <p className="text-sm text-gray-500">Începe conversația!</p>
+                            </div>
                           </div>
                         </div>
                       ) : (
                         messages.map((message, index) => {
+                          if (message.message_type === 'system') {
+                            return (
+                              <div key={message.id} className="my-4 flex justify-center">
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 text-blue-800 px-6 py-3 rounded-full text-sm max-w-lg w-fit shadow-sm">
+                                  <span dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br/>') }} />
+                                </div>
+                              </div>
+                            );
+                          }
                           const isOwnMessage = message.sender_id === user?.id;
                           const showAvatar = !isOwnMessage;
                           const showTime = index === messages.length - 1 || 
@@ -586,14 +661,14 @@ export const Messages: React.FC = () => {
                             <div
                               key={message.id}
                               className={cn(
-                                "flex items-end space-x-2",
+                                "flex items-end space-x-3",
                                 isOwnMessage ? "justify-end" : "justify-start"
                               )}
                             >
                               {showAvatar && (
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
                                   <AvatarImage src={message.sender?.avatar_url} />
-                                  <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
+                                  <AvatarFallback className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs">
                                     {message.sender?.full_name?.charAt(0).toUpperCase() || 'U'}
                                   </AvatarFallback>
                                 </Avatar>
@@ -603,18 +678,18 @@ export const Messages: React.FC = () => {
                                 isOwnMessage && "items-end"
                               )}>
                                 <div className={cn(
-                                  "px-4 py-2 rounded-2xl",
+                                  "px-4 py-3 rounded-2xl shadow-sm",
                                   isOwnMessage 
-                                    ? "bg-purple-600 text-white rounded-br-md" 
-                                    : "bg-gray-100 text-gray-900 rounded-bl-md"
+                                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-md" 
+                                    : "bg-white text-gray-900 rounded-bl-md border border-gray-200"
                                 )}>
-                                  <p className="text-sm whitespace-pre-wrap break-words">
+                                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                                     {sanitizeText(message.content)}
                                   </p>
                                 </div>
                                 {showTime && (
                                   <div className={cn(
-                                    "flex items-center space-x-1 mt-1 text-xs text-gray-500",
+                                    "flex items-center space-x-1 mt-2 text-xs text-gray-500",
                                     isOwnMessage && "justify-end"
                                   )}>
                                     <Clock className="h-3 w-3" />
@@ -625,7 +700,7 @@ export const Messages: React.FC = () => {
                                       })}
                                     </span>
                                     {isOwnMessage && (
-                                      <CheckCheck className="h-3 w-3 text-purple-600" />
+                                      <CheckCheck className="h-3 w-3 text-blue-400" />
                                     )}
                                   </div>
                                 )}
@@ -640,8 +715,8 @@ export const Messages: React.FC = () => {
                       <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Message Input */}
-                    <div className="border-t border-gray-200 p-4 bg-white">
+                    {/* Enhanced Message Input */}
+                    <div className="border-t border-gray-200/50 p-4 bg-white/80 backdrop-blur-sm">
                       <div className="flex items-end space-x-3">
                         <div className="flex-1 relative">
                           <Input
@@ -651,26 +726,29 @@ export const Messages: React.FC = () => {
                             onKeyPress={handleKeyPress}
                             placeholder="Scrie un mesaj..."
                             maxLength={1000}
-                            disabled={sending}
-                            className="pr-20 resize-none"
+                            disabled={sending || uploading}
+                            className="pr-24 resize-none bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-full"
                           />
                           <div className="absolute right-2 bottom-2 flex items-center space-x-1">
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <input type="file" accept="image/*" style={{ display: 'none' }} id="message-upload-input" onChange={handleFileChange} />
+                            <label htmlFor="message-upload-input">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100" asChild>
+                                <Paperclip className="h-4 w-4" />
+                              </Button>
+                            </label>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100">
                               <Smile className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <Paperclip className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
                         <Button 
-                          onClick={sendMessage}
-                          disabled={!newMessage.trim() || sending}
+                          onClick={handleSendMessage}
+                          disabled={!newMessage.trim() || sending || uploading}
                           size="sm"
-                          className="bg-purple-600 hover:bg-purple-700"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300 rounded-full h-10 w-10 p-0"
                         >
                           {sending ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                           ) : (
                             <Send className="h-4 w-4" />
                           )}
@@ -684,14 +762,16 @@ export const Messages: React.FC = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="h-full flex items-center justify-center">
-                  <CardContent className="text-center space-y-4">
-                    <MessageSquare className="h-16 w-16 text-gray-300 mx-auto" />
+                <Card className="h-full flex items-center justify-center bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+                  <CardContent className="text-center space-y-6">
+                    <div className="h-20 w-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto">
+                      <MessageSquare className="h-10 w-10 text-gray-400" />
+                    </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3">
                         Selectează o conversație
                       </h3>
-                      <p className="text-gray-600">
+                      <p className="text-gray-600 leading-relaxed">
                         Alege o rezervare din lista din stânga pentru a începe să comunici
                       </p>
                     </div>

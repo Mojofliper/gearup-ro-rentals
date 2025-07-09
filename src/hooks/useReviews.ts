@@ -1,105 +1,65 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useReviewApi } from './useApi';
+import { useAuthQuery } from './useAuthQuery';
+import { ReviewData, ReviewUpdate } from '@/integrations/supabase/types';
 
-type ReviewInsert = Database['public']['Tables']['reviews']['Insert'];
-
-export const useGearReviews = (gearId?: string) => {
-  return useQuery({
-    queryKey: ['gear-reviews', gearId],
-    queryFn: async () => {
-      if (!gearId) return { reviews: [], averageRating: 0, totalReviews: 0 };
-      
-      const { data, error } = await supabase
-        .from('reviews')
-        .select(`
-          *,
-          reviewer:users!reviews_reviewer_id_fkey(full_name, avatar_url)
-        `)
-        .eq('gear_id', gearId);
-      
-      if (error) throw error;
-      
-      const reviews = data || [];
-      const totalReviews = reviews.length;
-      const averageRating = totalReviews > 0 
-        ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews 
-        : 0;
-      
-      return { reviews, averageRating, totalReviews };
+export const useGearReviews = (gearId: string) => {
+  const { getGearReviews } = useReviewApi();
+  
+  return useAuthQuery(
+    ['gear-reviews', gearId],
+    async () => {
+      return await getGearReviews(gearId);
     },
-    enabled: !!gearId,
-  });
+    {
+      enabled: !!gearId,
+      staleTime: 5 * 60 * 1000, // 5 minutes for gear reviews
+    }
+  );
 };
 
 export const useCreateReview = () => {
   const queryClient = useQueryClient();
+  const { createReview } = useReviewApi();
   
   return useMutation({
-    mutationFn: async (review: ReviewInsert) => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .insert(review)
-        .select(`
-          *,
-          reviewer:users!reviews_reviewer_id_fkey(*),
-          reviewed:users!reviews_reviewed_id_fkey(full_name, avatar_url),
-          gear:gear(*)
-        `)
-        .single();
-      
-      if (error) throw error;
-      return data;
+    mutationFn: async (reviewData: Record<string, unknown>) => {
+      return await createReview(reviewData);
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['gear-reviews', variables.gearId] });
       queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['gear-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['gear', variables.gearId] });
     },
   });
 };
 
-// Enhanced review hooks
 export const useUpdateReview = () => {
   const queryClient = useQueryClient();
-  const { updateReview, loading, error } = useReviewApi();
+  const { updateReview } = useReviewApi();
   
   return useMutation({
-    mutationFn: async ({ reviewId, updates }: {
-      reviewId: string;
-      updates: { rating?: number; comment?: string };
-    }) => {
+    mutationFn: async ({ reviewId, updates }: { reviewId: string; updates: Record<string, unknown> }) => {
       return await updateReview(reviewId, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reviews'] });
-      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       queryClient.invalidateQueries({ queryKey: ['gear-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
     },
   });
 };
 
 export const useDeleteReview = () => {
   const queryClient = useQueryClient();
+  const { deleteReview } = useReviewApi();
   
   return useMutation({
     mutationFn: async (reviewId: string) => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .delete()
-        .eq('id', reviewId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      return await deleteReview(reviewId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       queryClient.invalidateQueries({ queryKey: ['gear-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
     },
   });
 };

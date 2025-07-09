@@ -14,7 +14,7 @@ import { calculatePlatformFee, formatAmountForDisplay } from '@/integrations/str
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  gear: any;
+  gear: Record<string, unknown>;
   selectedDates: Date[];
   pricePerDay: number;
   depositAmount: number;
@@ -58,7 +58,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         });
         onClose();
       },
-      onError: (error: any) => {
+      onError: (error: unknown) => {
         toast({
           title: 'Eroare',
           description: 'Nu s-a putut trimite cererea. Te rugăm să încerci din nou.',

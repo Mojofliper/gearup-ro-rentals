@@ -279,10 +279,10 @@ export const PaymentMonitoringDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {(metrics.totalAmount / 100).toFixed(2)} RON
+                {metrics.totalAmount.toFixed(2)} RON
               </div>
               <p className="text-xs text-muted-foreground">
-                Avg: {(metrics.averageAmount / 100).toFixed(2)} RON
+                Avg: {metrics.averageAmount.toFixed(2)} RON
               </p>
             </CardContent>
           </Card>
@@ -295,7 +295,7 @@ export const PaymentMonitoringDashboard: React.FC = () => {
             <CardContent>
               <div className="text-2xl font-bold">{metrics.escrowTransactions}</div>
               <p className="text-xs text-muted-foreground">
-                {(metrics.activeEscrowAmount / 100).toFixed(2)} RON held
+                {metrics.activeEscrowAmount.toFixed(2)} RON held
               </p>
             </CardContent>
           </Card>

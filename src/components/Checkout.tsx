@@ -11,6 +11,7 @@ import { Calendar, MapPin, CreditCard, Shield, CheckCircle, AlertCircle, Loader2
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateBooking } from '@/hooks/useBookings';
 import { PaymentService } from '@/services/paymentService';
+import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { formatAmountForDisplay, calculatePlatformFee } from '@/integrations/stripe/client';
@@ -21,7 +22,7 @@ interface CartItem {
   gear: {
     id: string;
     title: string;
-    daily_rate: number;
+    price_per_day: number;
     deposit_amount: number;
     owner: {
       id: string;
@@ -49,12 +50,13 @@ export const Checkout: React.FC<CheckoutProps> = ({
 }) => {
   const { user, profile } = useAuth();
   const { mutate: createBooking, isPending } = useCreateBooking();
+  const { notifyBookingCreated } = useNotifications();
   const [currentStep, setCurrentStep] = useState<'review' | 'payment' | 'success'>('review');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string>('');
 
   const calculateItemTotal = (item: CartItem) => {
-    const pricePerDay = item.gear.daily_rate;
+    const pricePerDay = item.gear.price_per_day;
     const depositAmount = item.gear.deposit_amount;
     const rentalTotal = item.selectedDates.length * pricePerDay;
     const platformFee = calculatePlatformFee(rentalTotal);
@@ -67,7 +69,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
   const calculateRentalTotal = () => {
     return cartItems.reduce((total, item) => {
-      const pricePerDay = item.gear.daily_rate;
+      const pricePerDay = item.gear.price_per_day;
       return total + (item.selectedDates.length * pricePerDay);
     }, 0);
   };
@@ -100,7 +102,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
         const endDate = sortedDates[sortedDates.length - 1];
         
         const totalDays = item.selectedDates.length;
-        const rentalAmount = totalDays * item.gear.daily_rate;
+        const rentalAmount = totalDays * item.gear.price_per_day;
         const depositAmount = item.gear.deposit_amount;
 
         // Create booking directly using Supabase to match the actual schema
@@ -123,6 +125,18 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
         if (bookingError) {
           throw new Error(`Failed to create booking for ${item.gear.title}: ${bookingError.message}`);
+        }
+
+        // Send notification to owner about new booking
+        try {
+          await notifyBookingCreated(
+            booking.id,
+            item.gear.title,
+            item.gear.owner.id,
+            user.id
+          );
+        } catch (notifError) {
+          console.error('Error sending booking notification:', notifError);
         }
 
         return { booking, item, rentalAmount, depositAmount };

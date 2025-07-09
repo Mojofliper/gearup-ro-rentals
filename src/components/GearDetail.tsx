@@ -5,25 +5,33 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera, ShoppingBag, Star } from 'lucide-react';
+import { 
+  MapPin, Shield, MessageSquare, Calendar as CalendarIcon, ArrowLeft, Camera, 
+  ShoppingBag, Star, Heart, Share2, Clock, Award, CheckCircle, 
+  TrendingUp, Users, Package, CreditCard, AlertCircle, ChevronLeft, ChevronRight, Loader2
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
-import { useGear } from '@/hooks/useGear';
+import { useGearById } from '@/hooks/useGear';
 import { useGearReviews } from '@/hooks/useReviews';
 import { toast } from '@/hooks/use-toast';
 import { BookingModal } from '@/components/BookingModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { GearCardSkeleton } from './LoadingSkeleton';
+import { format } from 'date-fns';
+import { useGearUnavailableDates } from '@/hooks/useGear';
 
 export const GearDetail: React.FC = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const { data: gear, isLoading, error } = useGear(id);
+  const { data: gear, isLoading, error } = useGearById(id);
   const { data: reviewsData } = useGearReviews(id);
-  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const { data: unavailableDates, isLoading: unavailableLoading } = useGearUnavailableDates(id);
+  // Calendar state
+  const [selectedDates, setSelectedDates] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -36,9 +44,9 @@ export const GearDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <Header />
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <GearCardSkeleton />
@@ -56,15 +64,21 @@ export const GearDetail: React.FC = () => {
 
   if (error || !gear) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <Header />
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Echipament negăsit</h2>
-            <p className="text-gray-600">Ne pare rău, echipamentul căutat nu există.</p>
-            <Link to="/browse" className="text-purple-600 hover:underline mt-4 inline-block">
-              Înapoi la căutare
-            </Link>
+            <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="h-12 w-12 text-red-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Echipament negăsit</h2>
+            <p className="text-gray-600 mb-8">Ne pare rău, echipamentul căutat nu există sau a fost șters.</p>
+            <Button asChild className="bg-gradient-to-r from-blue-600 to-purple-600">
+              <Link to="/browse">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Înapoi la căutare
+              </Link>
+            </Button>
           </div>
         </div>
         <Footer />
@@ -73,18 +87,20 @@ export const GearDetail: React.FC = () => {
   }
 
   // Type assertion for gear with relations
-  const gearWithRelations = gear as any;
+  const gearWithRelations = gear as Record<string, unknown>;
 
   // Get owner data from the correct key
-  const owner = gearWithRelations.users;
+  const owner = gearWithRelations.users as { full_name?: string; location?: string; is_verified?: boolean; rating?: number; total_reviews?: number } | undefined;
 
   // Parse JSON fields safely
-  const images = gear.gear_photos?.map((photo: any) => photo.photo_url) || [];
-  const specifications = gear.gear_specifications?.map((spec: any) => `${spec.spec_key}: ${spec.spec_value}`) || [];
+  const images = (gear.gear_photos as { photo_url: string }[] | undefined)?.map((photo) => photo.photo_url) || [];
+  const specifications: string[] = Array.isArray(gear.gear_specifications)
+    ? (gear.gear_specifications as { spec_key: string; spec_value: string }[]).map((spec) => `${spec.spec_key}: ${spec.spec_value}`)
+    : [];
   const includedItems: string[] = [];
 
-  // Use gear.location for the location display
-  const gearLocation = gear.location || 'Necunoscut';
+  // Use gear.pickup_location for the location display
+  const gearLocation = gear.pickup_location || 'Necunoscut';
 
   const handleRentRequest = () => {
     if (!user) {
@@ -92,7 +108,7 @@ export const GearDetail: React.FC = () => {
       return;
     }
 
-    if (selectedDates.length === 0) {
+    if (!selectedDates.from || !selectedDates.to) {
       toast({
         title: 'Selectează datele',
         description: 'Te rugăm să selectezi perioada de închiriere.',
@@ -132,7 +148,7 @@ export const GearDetail: React.FC = () => {
       return;
     }
 
-    if (selectedDates.length === 0) {
+    if (!selectedDates.from || !selectedDates.to) {
       toast({
         title: 'Selectează datele',
         description: 'Te rugăm să selectezi perioada de închiriere.',
@@ -157,7 +173,7 @@ export const GearDetail: React.FC = () => {
       gear: {
         id: gear.id,
         title: gear.title,
-        daily_rate: gear.daily_rate,
+        price_per_day: gear.price_per_day,
         deposit_amount: gear.deposit_amount,
         // Nu salvăm imaginea în localStorage pentru a evita QuotaExceededError
         owner: {
@@ -200,20 +216,20 @@ export const GearDetail: React.FC = () => {
 
           toast({
             title: 'Adăugat în coș!',
-            description: 'Coșul a fost resetat și echipamentul a fost adăugat.',
+            description: 'Echipamentul a fost adăugat în coșul de cumpărături.',
           });
         } catch (retryError) {
           console.error('Retry error:', retryError);
           toast({
             title: 'Eroare la adăugarea în coș',
-            description: 'Nu s-a putut adăuga în coș. Te rugăm să încerci din nou.',
+            description: 'Nu s-a putut adăuga echipamentul în coș. Încearcă din nou.',
             variant: 'destructive',
           });
         }
       } else {
         toast({
           title: 'Eroare la adăugarea în coș',
-          description: 'Nu s-a putut adăuga în coș. Te rugăm să încerci din nou.',
+          description: 'Nu s-a putut adăuga echipamentul în coș. Încearcă din nou.',
           variant: 'destructive',
         });
       }
@@ -221,397 +237,495 @@ export const GearDetail: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    const pricePerDay = gear.daily_rate; // Already in RON
-    return selectedDates.length * pricePerDay;
+    if (!selectedDates.from || !selectedDates.to) return 0;
+    
+    // Calculate days more reliably
+    const startDate = new Date(selectedDates.from);
+    const endDate = new Date(selectedDates.to);
+    
+    // Set both dates to midnight for accurate comparison
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    
+    // Calculate the difference in days
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+    
+    // For single-day bookings (same start and end date), count as 1 day
+    // For multi-day bookings, count the actual difference + 1 (inclusive)
+    const days = daysDiff === 0 ? 1 : daysDiff + 1;
+    
+    return days * Number(gear.price_per_day);
   };
 
-  const depositAmount = gear.deposit_amount || 0;
-      const pricePerDay = gear.daily_rate;
+  // Helper function to get the number of days for display
+  const getDaysCount = () => {
+    if (!selectedDates.from || !selectedDates.to) return 0;
+    
+    const startDate = new Date(selectedDates.from);
+    const endDate = new Date(selectedDates.to);
+    
+    // Set both dates to midnight for accurate comparison
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    
+    // Calculate the difference in days
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+    
+    // For single-day bookings (same start and end date), count as 1 day
+    // For multi-day bookings, count the actual difference + 1 (inclusive)
+    return daysDiff === 0 ? 1 : daysDiff + 1;
+  };
+
+  // Helper function to format days display
+  const formatDaysDisplay = (days: number) => {
+    return days === 1 ? '1 zi' : `${days} zile`;
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ro-RO', {
+      style: 'currency',
+      currency: 'RON',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const formatRating = (rating: number) => {
+    return rating.toFixed(1);
+  };
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const reviews = reviewsData || [];
+  const averageRating = reviews.length > 0 
+    ? reviews.reduce((acc, review) => acc + (review.rating as number), 0) / reviews.length 
+    : 0;
 
   return (
     <ErrorBoundary>
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center space-x-2 mb-6">
-          <Link to="/browse" className="flex items-center text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Înapoi la căutare
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Images & Details */}
-          <div className="lg:col-span-2">
-            {/* Image Gallery */}
-            <div className="mb-6">
-              {images.length > 0 ? (
-                <>
-                  <div className="relative mb-4">
-                    <img
-                      src={images[currentImageIndex]}
-                      alt={gear.title}
-                      className="w-full h-96 object-cover rounded-lg"
-                    />
-                    {gearWithRelations.categories && (
-                      <Badge className="absolute top-4 left-4">{gearWithRelations.categories.name}</Badge>
-                    )}
-                  </div>
-                  <div className="flex space-x-2">
-                    {images.map((image: string, index: number) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentImageIndex(index)}
-                        className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                          index === currentImageIndex ? 'border-primary' : 'border-transparent'
-                        }`}
-                      >
-                        <img src={image} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <Camera className="h-16 w-16 text-gray-400" />
-                </div>
-              )}
-            </div>
-
-            {/* Title & Rating */}
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold mb-2">{gear.title}</h1>
-                              <div className="flex items-center space-x-4">
-                  <div className="text-muted-foreground">
-                    {reviewsData?.totalReviews ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="flex items-center space-x-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star 
-                              key={star} 
-                              className={`h-4 w-4 ${star <= reviewsData.averageRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                            />
-                          ))}
-                        </div>
-                        <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews} recenzii)</span>
-                      </div>
-                    ) : (
-                      'Fără recenzii încă'
-                    )}
-                    {/* Add separator if both reviews and location exist */}
-                    {gearLocation && (
-                      <span className="mx-2 text-gray-400">•</span>
-                    )}
-                    <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-muted-foreground">{gearLocation}</span>
-                    </div>
-                  </div>
-                </div>
-            </div>
-
-            {/* Description */}
-            {gear.description && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Descriere</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{gear.description}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Specifications */}
-            {specifications.length > 0 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Specificații tehnice</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {specifications.map((spec: string, index: number) => (
-                      <li key={index} className="flex items-center space-x-2">
-                        <Camera className="h-4 w-4 text-primary" />
-                        <span>{spec}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* What's Included */}
-            {includedItems.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ce este inclus</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {includedItems.map((item: string, index: number) => (
-                      <li key={index} className="flex items-center space-x-2">
-                        <span className="text-green-600">✓</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Reviews Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Star className="h-5 w-5" />
-                  <span>Recenzii</span>
-                  {reviewsData?.totalReviews && (
-                    <Badge variant="secondary">
-                      {reviewsData.totalReviews} recenzii
-                    </Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {reviewsData?.totalReviews ? (
-                  <div className="space-y-4">
-                    {/* Average Rating */}
-                    <div className="flex items-center space-x-2">
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-5 w-5 ${
-                              star <= reviewsData.averageRating 
-                                ? 'fill-yellow-400 text-yellow-400' 
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="font-semibold">
-                        {reviewsData.averageRating.toFixed(1)} din 5
-                      </span>
-                    </div>
-
-                    {/* Individual Reviews */}
-                    <div className="space-y-4">
-                      {reviewsData.reviews.map((review: any) => (
-                        <div key={review.id} className="border-t pt-4">
-                          <div className="flex items-start space-x-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs">
-                                {review.reviewer?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-medium text-sm">
-                                  {review.reviewer?.full_name || 'Utilizator'}
-                                </span>
-                                <div className="flex">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                      key={star}
-                                      className={`h-3 w-3 ${
-                                        star <= review.rating 
-                                          ? 'fill-yellow-400 text-yellow-400' 
-                                          : 'text-gray-300'
-                                      }`}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                              {review.comment && (
-                                <p className="text-sm text-gray-600 mb-2">{review.comment}</p>
-                              )}
-                              <p className="text-xs text-gray-400">
-                                {new Date(review.created_at).toLocaleDateString('ro-RO')}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Star className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                    <p>Nu există încă recenzii pentru acest echipament.</p>
-                    <p className="text-sm">Fii primul care lasă o recenzie!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <Header />
+        
+        <main className="container mx-auto px-4 py-8">
+          {/* Breadcrumb */}
+          <div className="mb-6">
+            <Button variant="ghost" asChild className="text-gray-600 hover:text-gray-900">
+              <Link to="/browse">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Înapoi la căutare
+              </Link>
+            </Button>
           </div>
 
-          {/* Right Column - Booking */}
-          <div className="space-y-6">
-            {/* Owner Info */}
-            {owner && (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback>
-                        {owner.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold">{owner.full_name || 'Utilizator'}</h3>
-                        {owner.is_verified && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Shield className="h-3 w-3 mr-1" />
-                            Verificat
-                          </Badge>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Image Gallery */}
+              <Card className="bg-white shadow-sm border-0 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="relative aspect-[4/3] bg-gray-100">
+                    {images.length > 0 ? (
+                      <>
+                        <img
+                          src={images[currentImageIndex]}
+                          alt={`${gear.title} - Imagine ${currentImageIndex + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        
+                        {/* Navigation Arrows */}
+                        {images.length > 1 && (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white"
+                              onClick={prevImage}
+                            >
+                              <ChevronLeft className="h-5 w-5" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white"
+                              onClick={nextImage}
+                            >
+                              <ChevronRight className="h-5 w-5" />
+                            </Button>
+                          </>
                         )}
+
+                        {/* Image Counter */}
+                        {images.length > 1 && (
+                          <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                            {currentImageIndex + 1} / {images.length}
+                          </div>
+                        )}
+
+                        {/* Thumbnail Navigation */}
+                        {images.length > 1 && (
+                          <div className="absolute bottom-4 left-4 flex space-x-2">
+                            {images.map((image, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setCurrentImageIndex(index)}
+                                className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                                  index === currentImageIndex 
+                                    ? 'border-blue-500 scale-110' 
+                                    : 'border-white/50 hover:border-white'
+                                }`}
+                              >
+                                <img
+                                  src={image}
+                                  alt={`Thumbnail ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500">Nu sunt imagini disponibile</p>
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {reviewsData?.totalReviews ? (
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Gear Information */}
+              <Card className="bg-white shadow-sm border-0">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                          {(gear.categories as { name?: string })?.name || 'Echipament'}
+                        </Badge>
+                        <Badge variant={gear.status === 'available' ? "default" : "destructive"}>
+                          {gear.status === 'available' ? 'Disponibil' : 'Indisponibil'}
+                        </Badge>
+                      </div>
+                      <h1 className="text-3xl font-bold text-gray-900">{gear.title}</h1>
+                      <div className="flex items-center space-x-4 text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>{gearLocation}</span>
+                        </div>
+                        {reviews.length > 0 && (
                           <div className="flex items-center space-x-1">
                             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews} recenzii)</span>
+                            <span>{formatRating(averageRating)} ({reviews.length} recenzii)</span>
                           </div>
-                        ) : (
-                          'Fără recenzii încă'
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Membru din 2025
-                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" className="h-10 w-10 p-0 rounded-full">
+                        <Heart className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-10 w-10 p-0 rounded-full">
+                        <Share2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={handleMessage}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Trimite mesaj
-                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Descriere</h3>
+                    <p className="text-gray-700 leading-relaxed">{gear.description as string}</p>
+                  </div>
+
+                  {/* Features */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Caracteristici</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                        <Shield className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-medium">Asigurat</span>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                        <Clock className="h-5 w-5 text-blue-600" />
+                        <span className="text-sm font-medium">24h răspuns</span>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-purple-600" />
+                        <span className="text-sm font-medium">Verificat</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Specifications */}
+                  {specifications.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Specificații</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {specifications.map((spec, index) => (
+                          <div key={index} className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-sm text-gray-600">{spec}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Owner Information */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Despre proprietar</h3>
+                    <Card className="bg-gray-50 border-0">
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-4">
+                          <Avatar className="h-16 w-16">
+                            <AvatarImage src="" alt={owner?.full_name as string} />
+                            <AvatarFallback className="text-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                              {(owner?.full_name as string)?.charAt(0)?.toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h4 className="font-semibold text-lg">{owner?.full_name as string}</h4>
+                              {owner?.is_verified && (
+                                <CheckCircle className="h-5 w-5 text-blue-500" />
+                              )}
+                            </div>
+                            <p className="text-gray-600 mb-2">{owner?.location as string}</p>
+                            <div className="flex items-center space-x-4 text-sm text-gray-500">
+                              <div className="flex items-center space-x-1">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <span>{formatRating(owner?.rating as number)}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Users className="h-4 w-4" />
+                                <span>{owner?.total_reviews as number} recenzii</span>
+                              </div>
+                            </div>
+                          </div>
+                          <Button variant="outline" onClick={handleMessage}>
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Mesaj
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Reviews */}
+                  {reviews.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Recenzii</h3>
+                      <div className="space-y-4">
+                        {reviews.slice(0, 3).map((review) => (
+                          <div key={String((review as { id?: string | number }).id)} className="p-4 border rounded-lg">
+                            <div className="flex items-center space-x-2 mb-2">
+                              {[...Array(5)].map((_, i) => (
+                                <Star 
+                                  key={i} 
+                                  className={`h-4 w-4 ${i < Number((review as { rating?: number }).rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                                />
+                              ))}
+                              <span className="text-sm text-gray-500">
+                                {format(new Date(String((review as { created_at?: string }).created_at)), 'dd MMM yyyy')}
+                              </span>
+                            </div>
+                            <p className="text-gray-700">{String((review as { comment?: string }).comment)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            )}
+            </div>
 
-            {/* Booking Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Rezervare</span>
+            {/* Booking Sidebar */}
+            <div className="space-y-6">
+              {/* Booking Card */}
+              <Card className="bg-white shadow-sm border-0 sticky top-8">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <CalendarIcon className="h-5 w-5 text-blue-600" />
+                    Rezervare
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Pricing */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formatPrice(Number(gear.price_per_day))}
+                      </span>
+                      <span className="text-gray-500">pe zi</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Depozit</span>
+                      <span className="font-medium">{formatPrice(Number(gear.deposit_amount))}</span>
+                    </div>
+                  </div>
+
+                  {/* Date Selection */}
                   <div>
-                    <span className="text-2xl font-bold">{pricePerDay} RON</span>
-                    <span className="text-sm text-muted-foreground">/zi</span>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    <CalendarIcon className="h-4 w-4 inline mr-1" />
-                    Selectează datele
-                  </label>
-                  <Calendar
-                    mode="multiple"
-                    selected={selectedDates}
-                    onSelect={(dates) => setSelectedDates(dates || [])}
-                    className="rounded-md border"
-                  />
-                </div>
-
-                {selectedDates.length > 0 && (
-                  <div className="space-y-2">
-                    <Separator />
-                    <div className="flex justify-between text-sm">
-                      <span>{pricePerDay} RON × {selectedDates.length} zile</span>
-                      <span>{calculateTotal()} RON</span>
-                    </div>
-                    {depositAmount > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span>Garanție</span>
-                        <span>{depositAmount} RON</span>
+                    <h4 className="font-medium mb-3">Selectează perioada</h4>
+                    {unavailableLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="animate-spin h-6 w-6 text-blue-500" />
+                        <span className="ml-2 text-blue-500">Se încarcă datele...</span>
                       </div>
-                    )}
-                    <Separator />
-                    <div className="flex justify-between font-semibold">
-                      <span>Total</span>
-                      <span>{calculateTotal() + depositAmount} RON</span>
-                    </div>
-                    {depositAmount > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        * Garanția se returnează la finalul închirierii
-                      </p>
+                    ) : (
+                      <Calendar
+                        mode="range"
+                        selected={selectedDates}
+                        onSelect={range => setSelectedDates({ from: range?.from, to: range?.to })}
+                        className="rounded-md border"
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const compareDate = new Date(date);
+                          compareDate.setHours(0, 0, 0, 0);
+                          // Disable past dates
+                          if (compareDate < today) return true;
+                          // Disable unavailable dates
+                          if (unavailableDates && unavailableDates.some((d) => {
+                            const dDate = new Date(d.unavailable_date);
+                            dDate.setHours(0, 0, 0, 0);
+                            return dDate.getTime() === compareDate.getTime();
+                          })) return true;
+                          return false;
+                        }}
+                      />
                     )}
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <Button 
-                    className="w-full" 
-                    onClick={handleRentRequest}
-                    disabled={gear.status !== 'available'}
-                  >
-                    {gear.status === 'available' ? 'Solicită închirierea' : 'Indisponibil'}
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    className="w-full" 
-                    onClick={handleAddToCart}
-                    disabled={gear.status !== 'available'}
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    Adaugă în coș
-                  </Button>
-                </div>
+                  {/* Total Calculation */}
+                  {!!selectedDates.from && !!selectedDates.to && (
+                    <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Perioada</span>
+                        <span className="font-medium">
+                          {formatDaysDisplay(getDaysCount())}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Total închiriere</span>
+                        <span className="font-medium">{formatPrice(Number(calculateTotal()))}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Depozit</span>
+                        <span className="font-medium">{formatPrice(Number(gear.deposit_amount))}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between items-center font-semibold text-lg">
+                        <span>Total de plată</span>
+                        <span className="text-blue-600">{formatPrice(Number(calculateTotal()) + Number(gear.deposit_amount))}</span>
+                      </div>
+                    </div>
+                  )}
 
-                <p className="text-xs text-muted-foreground text-center">
-                  Nu vei fi taxat încă. Proprietarul trebuie să confirme disponibilitatea.
-                </p>
-              </CardContent>
-            </Card>
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    {gear.status === 'available' ? (
+                      <>
+                        <Button 
+                          onClick={handleRentRequest}
+                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                          disabled={!selectedDates.from || !selectedDates.to}
+                        >
+                          <ShoppingBag className="h-4 w-4 mr-2" />
+                          Închiriază acum
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleAddToCart}
+                          className="w-full"
+                          disabled={!selectedDates.from || !selectedDates.to}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Adaugă în coș
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="outline" className="w-full" disabled>
+                        Indisponibil
+                      </Button>
+                    )}
+                  </div>
 
-            {/* Safety Info */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Shield className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Siguranță GearUp</span>
-                </div>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Plăți securizate prin Stripe</li>
-                  <li>• Verificarea identității</li>
-                  <li>• Suport 24/7</li>
-                  <li>• Politică de rambursare</li>
-                </ul>
-              </CardContent>
-            </Card>
+                  {/* Trust Indicators */}
+                  <div className="space-y-3 pt-4 border-t">
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Shield className="h-4 w-4 text-green-600" />
+                      <span>Plată securizată</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span>Răspuns în 24h</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Award className="h-4 w-4 text-purple-600" />
+                      <span>Echipament verificat</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Similar Gear */}
+              <Card className="bg-white shadow-sm border-0">
+                <CardHeader>
+                  <CardTitle className="text-lg">Echipamente similare</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Nu sunt echipamente similare disponibile</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        </main>
+
+        <Footer />
+
+        {/* Modals */}
+        <AuthModal 
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          mode={authMode}
+          onSwitchMode={setAuthMode}
+        />
+
+        {isBookingModalOpen && (
+          <BookingModal
+            isOpen={isBookingModalOpen}
+            onClose={() => setIsBookingModalOpen(false)}
+            gear={gear}
+            selectedDates={(() => {
+              if (!selectedDates.from) return [];
+              if (!selectedDates.to) return [selectedDates.from];
+              // Generate all dates in range
+              const dates = [];
+              let d = new Date(selectedDates.from);
+              while (d <= selectedDates.to) {
+                dates.push(new Date(d));
+                d.setDate(d.getDate() + 1);
+              }
+              return dates;
+            })()}
+            pricePerDay={Number(gear.price_per_day)}
+            depositAmount={Number(gear.deposit_amount)}
+          />
+        )}
       </div>
-
-      <Footer />
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        mode={authMode}
-        onSwitchMode={setAuthMode}
-      />
-
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        gear={gear}
-        selectedDates={selectedDates}
-        pricePerDay={pricePerDay}
-        depositAmount={depositAmount}
-      />
-    </div>
     </ErrorBoundary>
   );
 };

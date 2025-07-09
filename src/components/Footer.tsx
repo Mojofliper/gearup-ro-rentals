@@ -66,6 +66,7 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
           <p>&copy; 2025 GearUp. Toate drepturile rezervate. Made with ❤️ in Romania</p>
+          <p className="mt-2">Made by <span className="font-semibold text-white">FluX Dev Designs</span></p>
         </div>
       </div>
     </footer>

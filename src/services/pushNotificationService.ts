@@ -7,7 +7,7 @@ export interface PushNotification {
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   actions?: NotificationAction[];
   requireInteraction?: boolean;
   silent?: boolean;
@@ -19,7 +19,7 @@ interface NotificationAction {
   icon?: string;
 }
 
-class PushNotificationService {
+export class PushNotificationService {
   private isSupported: boolean;
   private permission: NotificationPermission = 'default';
   private subscription: PushSubscription | null = null;

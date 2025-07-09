@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  booking: any;
+  booking: Record<string, unknown>;
 }
 
 export const ReviewModal: React.FC<ReviewModalProps> = ({
@@ -55,7 +55,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         });
         onClose();
       },
-      onError: (error: any) => {
+      onError: (error: unknown) => {
         toast({
           title: 'Eroare',
           description: 'Nu s-a putut trimite recenzia. Te rugăm să încerci din nou.',

@@ -7,8 +7,8 @@ import { toast } from '@/hooks/use-toast';
 
 interface SecureFormProps {
   children: React.ReactNode;
-  onSubmit: (data: Record<string, any>) => Promise<void>;
-  initialData?: Record<string, any>;
+  onSubmit: (data: Record<string, unknown>) => Promise<void>;
+  initialData?: Record<string, unknown>;
   requiredFields?: string[];
 }
 
@@ -65,7 +65,7 @@ export const SecureForm: React.FC<SecureFormProps> = ({
     }
   };
 
-  const updateFormData = (updates: Record<string, any>) => {
+  const updateFormData = (updates: Record<string, unknown>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
@@ -78,7 +78,7 @@ export const SecureForm: React.FC<SecureFormProps> = ({
             updateFormData,
             validationErrors: errors,
             isSubmitting
-          } as any);
+          } as unknown);
         }
         return child;
       })}

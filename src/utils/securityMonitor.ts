@@ -1,7 +1,7 @@
 interface SecurityEvent {
   type: 'auth_failure' | 'rate_limit_exceeded' | 'suspicious_input' | 'session_expired';
   userId?: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   timestamp: Date;
 }
 

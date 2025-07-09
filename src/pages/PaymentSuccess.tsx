@@ -16,6 +16,8 @@ import {
 import { PaymentService } from '@/services/paymentService';
 import { formatAmountForDisplay } from '@/integrations/stripe/client';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface PaymentSuccessData {
   booking: Record<string, unknown> | null;
@@ -29,6 +31,7 @@ export const PaymentSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(null);
   const [error, setError] = useState<string>('');
+  const { notifyPaymentCompleted, notifyPaymentReceived } = useNotifications();
 
   const sessionId = searchParams.get('session_id');
   const bookingId = searchParams.get('booking_id');
@@ -62,6 +65,50 @@ export const PaymentSuccess: React.FC = () => {
           } catch (error) {
             // Escrow transaction might not exist yet
             console.log('No escrow transaction found yet');
+          }
+        }
+
+        // Update booking status to confirmed if payment was successful
+        if (booking && booking.payment_status !== 'paid') {
+          try {
+            const { error: updateError } = await supabase
+              .from('bookings')
+              .update({
+                status: 'confirmed',
+                payment_status: 'paid'
+              })
+              .eq('id', booking.id);
+
+            if (updateError) {
+              console.error('Error updating booking status:', updateError);
+            } else {
+              console.log('Booking status updated to confirmed');
+              // Refresh booking data
+              booking = await PaymentService.getBookingById(bookingId!);
+              
+              // Send notifications
+              try {
+                if (booking) {
+                  // Notify renter that payment was completed
+                  await notifyPaymentCompleted(
+                    booking.id,
+                    booking.total_amount || 0,
+                    booking.renter_id
+                  );
+                  
+                  // Notify owner that payment was received
+                  await notifyPaymentReceived(
+                    booking.id,
+                    booking.total_amount || 0,
+                    booking.owner_id
+                  );
+                }
+              } catch (notifError) {
+                console.error('Error sending payment notifications:', notifError);
+              }
+            }
+          } catch (error) {
+            console.error('Error updating booking status:', error);
           }
         }
 

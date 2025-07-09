@@ -34,8 +34,8 @@ export interface EscrowTransaction {
 }
 
 export interface EscrowPaymentIntent {
-  clientSecret: string;
-  paymentIntentId: string;
+  url: string;
+  sessionId: string;
   amount: number;
   platformFee: number;
   escrowStatus: string;
@@ -65,7 +65,7 @@ export const useEscrowPayments = () => {
       
       toast.success('Stripe Connect setup initiated');
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Stripe Connect setup error:', error);
       toast.error('Failed to setup Stripe Connect account');
       return null;
@@ -85,7 +85,7 @@ export const useEscrowPayments = () => {
       const account = await PaymentService.getConnectedAccountStatus(user.id);
       setConnectedAccount(account as ConnectedAccountStatus);
       return account;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to get connected account status:', error);
       return null;
     } finally {
@@ -114,10 +114,10 @@ export const useEscrowPayments = () => {
       
       toast.success('Payment intent created successfully');
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Escrow payment intent error:', error);
       
-      if (error.message?.includes('Owner account not ready')) {
+      if ((error as Error).message?.includes('Owner account not ready')) {
         toast.error('Owner needs to complete payment setup first');
       } else {
         toast.error('Failed to create payment intent');
@@ -136,7 +136,7 @@ export const useEscrowPayments = () => {
       const transaction = await PaymentService.getEscrowTransaction(bookingId);
       setEscrowTransaction(transaction as EscrowTransaction);
       return transaction;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to get escrow transaction:', error);
       return null;
     } finally {
@@ -157,7 +157,7 @@ export const useEscrowPayments = () => {
   // Release escrow funds
   const releaseEscrowFunds = useCallback(async (
     bookingId: string,
-    releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' = 'automatic',
+    releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'pickup_confirmed' | 'completed' = 'automatic',
     depositToOwner: boolean = false
   ) => {
     if (!user) {
@@ -171,7 +171,7 @@ export const useEscrowPayments = () => {
       
       toast.success('Escrow funds released successfully');
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to release escrow funds:', error);
       toast.error('Failed to release escrow funds');
       return null;

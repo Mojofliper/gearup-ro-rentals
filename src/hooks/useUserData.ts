@@ -1,125 +1,139 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUserApi, useBookingApi, useGearApi, useReviewApi } from './useApi';
 import { useAuth } from '@/contexts/AuthContext';
-import { Database } from '@/integrations/supabase/types';
+import { useAuthQuery, useAuthMutation } from './useAuthQuery';
 
-type Profile = Database['public']['Tables']['profiles']['Row'];
+type Profile = Record<string, unknown>;
 
 export const useCurrentUser = () => {
-  const { getCurrentUser, loading, error } = useUserApi();
+  const { getCurrentUser } = useUserApi();
   
-  return useQuery({
-    queryKey: ['current-user'],
-    queryFn: async () => {
+  return useAuthQuery(
+    ['current-user'],
+    async () => {
       return await getCurrentUser();
     },
-  });
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes for user data
+    }
+  );
 };
 
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { updateProfile, loading, error } = useUserApi();
+  const { updateProfile } = useUserApi();
   
-  return useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
+  return useAuthMutation(
+    async (updates: Partial<Profile>) => {
       if (!user?.id) throw new Error('User not authenticated');
       return await updateProfile(user.id, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['current-user'] });
-      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
-    },
-  });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['current-user'] });
+        queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      },
+    }
+  );
 };
 
 export const useDashboardOverview = () => {
   const { user } = useAuth();
-  const { getDashboardOverview, loading, error } = useUserApi();
+  const { getDashboardOverview } = useUserApi();
   
-  return useQuery({
-    queryKey: ['dashboard-overview', user?.id],
-    queryFn: async () => {
+  return useAuthQuery(
+    ['dashboard-overview', user?.id],
+    async () => {
       if (!user?.id) return null;
       return await getDashboardOverview(user.id);
     },
-    enabled: !!user?.id,
-  });
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes for dashboard data
+    }
+  );
 };
-
-// Note: uploadVerificationDocument is not yet implemented in the API service
-// Will be added in a future update
 
 export const useUserBookings = () => {
   const { user } = useAuth();
-  const { getUserBookings, loading, error } = useBookingApi();
+  const { getUserBookings } = useBookingApi();
   
-  return useQuery({
-    queryKey: ['user-bookings', user?.id],
-    queryFn: async () => {
+  return useAuthQuery(
+    ['user-bookings', user?.id],
+    async () => {
       if (!user) return [];
       return await getUserBookings(user.id);
     },
-    enabled: !!user,
-  });
+    {
+      enabled: !!user,
+      staleTime: 1 * 60 * 1000, // 1 minute for bookings
+    }
+  );
 };
 
 export const useUserListings = () => {
   const { user } = useAuth();
-  const { getAvailableGear, loading, error } = useGearApi();
+  const { getMyEquipment } = useUserApi();
   
-  return useQuery({
-    queryKey: ['user-listings', user?.id],
-    queryFn: async () => {
+  return useAuthQuery(
+    ['user-listings', user?.id],
+    async () => {
       if (!user) return [];
-      // Filter gear by owner_id - this would need to be added to the API service
-      const allGear = await getAvailableGear();
-      return allGear?.filter(gear => gear.owner_id === user.id) || [];
+      const result = await getMyEquipment(user.id);
+      return result || [];
     },
-    enabled: !!user,
-  });
+    {
+      enabled: !!user,
+      staleTime: 2 * 60 * 1000, // 2 minutes for listings
+    }
+  );
 };
 
 export const useUserReviews = () => {
   const { user } = useAuth();
-  const { getUserReviews, loading, error } = useReviewApi();
+  const { getUserReviews } = useReviewApi();
   
-  return useQuery({
-    queryKey: ['user-reviews', user?.id],
-    queryFn: async () => {
+  return useAuthQuery(
+    ['user-reviews', user?.id],
+    async () => {
       if (!user) return [];
       return await getUserReviews(user.id);
     },
-    enabled: !!user,
-  });
+    {
+      enabled: !!user,
+      staleTime: 2 * 60 * 1000, // 2 minutes for reviews
+    }
+  );
 };
 
 export const useUpdateReview = () => {
   const queryClient = useQueryClient();
-  const { updateReview, loading, error } = useReviewApi();
+  const { updateReview } = useReviewApi();
   
-  return useMutation({
-    mutationFn: async ({ reviewId, updates }: {
+  return useAuthMutation(
+    async ({ reviewId, updates }: {
       reviewId: string;
       updates: { rating?: number; comment?: string };
     }) => {
       return await updateReview(reviewId, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
-    },
-  });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
+        queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+      },
+    }
+  );
 };
 
 export const useUserStats = () => {
   const { user } = useAuth();
-  const { getDashboardOverview, loading, error } = useUserApi();
+  const { getDashboardOverview } = useUserApi();
   const { getUserRatingStats } = useReviewApi();
   
-  return useQuery({
-    queryKey: ['user-stats', user?.id],
-    queryFn: async () => {
+  return useAuthQuery(
+    ['user-stats', user?.id],
+    async () => {
       if (!user) return {
         totalRentals: 0,
         totalListings: 0,
@@ -141,6 +155,9 @@ export const useUserStats = () => {
         joinDate: user.created_at ? new Date(user.created_at).getFullYear().toString() : new Date().getFullYear().toString()
       };
     },
-    enabled: !!user,
-  });
+    {
+      enabled: !!user,
+      staleTime: 5 * 60 * 1000, // 5 minutes for stats
+    }
+  );
 };

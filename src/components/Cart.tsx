@@ -16,9 +16,9 @@ interface CartItem {
   gear: {
     id: string;
     title: string;
-    daily_rate: number;
+    price_per_day: number;
     deposit_amount: number;
-    gear_photos: any[];
+    gear_photos: Array<Record<string, unknown>>;
     owner: {
       full_name: string;
       location: string;
@@ -47,9 +47,9 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
       try {
         const parsed = JSON.parse(savedCart);
         // Convert date strings back to Date objects
-        const itemsWithDates = parsed.map((item: any) => ({
+        const itemsWithDates = parsed.map((item: Record<string, unknown>) => ({
           ...item,
-          selectedDates: item.selectedDates.map((dateStr: string) => new Date(dateStr))
+          selectedDates: (item.selectedDates as string[]).map((dateStr: string) => new Date(dateStr))
         }));
         setCartItems(itemsWithDates);
       } catch (error) {
@@ -90,7 +90,7 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
   };
 
   const calculateItemTotal = (item: CartItem) => {
-    const pricePerDay = item.gear.daily_rate; // Price is already in RON
+    const pricePerDay = item.gear.price_per_day; // Price is already in RON
     const depositAmount = item.gear.deposit_amount; // Deposit is already in RON
     const rentalTotal = item.selectedDates.length * pricePerDay;
     return rentalTotal + depositAmount;
@@ -179,7 +179,7 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                       <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                         {item.gear.gear_photos && item.gear.gear_photos.length > 0 ? (
                           <img
-                            src={item.gear.gear_photos[0]}
+                            src={item.gear.gear_photos[0] as string}
                             alt={item.gear.title}
                             className="w-full h-full object-cover"
                           />
@@ -218,7 +218,7 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                             <div className="flex items-center space-x-4 mb-3">
                               <div>
                                 <span className="text-lg font-bold text-gray-800">
-                                  {item.gear.daily_rate} RON
+                                  {item.gear.price_per_day} RON
                                 </span>
                                 <span className="text-sm text-gray-500">/zi</span>
                               </div>

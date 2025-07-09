@@ -20,8 +20,8 @@ export const useApi = <T>() => {
         setData(result.data);
         setError(null);
       }
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'An unexpected error occurred', 'UNKNOWN_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'An unexpected error occurred', 'UNKNOWN_ERROR'));
       setData(null);
     } finally {
       setLoading(false);
@@ -47,15 +47,15 @@ const useUserApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get user', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get user', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const updateProfile = useCallback(async (userId: string, updates: any) => {
+  const updateProfile = useCallback(async (userId: string, updates: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -66,8 +66,8 @@ const useUserApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to update profile', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to update profile', 'UPDATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -85,8 +85,8 @@ const useUserApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get dashboard', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get dashboard', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -104,8 +104,8 @@ const useUserApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get verification status', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get verification status', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -123,8 +123,8 @@ const useUserApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get my equipment', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get my equipment', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -142,8 +142,8 @@ const useUserApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get my bookings', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get my bookings', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -167,7 +167,7 @@ const useGearApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const getAvailableGear = useCallback(async (filters?: any) => {
+  const getAvailableGear = useCallback(async (filters?: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -178,8 +178,8 @@ const useGearApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get gear', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get gear', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -197,15 +197,15 @@ const useGearApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get gear item', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get gear item', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const createGear = useCallback(async (gearData: any) => {
+  const createGear = useCallback(async (gearData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -220,16 +220,16 @@ const useGearApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('useGearApi.createGear exception:', err);
-      setError(new ApiError(err.message || 'Failed to create gear', 'CREATE_ERROR'));
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create gear', 'CREATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const updateGear = useCallback(async (gearId: string, updates: any) => {
+  const updateGear = useCallback(async (gearId: string, updates: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -240,8 +240,8 @@ const useGearApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to update gear', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to update gear', 'UPDATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -256,12 +256,12 @@ const useGearApi = () => {
       const result = await api.gear.deleteGear(gearId);
       if (result.error) {
         setError(result.error);
-        return false;
+        throw result.error;
       }
       return true;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to delete gear', 'DELETE_ERROR'));
-      return false;
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to delete gear', 'DELETE_ERROR'));
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -278,8 +278,8 @@ const useGearApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get categories', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get categories', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -297,15 +297,15 @@ const useGearApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get category', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get category', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const createCategory = useCallback(async (categoryData: any) => {
+  const createCategory = useCallback(async (categoryData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -316,15 +316,15 @@ const useGearApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to create category', 'CREATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create category', 'CREATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const searchGearWithFilters = useCallback(async (filters: any) => {
+  const searchGearWithFilters = useCallback(async (filters: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -335,8 +335,8 @@ const useGearApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to search gear', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to search gear', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -354,8 +354,8 @@ const useGearApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to search by location', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to search by location', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -373,8 +373,8 @@ const useGearApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to search by brand/model', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to search by brand/model', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -392,8 +392,8 @@ const useGearApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get featured gear', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get featured gear', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -423,7 +423,7 @@ const useBookingApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const createBooking = useCallback(async (bookingData: any) => {
+  const createBooking = useCallback(async (bookingData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -434,8 +434,8 @@ const useBookingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to create booking', 'CREATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create booking', 'CREATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -453,8 +453,8 @@ const useBookingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to accept booking', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to accept booking', 'UPDATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -472,8 +472,8 @@ const useBookingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get rental dashboard', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get rental dashboard', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -491,8 +491,8 @@ const useBookingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to confirm return', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to confirm return', 'UPDATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -510,8 +510,8 @@ const useBookingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to complete return', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to complete return', 'UPDATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -529,15 +529,15 @@ const useBookingApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get user bookings', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get user bookings', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const updateBooking = useCallback(async (bookingId: string, updates: any) => {
+  const updateBooking = useCallback(async (bookingId: string, updates: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     try {
@@ -547,8 +547,46 @@ const useBookingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to update booking', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to update booking', 'UPDATE_ERROR'));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateBookingStatus = useCallback(async (bookingId: string, status: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.booking.updateBookingStatus(bookingId, status);
+      if (result.error) {
+        setError(result.error);
+        return null;
+      }
+      return result.data;
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to update booking status', 'UPDATE_ERROR'));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const completeRental = useCallback(async (bookingId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.booking.completeRental(bookingId);
+      if (result.error) {
+        setError(result.error);
+        return null;
+      }
+      return result.data;
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to complete rental', 'COMPLETION_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -563,6 +601,8 @@ const useBookingApi = () => {
     completeReturn,
     getUserBookings,
     updateBooking,
+    updateBookingStatus,
+    completeRental,
     loading,
     error
   };
@@ -584,8 +624,8 @@ const usePaymentApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to create payment intent', 'PAYMENT_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create payment intent', 'PAYMENT_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -603,8 +643,8 @@ const usePaymentApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get transaction details', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get transaction details', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -622,8 +662,8 @@ const usePaymentApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get escrow status', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get escrow status', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -641,8 +681,8 @@ const usePaymentApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to create connected account', 'CONNECT_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create connected account', 'CONNECT_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -660,15 +700,15 @@ const usePaymentApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get connected account status', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get connected account status', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const releaseEscrowFunds = useCallback(async (releaseData: any) => {
+  const releaseEscrowFunds = useCallback(async (releaseData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -679,8 +719,8 @@ const usePaymentApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to release escrow funds', 'ESCROW_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to release escrow funds', 'ESCROW_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -698,8 +738,8 @@ const usePaymentApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to process refund', 'REFUND_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to process refund', 'REFUND_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -724,7 +764,7 @@ const useMessagingApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const sendMessage = useCallback(async (bookingId: string, content: string, messageType: 'text' | 'image' = 'text') => {
+  const sendMessage = useCallback(async (bookingId: string, content: string, messageType: 'text' | 'image' | 'system' = 'text') => {
     setLoading(true);
     setError(null);
     
@@ -735,8 +775,8 @@ const useMessagingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to send message', 'SEND_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to send message', 'SEND_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -754,8 +794,8 @@ const useMessagingApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get messages', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get messages', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -773,15 +813,15 @@ const useMessagingApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get conversations', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get conversations', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const createConversation = useCallback(async (conversationData: any) => {
+  const createConversation = useCallback(async (conversationData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -792,8 +832,8 @@ const useMessagingApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to create conversation', 'CREATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create conversation', 'CREATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -811,9 +851,28 @@ const useMessagingApi = () => {
         return 0;
       }
       return result.data || 0;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get unread count', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get unread count', 'FETCH_ERROR'));
       return 0;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteConversation = useCallback(async (bookingId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.messaging.deleteConversation(bookingId);
+      if (result.error) {
+        setError(result.error);
+        return false;
+      }
+      return true;
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to delete conversation', 'DELETE_ERROR'));
+      return false;
     } finally {
       setLoading(false);
     }
@@ -825,6 +884,7 @@ const useMessagingApi = () => {
     getUserConversations,
     createConversation,
     getUnreadMessageCount,
+    deleteConversation,
     loading,
     error
   };
@@ -835,7 +895,7 @@ const useReviewApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const createReview = useCallback(async (reviewData: any) => {
+  const createReview = useCallback(async (reviewData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -846,8 +906,8 @@ const useReviewApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to create review', 'CREATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create review', 'CREATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -865,15 +925,15 @@ const useReviewApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get gear reviews', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get gear reviews', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const updateReview = useCallback(async (reviewId: string, updates: any) => {
+  const updateReview = useCallback(async (reviewId: string, updates: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -884,9 +944,28 @@ const useReviewApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to update review', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to update review', 'UPDATE_ERROR'));
       return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteReview = useCallback(async (reviewId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.review.deleteReview(reviewId);
+      if (result.error) {
+        setError(result.error);
+        return false;
+      }
+      return true;
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to delete review', 'DELETE_ERROR'));
+      return false;
     } finally {
       setLoading(false);
     }
@@ -903,8 +982,8 @@ const useReviewApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get user reviews', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get user reviews', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -922,8 +1001,8 @@ const useReviewApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get user rating stats', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get user rating stats', 'FETCH_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -934,6 +1013,7 @@ const useReviewApi = () => {
     createReview,
     getGearReviews,
     updateReview,
+    deleteReview,
     getUserReviews,
     getUserRatingStats,
     loading,
@@ -946,7 +1026,7 @@ const useClaimsApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const createClaim = useCallback(async (claimData: any) => {
+  const createClaim = useCallback(async (claimData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -957,8 +1037,8 @@ const useClaimsApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to create claim', 'CREATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create claim', 'CREATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -976,15 +1056,15 @@ const useClaimsApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get claims', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get claims', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const updateClaimStatus = useCallback(async (claimId: string, updates: any) => {
+  const updateClaimStatus = useCallback(async (claimId: string, updates: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -995,15 +1075,15 @@ const useClaimsApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to update claim status', 'UPDATE_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to update claim status', 'UPDATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const uploadEvidence = useCallback(async (claimId: string, evidenceData: any) => {
+  const uploadEvidence = useCallback(async (claimId: string, evidenceData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -1014,8 +1094,8 @@ const useClaimsApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to upload evidence', 'UPLOAD_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to upload evidence', 'UPLOAD_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -1033,8 +1113,8 @@ const useClaimsApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get claim evidence', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get claim evidence', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -1068,8 +1148,8 @@ const useNotificationApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get notifications', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get notifications', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);
@@ -1087,8 +1167,8 @@ const useNotificationApi = () => {
         return 0;
       }
       return result.data || 0;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get unread count', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get unread count', 'FETCH_ERROR'));
       return 0;
     } finally {
       setLoading(false);
@@ -1108,7 +1188,7 @@ const usePhotoApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const uploadHandoverPhoto = useCallback(async (photoData: any) => {
+  const uploadHandoverPhoto = useCallback(async (photoData: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     
@@ -1119,8 +1199,8 @@ const usePhotoApi = () => {
         return null;
       }
       return result.data;
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to upload photo', 'UPLOAD_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to upload photo', 'UPLOAD_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -1138,8 +1218,8 @@ const usePhotoApi = () => {
         return [];
       }
       return result.data || [];
-    } catch (err: any) {
-      setError(new ApiError(err.message || 'Failed to get photos', 'FETCH_ERROR'));
+    } catch (err: unknown) {
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to get photos', 'FETCH_ERROR'));
       return [];
     } finally {
       setLoading(false);

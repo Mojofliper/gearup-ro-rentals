@@ -70,7 +70,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         description: 'Avatar actualizat cu succes!',
         variant: 'default',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading avatar:', error);
       toast({
         title: 'Eroare',

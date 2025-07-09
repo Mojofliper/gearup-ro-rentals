@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface OwnerClaimFormProps {
   bookingId: string;
@@ -13,6 +14,7 @@ interface OwnerClaimFormProps {
 // Minimal claim form component (owner side)
 export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSubmitted }) => {
   const { user } = useAuth();
+  const { notifyClaimSubmitted } = useNotifications();
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,7 +48,7 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
 
     try {
       setLoading(true);
-      let evidenceUrls: string[] = [];
+      const evidenceUrls: string[] = [];
 
       if (files && files.length > 0) {
         const uploadPromises = Array.from(files).map(async (file) => {
@@ -67,11 +69,33 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
         evidence_urls: evidenceUrls,
       });
       if (insertError) throw insertError;
+
+      // Send notification about claim submission
+      try {
+        // Get booking details for notification
+        const { data: booking } = await supabase
+          .from('bookings')
+          .select('gear:gear_id(title), owner_id, renter_id')
+          .eq('id', bookingId)
+          .single();
+
+        if (booking) {
+          await notifyClaimSubmitted(
+            bookingId,
+            (booking.gear as Record<string, unknown>)?.title || 'Echipament',
+            booking.owner_id,
+            booking.renter_id
+          );
+        }
+      } catch (notificationError) {
+        console.error('Error sending claim notification:', notificationError);
+      }
+
       toast.success('Claim submitted');
       setDescription('');
       setFiles(null);
       onSubmitted?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       toast.error('Failed to submit claim');
     } finally {
@@ -93,4 +117,7 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
       </Button>
     </form>
   );
-}; 
+};
+
+// Add default export for better compatibility
+export default OwnerClaimForm; 

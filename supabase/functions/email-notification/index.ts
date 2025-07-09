@@ -10,7 +10,7 @@ interface EmailData {
   to: string;
   subject: string;
   template: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 interface BookingEmailData {
@@ -18,6 +18,8 @@ interface BookingEmailData {
   eventType: 'booking_confirmed' | 'booking_cancelled' | 'pickup_reminder' | 'return_reminder' | 'payment_received' | 'claim_submitted' | 'claim_updated';
   userId?: string;
 }
+
+const adminEmail = Deno.env.get('ADMIN_EMAIL');
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -163,11 +165,10 @@ serve(async (req) => {
 
       case 'claim_submitted':
         // Send to admin and owner
-        recipients = [booking.owner.email]
-        // TODO: Add admin email from environment variable
-        const adminEmail = Deno.env.get('ADMIN_EMAIL')
+        recipients = [booking.owner.email];
+        // Use adminEmail from above
         if (adminEmail) {
-          recipients.push(adminEmail)
+          recipients.push(adminEmail);
         }
         emailData = {
           to: recipients.join(','),

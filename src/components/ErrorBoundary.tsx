@@ -2,7 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, RefreshCw, Home, ArrowLeft } from 'lucide-react';
-import { captureException, addBreadcrumb } from '@/utils/errorReporting';
+import { reportError } from '@/utils/errorReporting';
 
 interface Props {
   children: ReactNode;
@@ -31,15 +31,8 @@ export class ErrorBoundary extends Component<Props, State> {
     
     this.setState({ error, errorInfo, errorId });
 
-    // Add breadcrumb for debugging
-    addBreadcrumb('error', 'Error boundary caught error', {
-      errorId,
-      componentStack: errorInfo.componentStack,
-      errorMessage: error.message
-    });
-
     // Send to error reporting service
-    captureException(error, {
+    reportError(error, {
       errorId,
       componentStack: errorInfo.componentStack,
       url: window.location.href,
@@ -65,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const { error, errorInfo, errorId } = this.state;
     if (error) {
       // Send additional context to error reporting
-      captureException(error, {
+      reportError(error, {
         errorId,
         componentStack: errorInfo?.componentStack,
         userAction: 'manual_report',

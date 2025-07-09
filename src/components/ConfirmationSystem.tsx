@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 interface ConfirmationSystemProps {
   isOpen: boolean;
   onClose: () => void;
-  booking: any;
+  booking: Record<string, unknown>;
   type: 'pickup' | 'return';
 }
 
@@ -60,7 +60,7 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
           });
           onClose();
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           toast({
             title: 'Eroare',
             description: 'Nu s-a putut confirma operația.',
@@ -159,7 +159,7 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
                   </div>
                 </div>
                 
-                {getStatusBadge(booking.status)}
+                {getStatusBadge(booking.status as string)}
               </div>
             </CardContent>
           </Card>
@@ -173,7 +173,7 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
                   <span className="text-sm font-medium">Perioada închirierii</span>
                 </div>
                 <div className="text-sm text-gray-600">
-                  {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                  {format(new Date(booking.start_date as string), 'dd MMM yyyy')} - {format(new Date(booking.end_date as string), 'dd MMM yyyy')}
                 </div>
                 <div className="text-sm text-gray-600">
                   {booking.total_days} {booking.total_days === 1 ? 'zi' : 'zile'}

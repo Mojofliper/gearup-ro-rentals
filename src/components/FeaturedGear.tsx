@@ -6,30 +6,30 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ConversationModal } from '@/components/ConversationModal';
 import { MapPin, Search, MessageSquare, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useGearList } from '@/hooks/useGear';
+import { useAllGear } from '@/hooks/useGear';
 import { useGearReviews } from '@/hooks/useReviews';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Component for individual featured gear card
-const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) => void }> = ({ gear, onStartConversation }) => {
-  const { data: reviewsData } = useGearReviews(gear.id);
+const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConversation: (gear: Record<string, unknown>) => void }> = ({ gear, onStartConversation }) => {
+  const { data: reviewsData } = useGearReviews(gear.id as string);
   const { user } = useAuth();
   
   // Safely parse images from Json type
   const images = Array.isArray(gear.gear_photos) ? (gear.gear_photos as unknown as string[]) : [];
   const firstImage = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
-  const ownerName = gear.owner?.full_name || 'Utilizator';
-  const ownerLocation = gear.owner?.location || 'România';
-  const categoryName = gear.category?.name || 'Echipament';
+  const ownerName = (gear.owner as Record<string, string>)?.full_name || 'Utilizator';
+  const ownerLocation = (gear.owner as Record<string, string>)?.location || 'România';
+  const categoryName = (gear.category as Record<string, string>)?.name || 'Echipament';
   
   // Convert price from cents to RON
-          const priceInRON = gear.daily_rate; // Price is already in RON
+          const priceInRON = (gear.price_per_day as number) / 100; // Price is already in RON
   
   // Get full avatar URL
-  const ownerAvatar = gear.owner?.avatar_url 
-    ? gear.owner.avatar_url.startsWith('http') 
-      ? gear.owner.avatar_url 
-      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${gear.owner.avatar_url}`
+  const ownerAvatar = (gear.owner as Record<string, string>)?.avatar_url 
+    ? (gear.owner as Record<string, string>).avatar_url.startsWith('http') 
+      ? (gear.owner as Record<string, string>).avatar_url 
+      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${(gear.owner as Record<string, string>).avatar_url}`
     : '';
 
   return (
@@ -38,14 +38,14 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
         <Link to={`/gear/${gear.id}`}>
           <img
             src={firstImage}
-            alt={gear.title}
+            alt={gear.title as string}
             className="w-full h-48 object-cover rounded-t-lg cursor-pointer"
           />
         </Link>
         <div className="absolute top-3 left-3">
           <Badge variant="secondary">{categoryName}</Badge>
         </div>
-        {gear.status !== 'available' && (
+        {(gear.status as string) !== 'available' && (
           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
             <Badge variant="secondary" className="text-white bg-red-600">
               Indisponibil
@@ -56,12 +56,15 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
 
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-lg">{gear.title}</h3>
+          <h3 className="font-semibold text-lg">{gear.title as string}</h3>
           <div className="text-xs text-muted-foreground">
-            {reviewsData?.totalReviews ? (
+            {reviewsData && reviewsData.length > 0 ? (
               <div className="flex items-center space-x-1">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                <span>{reviewsData.averageRating.toFixed(1)} ({reviewsData.totalReviews})</span>
+                <span>
+                  {(reviewsData.reduce((sum: number, review: Record<string, unknown>) => sum + (review.rating as number || 0), 0) / reviewsData.length).toFixed(1)} 
+                  ({reviewsData.length})
+                </span>
               </div>
             ) : (
               'Fără recenzii'
@@ -73,7 +76,7 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
           <Avatar className="h-6 w-6">
             <AvatarImage src={ownerAvatar} />
             <AvatarFallback className="text-xs">
-              {ownerName.split(' ').map(n => n[0]).join('')}
+              {(ownerName.split(' ').map(n => n[0]).join(''))}
             </AvatarFallback>
           </Avatar>
           <span className="text-sm text-muted-foreground">{ownerName}</span>
@@ -95,15 +98,15 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
           <Link to={`/gear/${gear.id}`} className="flex-1">
             <Button 
               size="sm" 
-              disabled={gear.status !== 'available'}
-              className={`w-full ${gear.status === 'available' ? "btn-creative shadow-md hover:shadow-lg transition-all duration-300" : ""}`}
-              variant={gear.status === 'available' ? "default" : "secondary"}
+              disabled={(gear.status as string) !== 'available'}
+              className={`w-full ${((gear.status as string) === 'available' ? "btn-creative shadow-md hover:shadow-lg transition-all duration-300" : "")}`}
+              variant={(gear.status as string) === 'available' ? "default" : "secondary"}
             >
-              {gear.status === 'available' ? '🚀 Închiriază' : '❌ Indisponibil'}
+              {(gear.status as string) === 'available' ? '🚀 Închiriază' : '❌ Indisponibil'}
             </Button>
           </Link>
           
-          {user && user.id !== gear.owner_id && (
+          {user && (gear.owner_id as string) !== user.id && (
             <Button
               size="sm"
               variant="outline"
@@ -120,7 +123,7 @@ const FeaturedGearCard: React.FC<{ gear: any; onStartConversation: (gear: any) =
 };
 
 export const FeaturedGear: React.FC = () => {
-  const { data: gearList, isLoading, error } = useGearList();
+  const { data: gearList, isLoading, error } = useAllGear();
   const { user } = useAuth();
   const [conversationModal, setConversationModal] = useState<{
     isOpen: boolean;
@@ -141,24 +144,24 @@ export const FeaturedGear: React.FC = () => {
   // Get first 4 items for featured section
   const featuredGear = gearList?.slice(0, 4) || [];
 
-  const handleStartConversation = (gear: any) => {
+  const handleStartConversation = (gear: Record<string, unknown>) => {
     if (!user) {
       // Handle unauthenticated user
       return;
     }
 
-    const ownerName = gear.owner?.full_name || 'Utilizator';
-    const ownerAvatar = gear.owner?.avatar_url 
-      ? gear.owner.avatar_url.startsWith('http') 
-        ? gear.owner.avatar_url 
-        : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${gear.owner.avatar_url}`
+    const ownerName = (gear.owner as Record<string, string>)?.full_name || 'Utilizator';
+    const ownerAvatar = (gear.owner as Record<string, string>)?.avatar_url 
+      ? (gear.owner as Record<string, string>).avatar_url.startsWith('http') 
+        ? (gear.owner as Record<string, string>).avatar_url 
+        : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${(gear.owner as Record<string, string>).avatar_url}`
       : '';
 
     setConversationModal({
       isOpen: true,
-      gearId: gear.id,
-      ownerId: gear.owner_id,
-      gearName: gear.title,
+      gearId: gear.id as string,
+      ownerId: gear.owner_id as string,
+      gearName: gear.title as string,
       ownerName,
       ownerAvatar
     });
@@ -216,7 +219,7 @@ export const FeaturedGear: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuredGear.map((gear) => (
-            <FeaturedGearCard key={gear.id} gear={gear} onStartConversation={handleStartConversation} />
+            <FeaturedGearCard key={gear.id as string} gear={gear} onStartConversation={handleStartConversation} />
           ))}
         </div>
 

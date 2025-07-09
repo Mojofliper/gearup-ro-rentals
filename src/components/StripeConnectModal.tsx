@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -24,10 +24,10 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
         title: 'Configurare inițiată',
         description: 'Veți fi redirecționat către Stripe pentru configurarea contului.',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: 'Eroare',
-        description: err.message || 'Nu s-a putut iniția configurarea Stripe Connect.',
+        description: (err as Error).message || 'Nu s-a putut iniția configurarea Stripe Connect.',
         variant: 'destructive',
       });
     }
@@ -124,44 +124,23 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
         </div>
 
         <div className="flex space-x-2">
-          {!connectedAccount ? (
-            <Button 
-              onClick={handleSetup} 
-              disabled={loading}
-              className="flex-1"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" />
-                  Configurare...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="mr-2" />
-                  Configurare cont plată
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleSetup} 
-              disabled={loading}
-              variant="outline"
-              className="flex-1"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" />
-                  Actualizare...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="mr-2" />
-                  Actualizează configurarea
-                </>
-              )}
-            </Button>
-          )}
+          <Button 
+            onClick={handleSetup} 
+            disabled={loading}
+            className="flex-1"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin mr-2" />
+                Configurare...
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2" />
+                Configurare cont plată
+              </>
+            )}
+          </Button>
           <Button variant="outline" onClick={onClose}>
             Închide
           </Button>

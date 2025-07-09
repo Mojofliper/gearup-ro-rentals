@@ -3,10 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export const AdminClaimsDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [claims, setClaims] = useState<any[]>([]);
+  const { notifyClaimResolved } = useNotifications();
+  const [claims, setClaims] = useState<Array<Record<string, unknown>>>([]);
 
   const fetchClaims = async () => {
     const { data, error } = await supabase.from('claims').select('*').eq('claim_status', 'pending');
@@ -29,11 +31,25 @@ export const AdminClaimsDashboard: React.FC = () => {
       return;
     }
 
+    // Send notification about claim resolution
+    try {
+      const claim = claims.find(c => c.id === claimId);
+      if (claim) {
+        await notifyClaimResolved(
+          (claim as Record<string, unknown>).booking_id as string,
+          approve ? 'approved' : 'rejected',
+          approve ? 'Reclamarea a fost aprobată' : 'Reclamarea a fost respinsă'
+        );
+      }
+    } catch (notificationError) {
+      console.error('Error sending claim resolution notification:', notificationError);
+    }
+
     // Broadcast status change
     await fetch('/functions/v1/claim-status-broadcast', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ booking_id: claims.find(c => c.id === claimId)?.booking_id, claim_status: approve ? 'approved' : 'rejected' }),
+      body: JSON.stringify({ booking_id: (claims.find(c => c.id === claimId) as Record<string, unknown>)?.booking_id, claim_status: approve ? 'approved' : 'rejected' }),
     });
 
     // Trigger escrow release accordingly
@@ -41,7 +57,7 @@ export const AdminClaimsDashboard: React.FC = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        booking_id: claims.find(c => c.id === claimId)?.booking_id,
+        booking_id: (claims.find(c => c.id === claimId) as Record<string, unknown>)?.booking_id,
         release_type: approve ? 'claim_owner' : 'claim_denied',
         deposit_to_owner: approve,
       }),
@@ -63,8 +79,8 @@ export const AdminClaimsDashboard: React.FC = () => {
             <img key={url} src={url} alt="evidence" className="h-32 mb-2" />
           ))}
           <div className="flex gap-2">
-            <Button onClick={() => handleDecision(claim.id, true)}>Approve</Button>
-            <Button variant="outline" onClick={() => handleDecision(claim.id, false)}>Reject</Button>
+            <Button onClick={() => handleDecision(claim.id as string, true)}>Approve</Button>
+            <Button variant="outline" onClick={() => handleDecision(claim.id as string, false)}>Reject</Button>
           </div>
         </div>
       ))}

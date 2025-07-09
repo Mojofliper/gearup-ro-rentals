@@ -8,7 +8,7 @@ export interface PaymentTestResult {
   status: 'passed' | 'failed' | 'running';
   duration?: number;
   error?: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface PaymentTestSuite {
@@ -34,7 +34,7 @@ export const usePaymentTesting = () => {
 
   const runTest = useCallback(async (
     testName: string,
-    testFunction: () => Promise<any>
+    testFunction: () => Promise<unknown>
   ): Promise<PaymentTestResult> => {
     const startTime = Date.now();
     setCurrentTest(testName);
@@ -49,14 +49,14 @@ export const usePaymentTesting = () => {
         duration,
         details: result
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = Date.now() - startTime;
       
       return {
         testName,
         status: 'failed',
         duration,
-        error: error.message || 'Unknown error',
+        error: (error as Error).message || 'Unknown error',
         details: error
       };
     }
@@ -101,14 +101,14 @@ export const usePaymentTesting = () => {
         'processRefund'
       ];
       
-      const results = {};
+      const results: Record<string, unknown> = {};
       for (const method of methods) {
         try {
           if (method === 'calculatePaymentBreakdown') {
             results[method] = PaymentService.calculatePaymentBreakdown(1000, 500);
           }
         } catch (error) {
-          results[method] = { error: error.message };
+          results[method] = { error: (error as Error).message };
         }
       }
       
@@ -126,7 +126,7 @@ export const usePaymentTesting = () => {
         '/functions/v1/stripe-refund'
       ];
       
-      const results = {};
+      const results: Record<string, unknown> = {};
       for (const endpoint of endpoints) {
         try {
           const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co${endpoint}`, {
@@ -134,7 +134,7 @@ export const usePaymentTesting = () => {
           });
           results[endpoint] = { status: response.status, ok: response.ok };
         } catch (error) {
-          results[endpoint] = { error: error.message };
+          results[endpoint] = { error: (error as Error).message };
         }
       }
       
@@ -214,7 +214,7 @@ export const usePaymentTesting = () => {
     testEscrowTransactionRetrieval
   ]);
 
-  const runSpecificTest = useCallback(async (testName: string, testFunction: () => Promise<any>) => {
+  const runSpecificTest = useCallback(async (testName: string, testFunction: () => Promise<unknown>) => {
     setIsRunning(true);
     const result = await runTest(testName, testFunction);
     
@@ -248,7 +248,7 @@ export const usePaymentTesting = () => {
     if (result.status === 'passed') {
       toast.success(`${testName} passed!`);
     } else {
-      toast.error(`${testName} failed: ${result.error}`);
+      toast.error(`${testName} failed: ${(result as PaymentTestResult).error}`);
     }
   }, [runTest]);
 

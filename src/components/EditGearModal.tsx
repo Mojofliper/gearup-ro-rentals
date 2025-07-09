@@ -13,7 +13,7 @@ import { toast } from '@/hooks/use-toast';
 interface EditGearModalProps {
   isOpen: boolean;
   onClose: () => void;
-  gear: any;
+  gear: Record<string, unknown>;
 }
 
 export const EditGearModal: React.FC<EditGearModalProps> = ({
@@ -28,7 +28,7 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
     title: gear?.title || '',
     description: gear?.description || '',
     category_id: gear?.category_id || '',
-            daily_rate: gear?.daily_rate || 0,
+            price_per_day: gear?.price_per_day || 0,
     deposit_amount: gear?.deposit_amount || 0,
     location: gear?.location || '',
     status: gear?.status || 'available'
@@ -37,7 +37,7 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.daily_rate) {
+    if (!formData.title || !formData.price_per_day) {
       toast({
         title: 'Câmpuri obligatorii',
         description: 'Te rugăm să completezi numele și prețul pe zi.',
@@ -48,7 +48,7 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
 
     const updates = {
       ...formData,
-              daily_rate: Math.round(formData.daily_rate),
+              price_per_day: Math.round(formData.price_per_day),
       deposit_amount: Math.round(formData.deposit_amount),
     };
 
@@ -63,7 +63,7 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
         });
         onClose();
       },
-      onError: (error: any) => {
+      onError: (error: unknown) => {
         toast({
           title: 'Eroare',
           description: 'Nu s-au putut salva modificările. Te rugăm să încerci din nou.',
@@ -140,14 +140,14 @@ export const EditGearModal: React.FC<EditGearModalProps> = ({
           {/* Pricing */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="daily_rate">Preț pe zi (RON) *</Label>
+              <Label htmlFor="price_per_day">Preț pe zi (RON) *</Label>
               <Input
-                id="daily_rate"
+                id="price_per_day"
                 type="number"
                 step="0.01"
                 min="0"
-                value={formData.daily_rate}
-                onChange={(e) => handleInputChange('daily_rate', e.target.value)}
+                value={formData.price_per_day}
+                onChange={(e) => handleInputChange('price_per_day', e.target.value)}
                 placeholder="ex. 50"
               />
             </div>

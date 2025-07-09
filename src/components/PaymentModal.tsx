@@ -8,6 +8,7 @@ import { Loader2, CreditCard, Shield, CheckCircle, XCircle, Lock, AlertTriangle,
 import { useEscrowPayments } from '@/hooks/useEscrowPayments';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   getStripe, 
   formatAmountForDisplay, 
@@ -18,7 +19,7 @@ import {
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  booking: any;
+  booking: Record<string, unknown>;
   onPaymentSuccess?: () => void;
 }
 
@@ -41,7 +42,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setupStripeConnect
   } = useEscrowPayments();
   
-  const [stripe, setStripe] = useState<any>(null);
+  const [stripe, setStripe] = useState<unknown>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error' | 'escrow_pending'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showOwnerSetup, setShowOwnerSetup] = useState(false);
@@ -60,6 +61,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   }, [isOpen, booking]);
 
+  // Handle payment cancellation when component unmounts during processing
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (paymentStatus === 'processing') {
+        handlePaymentCancellation();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [paymentStatus]);
+
   const initializeStripe = async () => {
     try {
       const stripeInstance = await getStripe();
@@ -67,7 +82,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         throw new Error('Failed to load Stripe');
       }
       setStripe(stripeInstance);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Stripe initialization error:', error);
       setErrorMessage('Failed to initialize payment system');
     }
@@ -81,7 +96,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         if (account && !account.charges_enabled) {
           setShowOwnerSetup(true);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error checking owner payment setup:', error);
       }
     }
@@ -94,7 +109,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         if (transaction) {
           setPaymentStatus('escrow_pending');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error checking escrow transaction:', error);
       }
     }
@@ -108,7 +123,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     try {
       await setupStripeConnect(user.email || '', 'RO');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Owner setup error:', error);
       toast.error('Failed to setup payment account');
     }
@@ -127,28 +142,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         depositAmount
       );
 
-      if (result && result.clientSecret) {
-        // Use Stripe Elements for secure payment
-        const { error } = await stripe.confirmPayment({
-          elements: null, // We'll use redirect flow for simplicity
-          clientSecret: result.clientSecret,
-          confirmParams: {
-            return_url: `${window.location.origin}/payment-success?booking_id=${booking.id}`,
-          },
-        });
-
-        if (error) {
-          throw new Error(error.message);
-        }
+      if (result && result.url) {
+        // Redirect to Stripe's hosted checkout page
+        window.location.href = result.url;
       } else {
-        throw new Error('Failed to create payment intent');
+        throw new Error('Failed to create checkout session');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Escrow payment error:', error);
       setPaymentStatus('error');
-      setErrorMessage(error.message || 'Failed to process payment');
+      setErrorMessage((error as Error).message || 'Failed to process payment');
       
-      if (error.message?.includes('Owner account not ready')) {
+      if ((error as Error).message?.includes('Owner account not ready')) {
         setShowOwnerSetup(true);
       }
     }
@@ -157,10 +162,40 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const handleClose = () => {
     if (paymentStatus === 'processing') return;
     
+    // If payment was initiated but not completed, mark booking as cancelled
+    if (paymentStatus === 'error') {
+      handlePaymentCancellation();
+    }
+    
     setPaymentStatus('idle');
     setErrorMessage('');
     setShowOwnerSetup(false);
     onClose();
+  };
+
+  const handlePaymentCancellation = async () => {
+    if (!booking?.id) return;
+
+    try {
+      // Update booking status to cancelled
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          status: 'cancelled',
+          payment_status: 'failed', // Use valid enum value
+          cancellation_reason: 'Payment cancelled by user'
+        })
+        .eq('id', booking.id);
+
+      if (error) {
+        console.error('Error updating booking status:', error);
+      } else {
+        console.log('Booking status updated to cancelled');
+        toast.success('Rezervarea a fost anulată');
+      }
+    } catch (error: unknown) {
+      console.error('Error handling payment cancellation:', error);
+    }
   };
 
   if (!booking) return null;

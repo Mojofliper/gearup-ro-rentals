@@ -27,18 +27,26 @@ export const useRateLimit = () => {
 
   const getRateLimitStatus = async (actionType: string) => {
     try {
-      const { data, error } = await supabase
-        .from('rate_limits')
-        .select('*')
-        .eq('action_type', actionType)
-        .single();
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user for rate limit check');
+        return null;
+      }
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      // Use the get_rate_limit_status function to get detailed status
+      const { data, error } = await supabase.rpc('get_rate_limit_status', {
+        action_type: actionType,
+        max_actions: 10,
+        window_minutes: 60
+      });
+
+      if (error) {
         console.error('Rate limit status error:', error);
         return null;
       }
 
-      if (!data) {
+      if (!data || data.length === 0) {
         return {
           isLimited: false,
           remaining: 10,
@@ -48,18 +56,13 @@ export const useRateLimit = () => {
         };
       }
 
-      const now = Date.now();
-      const windowStart = new Date(data.window_start).getTime();
-      const windowEnd = windowStart + (data.window_minutes * 60 * 1000);
-      const isLimited = now < windowEnd && data.action_count >= data.max_actions;
-      const remaining = Math.max(0, data.max_actions - data.action_count);
-
+      const status = data[0];
       return {
-        isLimited,
-        remaining,
-        limit: data.max_actions,
-        resetTime: windowEnd,
-        windowStart
+        isLimited: status.is_limited,
+        remaining: status.remaining,
+        limit: status.limit,
+        resetTime: new Date(status.reset_time).getTime(),
+        windowStart: new Date(status.window_start).getTime()
       };
     } catch (error) {
       console.error('Rate limit status failed:', error);
@@ -69,10 +72,19 @@ export const useRateLimit = () => {
 
   const resetRateLimit = async (actionType: string) => {
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user for rate limit reset');
+        return false;
+      }
+
+      // Delete rate limit records for this user and action type
       const { error } = await supabase
         .from('rate_limits')
         .delete()
-        .eq('action_type', actionType);
+        .eq('action_type', actionType)
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Rate limit reset error:', error);

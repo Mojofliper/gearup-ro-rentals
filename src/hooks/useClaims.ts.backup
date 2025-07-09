@@ -1,0 +1,116 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useClaimsApi } from './useApi';
+import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/integrations/supabase/client';
+
+// Enhanced claims hooks
+export const useCreateClaim = () => {
+  const queryClient = useQueryClient();
+  const { createClaim, loading, error } = useClaimsApi();
+  const { notifyClaimSubmitted } = useNotifications();
+  
+  return useMutation({
+    mutationFn: async (claimData: {
+      booking_id: string;
+      claim_type: string;
+      description: string;
+      requested_amount?: number;
+    }) => {
+      return await createClaim(claimData);
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ['claims'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      
+      // Send notification about claim submission
+      if (data && data.booking_id) {
+        try {
+          // Get booking details for notification
+          const { data: booking } = await supabase
+            .from('bookings')
+            .select('gear:gear_id(title), owner_id, renter_id')
+            .eq('id', data.booking_id)
+            .single();
+
+          if (booking) {
+            await notifyClaimSubmitted(
+              data.booking_id,
+              (booking.gear as Record<string, unknown>)?.title || 'Echipament',
+              booking.owner_id,
+              booking.renter_id
+            );
+          }
+        } catch (notificationError) {
+          console.error('Error sending claim notification:', notificationError);
+        }
+      }
+    },
+  });
+};
+
+export const useUpdateClaimStatus = () => {
+  const queryClient = useQueryClient();
+  const { updateClaimStatus, loading, error } = useClaimsApi();
+  const { notifyClaimResolved } = useNotifications();
+  
+  return useMutation({
+    mutationFn: async ({ claimId, updates }: {
+      claimId: string;
+      updates: {
+        status: string;
+        resolution?: string;
+        deposit_penalty?: number;
+        admin_id?: string;
+      };
+    }) => {
+      return await updateClaimStatus(claimId, updates);
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ['claims'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      
+      // Send notification about claim resolution
+      if (data && data.booking_id && data.status === 'approved' || data.status === 'rejected') {
+        try {
+          await notifyClaimResolved(data.booking_id, data.status, data.resolution || '');
+        } catch (notificationError) {
+          console.error('Error sending claim resolution notification:', notificationError);
+        }
+      }
+    },
+  });
+};
+
+export const useUploadEvidence = () => {
+  const queryClient = useQueryClient();
+  const { uploadEvidence, loading, error } = useClaimsApi();
+  
+  return useMutation({
+    mutationFn: async ({ claimId, evidenceData }: {
+      claimId: string;
+      evidenceData: {
+        evidence_type: string;
+        evidence_url: string;
+        description?: string;
+      };
+    }) => {
+      return await uploadEvidence(claimId, evidenceData);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['claim-evidence', variables.claimId] });
+    },
+  });
+};
+
+export const useClaimEvidence = (claimId: string) => {
+  const { getClaimEvidence, loading, error } = useClaimsApi();
+  
+  return useQuery({
+    queryKey: ['claim-evidence', claimId],
+    queryFn: async () => {
+      if (!claimId) return [];
+      return await getClaimEvidence(claimId);
+    },
+    enabled: !!claimId,
+  });
+}; 

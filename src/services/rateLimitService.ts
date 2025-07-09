@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 export interface RateLimitConfig {
   maxRequests: number;
   windowMs: number;
-  keyGenerator?: (userId: string, action: string) => string;
 }
 
 export interface RateLimitResult {
@@ -92,18 +91,16 @@ class RateLimitService {
         };
       }
 
-      const key = config.keyGenerator 
-        ? config.keyGenerator(userId, action)
-        : `${userId}:${action}`;
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - config.windowMs);
 
-      const now = Date.now();
-      const windowStart = now - config.windowMs;
-
-      // Get current rate limit data
+      // Get current rate limit data for this user and action
       const { data: rateLimitData, error } = await supabase
         .from('rate_limits')
         .select('*')
-        .eq('key', key)
+        .eq('user_id', userId)
+        .eq('action_type', action)
+        .gte('window_start', windowStart.toISOString())
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -111,42 +108,31 @@ class RateLimitService {
         return {
           allowed: true, // Allow on error
           remaining: -1,
-          resetTime: now + config.windowMs,
+          resetTime: now.getTime() + config.windowMs,
         };
       }
 
-      let currentCount = 0;
-      let lastReset = now;
+      let currentCount = 1;
+      let windowStartTime = now;
 
       if (rateLimitData) {
-        // Check if we need to reset the window
-        if (rateLimitData.last_request < windowStart) {
-          // Window has expired, reset
-          currentCount = 1;
-          lastReset = now;
-        } else {
-          // Window is still active
-          currentCount = rateLimitData.request_count + 1;
-          lastReset = rateLimitData.last_request;
-        }
-      } else {
-        // First request
-        currentCount = 1;
-        lastReset = now;
+        // Window is still active, increment count
+        currentCount = rateLimitData.action_count + 1;
+        windowStartTime = new Date(rateLimitData.window_start);
       }
 
       const allowed = currentCount <= config.maxRequests;
       const remaining = Math.max(0, config.maxRequests - currentCount);
-      const resetTime = lastReset + config.windowMs;
+      const resetTime = windowStartTime.getTime() + config.windowMs;
 
       // Update rate limit data
-      await this.updateRateLimitData(key, currentCount, now, allowed);
+      await this.updateRateLimitData(userId, action, currentCount, windowStartTime, allowed);
 
       return {
         allowed,
         remaining,
         resetTime,
-        retryAfter: allowed ? undefined : Math.ceil((resetTime - now) / 1000),
+        retryAfter: allowed ? undefined : Math.ceil((resetTime - now.getTime()) / 1000),
       };
     } catch (error) {
       console.error('Error in rate limit check:', error);
@@ -159,22 +145,26 @@ class RateLimitService {
   }
 
   private async updateRateLimitData(
-    key: string,
+    userId: string,
+    actionType: string,
     count: number,
-    timestamp: number,
+    windowStart: Date,
     allowed: boolean
   ): Promise<void> {
     try {
+      const windowEnd = new Date(windowStart.getTime() + this.configs.get(actionType)?.windowMs || 3600000);
+      
       const { error } = await supabase
         .from('rate_limits')
         .upsert({
-          key,
-          request_count: count,
-          last_request: new Date(timestamp).toISOString(),
-          blocked: !allowed,
-          updated_at: new Date().toISOString(),
+          user_id: userId,
+          action_type: actionType,
+          action_count: count,
+          window_start: windowStart.toISOString(),
+          window_end: windowEnd.toISOString(),
+          created_at: new Date().toISOString(),
         }, {
-          onConflict: 'key'
+          onConflict: 'user_id,action_type'
         });
 
       if (error) {
@@ -197,11 +187,11 @@ class RateLimitService {
 
   async resetRateLimit(userId: string, action: string): Promise<void> {
     try {
-      const key = `${userId}:${action}`;
       const { error } = await supabase
         .from('rate_limits')
         .delete()
-        .eq('key', key);
+        .eq('user_id', userId)
+        .eq('action_type', action);
 
       if (error) {
         console.error('Error resetting rate limit:', error);
@@ -247,30 +237,34 @@ class RateLimitService {
   async checkClaimSubmission(userId: string): Promise<RateLimitResult> {
     return this.checkRateLimit(userId, 'claim_submit');
   }
-
-  // Decorator function for easy rate limiting
-  static withRateLimit(action: string) {
-    return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
-      const method = descriptor.value;
-
-      descriptor.value = async function (...args: any[]) {
-        const rateLimitService = new RateLimitService();
-        const userId = args[0]?.userId || args[0]?.user_id || 'anonymous';
-
-        const result = await rateLimitService.checkRateLimit(userId, action);
-        if (!result.allowed) {
-          throw new Error(`Rate limit exceeded for ${action}. Try again in ${result.retryAfter} seconds.`);
-        }
-
-        return method.apply(this, args);
-      };
-    };
-  }
 }
 
-export const rateLimitService = new RateLimitService();
+// Create singleton instance
+const rateLimitService = new RateLimitService();
 
-// React Hook for rate limiting
+// Higher-order function to wrap API calls with rate limiting
+export function withRateLimit(action: string) {
+  return function <T extends unknown[], R>(
+    target: (...args: T) => Promise<R>
+  ): (...args: T) => Promise<R> {
+    return async (...args: T): Promise<R> => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const result = await rateLimitService.checkRateLimit(user.id, action);
+      if (!result.allowed) {
+        throw new Error(`Rate limit exceeded for ${action}. Try again in ${result.retryAfter} seconds.`);
+      }
+
+      return target(...args);
+    };
+  };
+}
+
+// Hook for React components
 export const useRateLimit = (action: string) => {
   const checkLimit = async (userId: string): Promise<RateLimitResult> => {
     return rateLimitService.checkRateLimit(userId, action);
@@ -288,10 +282,7 @@ export const useRateLimit = (action: string) => {
     return rateLimitService.resetRateLimit(userId, action);
   };
 
-  return {
-    checkLimit,
-    isLimited,
-    getRemaining,
-    reset,
-  };
-}; 
+  return { checkLimit, isLimited, getRemaining, reset };
+};
+
+export default rateLimitService; 

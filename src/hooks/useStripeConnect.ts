@@ -31,7 +31,7 @@ export const useStripeConnect = () => {
         .from('connected_accounts')
         .select('*')
         .eq('owner_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         // PGRST116 is "not found" error, which is expected if no account exists
@@ -39,9 +39,9 @@ export const useStripeConnect = () => {
       }
 
       setConnectedAccount(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching connected account:', err);
-      setError(err.message);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ export const useStripeConnect = () => {
         setError(data.error || 'Stripe Connect setup required');
         return data;
       } else if (data.onboardingUrl) {
-        // Redirect to Stripe onboarding
+        // Redirect to Stripe onboarding (no need to store account ID)
         window.location.href = data.onboardingUrl;
       } else {
         // Account already exists, refresh data
@@ -90,9 +90,9 @@ export const useStripeConnect = () => {
       }
 
       return data;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error setting up Stripe Connect:', err);
-      setError(err.message);
+      setError((err as Error).message);
       throw err;
     } finally {
       setLoading(false);
@@ -105,7 +105,9 @@ export const useStripeConnect = () => {
   };
 
   useEffect(() => {
-    fetchConnectedAccount();
+    if (user?.id) {
+      fetchConnectedAccount();
+    }
   }, [user?.id]);
 
   return {

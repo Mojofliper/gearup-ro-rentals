@@ -4,16 +4,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X } from 'lucide-react';
+import { Send, X, Image as ImageIcon, Paperclip } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useSendMessage } from '@/hooks/useMessages';
+
 
 interface Message {
   id: string;
   content: string;
   sender_id: string;
   created_at: string;
+  message_type?: 'text' | 'image' | 'system';
   sender?: {
     full_name: string;
     avatar_url: string;
@@ -27,7 +31,7 @@ interface ConversationModalProps {
   ownerId: string;
   gearName: string;
   ownerName: string;
-  ownerAvatar?: string;
+  ownerAvatar: string;
 }
 
 export const ConversationModal: React.FC<ConversationModalProps> = ({
@@ -40,11 +44,15 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
   ownerAvatar
 }) => {
   const { user } = useAuth();
+  const { notifyNewMessage } = useNotifications();
+  const { mutateAsync: sendMessageApi } = useSendMessage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
 
   useEffect(() => {
     if (isOpen && user) {
@@ -135,23 +143,20 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
     }
   };
 
-  const sendMessage = async () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !bookingId || !user) return;
 
     setSending(true);
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          content: newMessage.trim(),
-          booking_id: bookingId,
-          sender_id: user.id,
-        });
-
-      if (error) throw error;
+      await sendMessageApi({ 
+        bookingId: bookingId, 
+        content: newMessage.trim(), 
+        messageType: 'text' 
+      });
 
       setNewMessage('');
       await fetchMessages(bookingId);
+      toast({ title: 'Mesaj trimis', description: 'Mesajul a fost trimis cu succes.' });
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -164,10 +169,36 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !bookingId || !user) return;
+
+    setUploading(true);
+    try {
+      const filePath = `${user.id}/${Date.now()}_${file.name}`;
+      const { data, error } = await supabase.storage.from('message-uploads').upload(filePath, file);
+      if (error) throw error;
+      
+      const { publicUrl } = supabase.storage.from('message-uploads').getPublicUrl(filePath).data;
+      if (!publicUrl) throw new Error('Could not get file URL');
+      
+      await sendMessageApi({ bookingId: bookingId, content: publicUrl, messageType: 'image' });
+      toast({ title: 'Imagine trimisă', description: 'Imaginea a fost trimisă cu succes.' });
+      await fetchMessages(bookingId);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({ title: 'Eroare', description: 'Nu s-a putut încărca imaginea.', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
@@ -199,47 +230,93 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
                 Începe o conversație despre acest echipament
               </div>
             ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender_id === user?.id ? 'justify-end' : 'justify-start'
-                  }`}
-                >
+              messages.map((message) => {
+                const isOwnMessage = message.sender_id === user?.id;
+                const isSystemMessage = message.message_type === 'system';
+                
+                if (isSystemMessage) {
+                  return (
+                    <div key={message.id} className="text-center">
+                      <div className="inline-block bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
+                        {message.content}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
                   <div
-                    className={`max-w-xs px-3 py-2 rounded-lg ${
-                      message.sender_id === user?.id
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-200 text-gray-800'
+                    key={message.id}
+                    className={`flex ${
+                      isOwnMessage ? 'justify-end' : 'justify-start'
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-xs opacity-75 mt-1">
-                      {new Date(message.created_at).toLocaleTimeString()}
-                    </p>
+                    <div
+                      className={`max-w-xs px-3 py-2 rounded-lg ${
+                        isOwnMessage
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-200 text-gray-800'
+                      }`}
+                    >
+                      {message.message_type === 'image' ? (
+                        <img 
+                          src={message.content} 
+                          alt="Uploaded image" 
+                          className="max-w-full rounded"
+                        />
+                      ) : (
+                        <p className="text-sm">{message.content}</p>
+                      )}
+                      <p className="text-xs opacity-75 mt-1">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
           {/* Message input */}
           <div className="flex space-x-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Scrie un mesaj..."
-              disabled={sending || loading}
-            />
+            <div className="flex-1 relative">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Scrie un mesaj..."
+                disabled={sending || loading || uploading}
+                className="pr-20"
+              />
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    disabled={sending || loading || uploading}
+                  />
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                </label>
+              </div>
+            </div>
             <Button 
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || sending || loading}
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || sending || loading || uploading}
               size="sm"
             >
-              <Send className="h-4 w-4" />
+              {sending || uploading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
           </div>
+
+
         </div>
       </DialogContent>
     </Dialog>

@@ -109,7 +109,7 @@ serve(async (req) => {
     }
 
     // Prepare update data
-    const updateData: any = { status }
+    const updateData = { status }
     
     if (status === 'picked_up' && pickupConfirmedAt) {
       updateData.pickup_confirmed_at = pickupConfirmedAt

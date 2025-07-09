@@ -59,7 +59,7 @@ serve(async (req) => {
       )
     }
 
-    // Validate amount (must be positive and in cents)
+    // Validate amount (must be positive)
     if (amount <= 0 || amount > 100000000) {
       return new Response(
         JSON.stringify({ error: 'Invalid amount' }),
@@ -77,8 +77,8 @@ serve(async (req) => {
         *,
         booking:bookings(
           *,
-          owner:profiles!bookings_owner_id_fkey(*),
-          renter:profiles!bookings_renter_id_fkey(*)
+                  owner:users!bookings_owner_id_fkey(*),
+        renter:users!bookings_renter_id_fkey(*)
         )
       `)
       .eq('id', transactionId)

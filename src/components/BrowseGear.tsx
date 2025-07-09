@@ -6,7 +6,7 @@ import { Camera, Filter, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { SearchFilters } from './BrowseGear/SearchFilters';
 import { GearCard } from './GearCard';
-import { useGearList } from '@/hooks/useGear';
+import { useAllGear } from '@/hooks/useGear';
 import { RentOfferToggle } from './RentOfferToggle';
 import { ErrorBoundary } from './ErrorBoundary';
 import { GridSkeleton } from './LoadingSkeleton';
@@ -42,12 +42,7 @@ export const BrowseGear: React.FC = () => {
     data: gear = [],
     isLoading,
     error
-  } = useGearList({
-    search: searchQuery,
-    category: selectedCategory,
-    location: selectedLocation === 'all' ? undefined : selectedLocation,
-    sortBy
-  });
+  } = useAllGear();
 
   const handleAdvancedFiltersChange = (filters: AdvancedSearchFiltersType) => {
     setAdvancedFilters(filters);
@@ -134,9 +129,9 @@ export const BrowseGear: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {gear.map((item: any) => (
+              {gear.map((item: Record<string, unknown>) => (
                 <GearCard 
-                  key={item.id} 
+                  key={item.id as string} 
                   gear={item}
                   onViewDetails={(gearId) => {
                     // Navigate to gear detail page

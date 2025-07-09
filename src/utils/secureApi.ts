@@ -101,13 +101,13 @@ export const checkRateLimit = async (
 };
 
 // Error handler for API responses
-export const handleApiError = (error: any): string => {
+export const handleApiError = (error: unknown): string => {
   if (error instanceof SecureApiError) {
     return error.message;
   }
   
-  if (error?.message) {
-    return error.message;
+  if ((error as Error)?.message) {
+    return (error as Error).message;
   }
   
   return 'An unexpected error occurred';
@@ -139,7 +139,7 @@ export const validateFileUpload = (file: File): { valid: boolean; error?: string
 };
 
 // Secure data export (removes sensitive fields)
-export const sanitizeUserData = (data: any): any => {
+export const sanitizeUserData = (data: unknown): unknown => {
   const sensitiveFields = ['password', 'email', 'phone', 'raw_user_meta_data'];
   
   if (Array.isArray(data)) {

@@ -264,6 +264,34 @@ export class PaymentService {
   }
 
   /**
+   * Sync connected account status from Stripe
+   */
+  static async syncConnectedAccountStatus(userId: string) {
+    try {
+      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/sync-stripe-account-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          userId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new StripeError(errorData.error || 'Failed to sync account status');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Sync account status error:', error);
+      throw error instanceof StripeError ? error : new StripeError('Failed to sync account status');
+    }
+  }
+
+  /**
    * Get escrow transaction details
    */
   static async getEscrowTransaction(bookingId: string) {
@@ -365,7 +393,7 @@ export class PaymentService {
   /**
    * Release escrow funds for a completed booking
    */
-  static async releaseEscrowFunds(bookingId: string, releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' = 'automatic', depositToOwner: boolean = false) {
+  static async releaseEscrowFunds(bookingId: string, releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'pickup_confirmed' | 'completed' = 'automatic', depositToOwner: boolean = false) {
     try {
       const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release`, {
         method: 'POST',

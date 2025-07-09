@@ -1,6 +1,7 @@
 // Security monitoring and logging utilities
+import { supabase } from '@/integrations/supabase/client';
 
-export const logSecurityEvent = (event: string, details?: any) => {
+export const logSecurityEvent = (event: string, details?: unknown) => {
   // In production, this would send to a monitoring service
   console.warn(`[SECURITY] ${event}`, details);
   
@@ -64,7 +65,7 @@ export const sanitizeForDisplay = (input: string): string => {
 };
 
 // Content Security Policy helpers
-export const reportCSPViolation = (violationReport: any) => {
+export const reportCSPViolation = (violationReport: unknown) => {
   logSecurityEvent('CSP_VIOLATION', violationReport);
 };
 
@@ -257,18 +258,44 @@ export const validateCSRFToken = (token: string, storedToken: string): boolean =
 };
 
 // Session security
-export const validateSession = (session: any): boolean => {
-  if (!session || !session.user || !session.access_token) {
+export const validateSession = (session: unknown): boolean => {
+  if (!session || !(session as Record<string, unknown>).user || !(session as Record<string, unknown>).access_token) {
     return false;
   }
   
   // Check if token is expired
   const now = Math.floor(Date.now() / 1000);
-  if (session.expires_at && session.expires_at < now) {
+  const sessionObj = session as Record<string, unknown>;
+  if (sessionObj.expires_at && (sessionObj.expires_at as number) < now) {
     return false;
   }
   
   return true;
+};
+
+// Check if Supabase session is ready for API calls
+export const isSessionReady = async (): Promise<boolean> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return validateSession(session);
+  } catch (error) {
+    console.error('Error checking session readiness:', error);
+    return false;
+  }
+};
+
+// Wait for session to be ready
+export const waitForSession = async (maxWaitMs: number = 5000): Promise<boolean> => {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < maxWaitMs) {
+    if (await isSessionReady()) {
+      return true;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  return false;
 };
 
 // Sanitize user input

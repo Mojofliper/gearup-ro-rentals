@@ -1,141 +1,106 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PaymentService } from '@/services/paymentService';
-import { CreatePaymentIntentParams } from '@/integrations/stripe/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePaymentApi } from './useApi';
+import { useAuthQuery, useAuthMutation } from './useAuthQuery';
+import { PaymentData, StripeAccountData } from '@/integrations/supabase/types';
 
 export const useCreatePaymentIntent = () => {
-  const queryClient = useQueryClient();
-  const { createPaymentIntent, loading, error } = usePaymentApi();
+  const { createPaymentIntent } = usePaymentApi();
   
-  return useMutation({
-    mutationFn: async (bookingId: string) => {
+  return useAuthMutation(
+    async (bookingId: string) => {
       return await createPaymentIntent(bookingId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    },
-  });
+    }
+  );
 };
 
-export const useGetTransactionDetails = (bookingId: string) => {
-  const { getTransactionDetails, loading, error } = usePaymentApi();
+export const useGetTransactionDetails = () => {
+  const { getTransactionDetails } = usePaymentApi();
   
-  return {
-    data: null, // Will be populated by the mutation
-    loading,
-    error,
-    refetch: async () => {
-      if (!bookingId) return null;
+  return useAuthQuery(
+    ['transaction-details'],
+    async (bookingId: string) => {
       return await getTransactionDetails(bookingId);
+    },
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes for transaction details
     }
-  };
+  );
 };
 
-export const useGetEscrowStatus = (bookingId: string) => {
-  const { getEscrowStatus, loading, error } = usePaymentApi();
+export const useGetEscrowStatus = () => {
+  const { getEscrowStatus } = usePaymentApi();
   
-  return {
-    data: null, // Will be populated by the mutation
-    loading,
-    error,
-    refetch: async () => {
-      if (!bookingId) return null;
+  return useAuthQuery(
+    ['escrow-status'],
+    async (bookingId: string) => {
       return await getEscrowStatus(bookingId);
+    },
+    {
+      staleTime: 1 * 60 * 1000, // 1 minute for escrow status
     }
-  };
+  );
 };
 
-export const useProcessRefund = () => {
-  const queryClient = useQueryClient();
-  const { processRefund, loading, error } = usePaymentApi();
-  
-  return useMutation({
-    mutationFn: async ({ transactionId, refundAmount, reason }: {
-      transactionId: string;
-      refundAmount: number;
-      reason: string; 
-    }) => {
-      return await processRefund(transactionId, refundAmount, reason);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    },
-  });
-};
-
-export const useBookingById = (bookingId: string) => {
-  return useQuery({
-    queryKey: ['booking', bookingId],
-    queryFn: () => PaymentService.getBookingById(bookingId),
-    enabled: !!bookingId,
-  });
-};
-
-export const useUserBookings = () => {
-  const { user } = useAuth();
-  
-  return useQuery({
-    queryKey: ['user-bookings', user?.id],
-    queryFn: () => PaymentService.getUserBookings(user!.id),
-    enabled: !!user,
-  });
-};
-
-export const usePaymentBreakdown = (rentalAmount: number, depositAmount: number) => {
-  return useQuery({
-    queryKey: ['payment-breakdown', rentalAmount, depositAmount],
-    queryFn: () => PaymentService.calculatePaymentBreakdown(rentalAmount, depositAmount),
-    enabled: rentalAmount > 0,
-  });
-};
-
-// Stripe Connect hooks
 export const useCreateConnectedAccount = () => {
   const queryClient = useQueryClient();
-  const { createConnectedAccount, loading, error } = usePaymentApi();
+  const { createConnectedAccount } = usePaymentApi();
   
-  return useMutation({
-    mutationFn: async (ownerId: string) => {
+  return useAuthMutation(
+    async (ownerId: string) => {
       return await createConnectedAccount(ownerId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['connected-account'] });
-    },
-  });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['connected-account-status'] });
+      },
+    }
+  );
 };
 
-export const useConnectedAccountStatus = (ownerId: string) => {
-  const { getConnectedAccountStatus, loading, error } = usePaymentApi();
+export const useGetConnectedAccountStatus = () => {
+  const { getConnectedAccountStatus } = usePaymentApi();
   
-  return useQuery({
-    queryKey: ['connected-account', ownerId],
-    queryFn: async () => {
-      if (!ownerId) return null;
+  return useAuthQuery(
+    ['connected-account-status'],
+    async (ownerId: string) => {
       return await getConnectedAccountStatus(ownerId);
     },
-    enabled: !!ownerId,
-  });
+    {
+      staleTime: 10 * 60 * 1000, // 10 minutes for account status
+    }
+  );
 };
 
 export const useReleaseEscrowFunds = () => {
   const queryClient = useQueryClient();
-  const { releaseEscrowFunds, loading, error } = usePaymentApi();
+  const { releaseEscrowFunds } = usePaymentApi();
   
-  return useMutation({
-    mutationFn: async (releaseData: {
-      transaction_id: string;
-      booking_id: string;
-      release_type: 'automatic' | 'manual';
-      rental_amount: number;
-      deposit_amount: number;
-    }) => {
+  return useAuthMutation(
+    async (releaseData: Record<string, unknown>) => {
       return await releaseEscrowFunds(releaseData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['escrow'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['escrow-status'] });
+        queryClient.invalidateQueries({ queryKey: ['transaction-details'] });
+      },
+    }
+  );
+};
+
+export const useProcessRefund = () => {
+  const queryClient = useQueryClient();
+  const { processRefund } = usePaymentApi();
+  
+  return useAuthMutation(
+    async ({ transactionId, refundAmount, reason }: { transactionId: string; refundAmount: number; reason: string }) => {
+      return await processRefund(transactionId, refundAmount, reason);
     },
-  });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['transaction-details'] });
+        queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+      },
+    }
+  );
 };

@@ -28,7 +28,7 @@ interface ModerationItem {
   reason?: string;
   reported_by?: string;
   created_at: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 interface ModerationQueueProps {

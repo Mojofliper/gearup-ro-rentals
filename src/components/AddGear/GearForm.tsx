@@ -136,9 +136,9 @@ export const GearForm: React.FC = () => {
         title: sanitizeInput(formData.name),
         description: formData.description ? sanitizeInput(formData.description) : null,
         category_id: formData.categoryId,
-        daily_rate: Math.round(parseFloat(formData.pricePerDay)), // Store as actual amount, not cents
+        price_per_day: Math.round(parseFloat(formData.pricePerDay)), // Store as actual amount, not cents
         deposit_amount: formData.depositAmount ? Math.round(parseFloat(formData.depositAmount)) : 0, // Store as actual amount, not cents
-        location: formData.pickupLocation ? sanitizeInput(formData.pickupLocation) : 'Romania',
+        pickup_location: formData.pickupLocation ? sanitizeInput(formData.pickupLocation) : 'Romania',
         // Note: brand, model, condition, specifications, included_items, is_available are not in the original schema
         // They were added in the migration, so we'll keep them for now
         brand: formData.brand ? sanitizeInput(formData.brand) : null,
@@ -180,16 +180,14 @@ export const GearForm: React.FC = () => {
       });
 
       navigate(`/gear/${result.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating gear:', error);
       
       // Get more specific error message
       let errorMessage = 'Nu am putut adăuga echipamentul. Te rugăm să încerci din nou.';
       
-      if (error?.message) {
+      if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
       }

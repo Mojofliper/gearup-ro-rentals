@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -113,18 +113,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           resetForm();
           navigate('/browse');
         } else {
-          // For signup, wait a bit for the auth state to settle
+          // For signup, show success message and switch to login mode
           toast({
-            title: 'Cont creat cu succes',
-            description: 'Contul tău a fost creat cu succes!',
+            title: 'Cont creat cu succes!',
+            description: 'Contul tău a fost creat cu succes. Te poți conecta acum cu emailul și parola.',
           });
           
-          // Wait for auth state to be fully loaded
-          setTimeout(() => {
-            onClose();
-            resetForm();
-            navigate('/browse');
-          }, 1000);
+          // Switch to login mode and clear form
+          onSwitchMode('login');
+          resetForm();
         }
       }
     } catch (error) {
@@ -215,6 +212,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           <DialogTitle className="text-center">
             {mode === 'login' ? 'Conectează-te' : 'Creează un cont'}
           </DialogTitle>
+          <DialogDescription className="text-center">
+            {mode === 'login' 
+              ? 'Introdu emailul și parola pentru a te conecta la contul tău'
+              : 'Completează informațiile pentru a crea un cont nou'
+            }
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

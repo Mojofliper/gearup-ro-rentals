@@ -9,27 +9,27 @@ interface ValidationErrors {
 export const useSecureValidation = () => {
   const [errors, setErrors] = useState<ValidationErrors>({});
 
-  const validateField = (name: string, value: any): string | null => {
+  const validateField = (name: string, value: unknown): string | null => {
     switch (name) {
       case 'name':
-        return validateGearName(value);
+        return validateGearName(value as string);
       case 'description':
-        return validateGearDescription(value);
+        return validateGearDescription(value as string);
       case 'pricePerDay':
-        return validatePrice(value);
+        return validatePrice(value as number);
       case 'image':
-        return validateImageFile(value);
+        return validateImageFile(value as File);
       default:
         return null;
     }
   };
 
-  const validateForm = (formData: Record<string, any>, requiredFields: string[]): boolean => {
+  const validateForm = (formData: Record<string, unknown>, requiredFields: string[]): boolean => {
     const newErrors: ValidationErrors = {};
 
     // Check required fields
     requiredFields.forEach(field => {
-      if (!formData[field] || formData[field].toString().trim().length === 0) {
+      if (!formData[field] || (formData[field] as string).trim().length === 0) {
         newErrors[field] = 'Acest câmp este obligatoriu';
       }
     });
@@ -48,12 +48,12 @@ export const useSecureValidation = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const sanitizeFormData = (formData: Record<string, any>): Record<string, any> => {
-    const sanitized: Record<string, any> = {};
+  const sanitizeFormData = (formData: Record<string, unknown>): Record<string, unknown> => {
+    const sanitized: Record<string, unknown> = {};
     
     Object.keys(formData).forEach(key => {
       if (typeof formData[key] === 'string') {
-        sanitized[key] = sanitizeInput(formData[key]);
+        sanitized[key] = sanitizeInput(formData[key] as string);
       } else {
         sanitized[key] = formData[key];
       }

@@ -118,10 +118,10 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
     onFiltersChange(filters);
   }, [filters, onFiltersChange]);
 
-  const handleFilterChange = (key: keyof SearchFilters, value: any) => {
+  const handleFilterChange = (key: keyof SearchFilters, value: unknown) => {
     setFilters(prev => ({
       ...prev,
-      [key]: value
+      [key]: key === 'category' && value === 'all' ? '' : value
     }));
   };
 
@@ -155,7 +155,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
   const clearFilters = () => {
     setFilters({
       search: '',
-      category: '',
+      category: 'all',
       minPrice: 0,
       maxPrice: 1000,
       location: '',
@@ -200,7 +200,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
   const activeFiltersCount = [
     filters.search,
-    filters.category,
+    filters.category && filters.category !== 'all',
     filters.location,
     filters.brand,
     filters.model,
@@ -279,12 +279,12 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
               {/* Category */}
               <div>
                 <Label>Categorie</Label>
-                <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
+                <Select value={filters.category || 'all'} onValueChange={(value) => handleFilterChange('category', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Toate categoriile" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toate categoriile</SelectItem>
+                    <SelectItem value="all">Toate categoriile</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}

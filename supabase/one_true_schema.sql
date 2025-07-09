@@ -210,13 +210,16 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 -- Stripe Connect accounts (for escrow system)
 CREATE TABLE IF NOT EXISTS public.connected_accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID,
+  owner_id UUID UNIQUE,
   stripe_account_id TEXT UNIQUE NOT NULL,
-  account_status TEXT DEFAULT 'pending' CHECK (account_status IN ('pending', 'active', 'restricted')),
+  account_status TEXT DEFAULT 'pending' CHECK (account_status IN ('pending', 'active', 'restricted', 'connect_required')),
   charges_enabled BOOLEAN DEFAULT FALSE,
   payouts_enabled BOOLEAN DEFAULT FALSE,
   verification_status TEXT,
   country TEXT,
+  business_type TEXT,
+  capabilities JSONB,
+  requirements JSONB,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -226,13 +229,21 @@ CREATE TABLE IF NOT EXISTS public.escrow_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID,
   stripe_payment_intent_id TEXT,
+  stripe_charge_id TEXT,
   rental_amount INTEGER NOT NULL,
   deposit_amount INTEGER NOT NULL,
+  platform_fee INTEGER DEFAULT 0,
   escrow_status escrow_status DEFAULT 'pending',
+  owner_stripe_account_id TEXT,
   held_until TIMESTAMPTZ,
   released_at TIMESTAMPTZ,
   released_to UUID,
   release_reason TEXT,
+  refund_amount INTEGER DEFAULT 0,
+  refund_reason TEXT,
+  refund_id TEXT,
+  transfer_id TEXT,
+  transfer_failure_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -316,13 +327,12 @@ CREATE TABLE IF NOT EXISTS public.claims (
   owner_id UUID,
   renter_id UUID,
   claim_type TEXT NOT NULL CHECK (claim_type IN ('damage', 'late_return', 'missing_item', 'other')),
-  claim_status TEXT NOT NULL DEFAULT 'pending' CHECK (claim_status IN ('pending', 'approved', 'rejected')),
+  claim_status TEXT NOT NULL DEFAULT 'pending' CHECK (claim_status IN ('pending', 'under_review', 'approved', 'rejected', 'resolved')),
   description TEXT NOT NULL,
   amount_requested INTEGER, -- Amount requested in RON cents
   evidence_photos JSONB, -- Array of photo URLs
   evidence_urls TEXT[],
   admin_notes TEXT,
-  status claim_status DEFAULT 'pending',
   resolution TEXT,
   deposit_penalty INTEGER DEFAULT 0, -- Amount withheld from deposit in RON cents
   admin_id UUID,
@@ -964,18 +974,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Gear input validation function
 CREATE OR REPLACE FUNCTION public.validate_gear_input(
-  gear_name TEXT,
+  gear_title TEXT,
   gear_description TEXT,
   price_per_day INTEGER
 ) RETURNS BOOLEAN AS $$
 BEGIN
-  -- Validate name length and content
-  IF gear_name IS NULL OR LENGTH(gear_name) < 3 OR LENGTH(gear_name) > 100 THEN
+  -- Validate title length and content
+  IF gear_title IS NULL OR LENGTH(gear_title) < 3 OR LENGTH(gear_title) > 100 THEN
     RETURN FALSE;
   END IF;
   
   -- Check for suspicious content patterns
-  IF gear_name ~* '(script|javascript|<|>|onclick|onerror)' THEN
+  IF gear_title ~* '(script|javascript|<|>|onclick|onerror)' THEN
     RETURN FALSE;
   END IF;
   
@@ -1280,7 +1290,7 @@ CREATE INDEX IF NOT EXISTS idx_reviews_reviewed_id ON public.reviews(reviewed_id
 -- Claim indexes
 CREATE INDEX IF NOT EXISTS idx_claims_booking_id ON public.claims(booking_id);
 CREATE INDEX IF NOT EXISTS idx_claims_claimant_id ON public.claims(claimant_id);
-CREATE INDEX IF NOT EXISTS idx_claims_status ON public.claims(status);
+CREATE INDEX IF NOT EXISTS idx_claims_status ON public.claims(claim_status);
 
 -- Rate limit indexes
 CREATE INDEX IF NOT EXISTS idx_rate_limits_user_action ON public.rate_limits(user_id, action_type);
@@ -1423,19 +1433,15 @@ CREATE POLICY "Gear owners can manage specifications" ON public.gear_specificati
     EXISTS (SELECT 1 FROM public.gear WHERE id = gear_id AND owner_id = auth.uid())
   );
 
--- Bookings policies
-CREATE POLICY "Users can view their own bookings" ON public.bookings
-  FOR SELECT USING (auth.uid() = renter_id OR auth.uid() = owner_id);
+-- Bookings policies - simplified
+CREATE POLICY "Users can view bookings" ON public.bookings
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can create bookings" ON public.bookings
   FOR INSERT WITH CHECK (auth.uid() = renter_id);
 
 CREATE POLICY "Users can update their own bookings" ON public.bookings
   FOR UPDATE USING (auth.uid() = renter_id OR auth.uid() = owner_id);
-
--- Allow authenticated users to view empty bookings list
-CREATE POLICY "Authenticated users can view bookings" ON public.bookings
-  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- Transactions policies
 CREATE POLICY "Users can view transactions for their bookings" ON public.transactions
@@ -1459,9 +1465,9 @@ CREATE POLICY "Users can create transactions for their bookings" ON public.trans
 CREATE POLICY "System can update transaction status" ON public.transactions
   FOR UPDATE USING (auth.role() = 'service_role');
 
--- Connected accounts policies
-CREATE POLICY "Users can view own connected account" ON public.connected_accounts
-  FOR SELECT USING (auth.uid() = owner_id);
+-- Connected accounts policies - simplified
+CREATE POLICY "Users can view connected accounts" ON public.connected_accounts
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can create own connected account" ON public.connected_accounts
   FOR INSERT WITH CHECK (auth.uid() = owner_id);
@@ -1473,15 +1479,9 @@ CREATE POLICY "Users can update own connected account" ON public.connected_accou
 CREATE POLICY "Service role can manage connected accounts" ON public.connected_accounts
   FOR ALL USING (auth.role() = 'service_role');
 
--- Messages policies
-CREATE POLICY "Users can view messages for their bookings" ON public.messages
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = messages.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
+-- Messages policies - simplified
+CREATE POLICY "Users can view messages" ON public.messages
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can send messages for their bookings" ON public.messages
   FOR INSERT WITH CHECK (
@@ -1493,13 +1493,9 @@ CREATE POLICY "Users can send messages for their bookings" ON public.messages
     )
   );
 
--- Allow authenticated users to view empty messages list
-CREATE POLICY "Authenticated users can view messages" ON public.messages
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
--- Reviews policies
+-- Reviews policies - simplified
 CREATE POLICY "Users can view reviews" ON public.reviews
-  FOR SELECT USING (true);
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can create reviews" ON public.reviews
   FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
@@ -1507,22 +1503,9 @@ CREATE POLICY "Users can create reviews" ON public.reviews
 CREATE POLICY "Users can update reviews" ON public.reviews
   FOR UPDATE USING (auth.uid() = reviewer_id);
 
--- Allow authenticated users to view reviews for their bookings
-CREATE POLICY "Users can view reviews for their bookings" ON public.reviews
-  FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    (reviewer_id = auth.uid() OR reviewed_id = auth.uid())
-  );
-
--- Claims policies
-CREATE POLICY "Users can view claims for their bookings" ON public.claims
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = claims.booking_id 
-      AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
-    )
-  );
+-- Claims policies - simplified
+CREATE POLICY "Users can view claims" ON public.claims
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can create claims for their bookings" ON public.claims
   FOR INSERT WITH CHECK (
@@ -1542,10 +1525,6 @@ CREATE POLICY "Users can update claims for their bookings" ON public.claims
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
-
--- Allow authenticated users to view empty claims list
-CREATE POLICY "Authenticated users can view claims" ON public.claims
-  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- Photo uploads policies
 CREATE POLICY "Users can view photo uploads for their bookings" ON public.photo_uploads
@@ -1617,9 +1596,14 @@ CREATE POLICY "Users can view their own notifications" ON public.notifications
 CREATE POLICY "Users can update their own notifications" ON public.notifications
   FOR UPDATE USING (auth.uid() = user_id);
 
--- Allow authenticated users to view empty notifications list
-CREATE POLICY "Authenticated users can view notifications" ON public.notifications
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "System can create notifications" ON public.notifications
+  FOR INSERT WITH CHECK (
+    auth.role() = 'service_role' OR 
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE id = auth.uid() AND role IN ('admin', 'moderator')
+    )
+  );
 
 -- Email notifications policies
 CREATE POLICY "Users can view their own email notifications" ON public.email_notifications

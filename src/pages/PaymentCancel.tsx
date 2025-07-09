@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -10,9 +10,59 @@ import {
   CreditCard,
   AlertTriangle
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export const PaymentCancel: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const bookingId = searchParams.get('booking_id');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const { notifyBookingCancelled } = useNotifications();
+
+  useEffect(() => {
+    console.log('PaymentCancel: Component mounted, bookingId:', bookingId);
+    console.log('PaymentCancel: Current URL:', window.location.href);
+    
+    const handlePaymentCancellation = async () => {
+      if (!bookingId) {
+        console.log('PaymentCancel: No booking_id in URL');
+        setError('Missing booking_id in URL');
+        return;
+      }
+
+      console.log('PaymentCancel: Attempting to cancel booking:', bookingId);
+
+      try {
+        // Update booking status to cancelled
+        const { error } = await supabase
+          .from('bookings')
+          .update({
+            status: 'cancelled',
+            payment_status: 'failed', // Use allowed enum value
+            cancellation_reason: 'Payment cancelled by user'
+          })
+          .eq('id', bookingId);
+
+        if (error) {
+          console.error('PaymentCancel: Error updating booking status:', error, 'BookingId:', bookingId);
+          toast.error('Eroare la anularea rezervării: ' + error.message);
+          setError('Eroare la anularea rezervării: ' + error.message);
+        } else {
+          console.log('PaymentCancel: Booking status updated to cancelled for', bookingId);
+          toast.success('Rezervarea a fost anulată');
+          setSuccess(true);
+        }
+      } catch (err) {
+        console.error('PaymentCancel: Error handling payment cancellation:', err, 'BookingId:', bookingId);
+        setError('Eroare la anularea rezervării: ' + (err instanceof Error ? err.message : String(err)));
+      }
+    };
+
+    handlePaymentCancellation();
+  }, [bookingId]);
 
   const handleGoHome = () => {
     navigate('/');
@@ -41,15 +91,24 @@ export const PaymentCancel: React.FC = () => {
           <CardContent className="space-y-6">
             <div className="text-center">
               <p className="text-gray-600 mb-4">
-                Ai anulat procesul de plată. Rezervarea ta nu a fost confirmată.
+                Ai anulat procesul de plată. Rezervarea ta {success ? 'a fost anulată.' : 'nu a putut fi anulată.'}
               </p>
-              
-              <Alert className="border-orange-200 bg-orange-50">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <AlertDescription className="text-orange-800">
-                  Rezervarea va fi ștearsă automat dacă nu finalizezi plata în următoarele 30 de minute.
-                </AlertDescription>
-              </Alert>
+              {error && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+              {!error && (
+                <Alert className="border-orange-200 bg-orange-50">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-800">
+                    Rezervarea va fi ștearsă automat în următoarele 30 de minute.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             <div className="space-y-3">

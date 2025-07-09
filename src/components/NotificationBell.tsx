@@ -19,7 +19,7 @@ interface NotificationRow {
   message: string;
   is_read: boolean;
   created_at: string;
-  data?: any;
+  data?: unknown;
 }
 
 export const NotificationBell: React.FC = () => {
@@ -30,6 +30,7 @@ export const NotificationBell: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+    
     const load = async () => {
       const { data, error } = await supabase
         .from('notifications')
@@ -43,12 +44,13 @@ export const NotificationBell: React.FC = () => {
       }
       setLoading(false);
     };
+    
     load();
 
     const channel = supabase.channel('notifications_' + user.id)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, payload => {
-        setNotifications(prev => [payload.new as NotificationRow, ...prev].slice(0,20));
-        setUnread(prev => prev + 1);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, payload => {
+        // Reload all notifications on any change
+        load();
       })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };

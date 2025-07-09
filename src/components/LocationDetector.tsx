@@ -57,15 +57,15 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
       } else {
         setDetectionError('Nu am putut determina județul din coordonatele GPS');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Location detection error:', error);
       
       let errorMessage = 'Nu am putut detecta locația';
-      if (error.code === 1) {
+      if ((error as GeolocationPositionError).code === 1) {
         errorMessage = 'Accesul la locație a fost refuzat. Te rugăm să permiți accesul în setările browser-ului.';
-      } else if (error.code === 2) {
+      } else if ((error as GeolocationPositionError).code === 2) {
         errorMessage = 'Locația nu a putut fi determinată. Verifică-ți conexiunea la internet.';
-      } else if (error.code === 3) {
+      } else if ((error as GeolocationPositionError).code === 3) {
         errorMessage = 'Detectarea locației a durat prea mult. Încearcă din nou.';
       }
       
@@ -178,7 +178,7 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
       }
       
       return null;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Reverse geocoding error:', error);
       return null;
     }
@@ -329,7 +329,7 @@ const reverseGeocode = async (lat: number, lng: number): Promise<string | null> 
     }
     
     return null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Reverse geocoding error:', error);
     return null;
   }

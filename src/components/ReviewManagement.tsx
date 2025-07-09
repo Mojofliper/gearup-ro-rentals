@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Star, Edit, Trash2, X, Check } from 'lucide-react';
+import { Star, Edit, X, Check } from 'lucide-react';
 import { useUserReviews, useUpdateReview } from '@/hooks/useUserData';
-import { useDeleteReview } from '@/hooks/useReviews';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
@@ -19,18 +18,17 @@ interface ReviewManagementProps {
 export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className }) => {
   const { user } = useAuth();
   const { data: reviews = [], isLoading } = useUserReviews();
-  const { mutate: updateReview, isPending: isUpdating } = useUpdateReview();
-  const { mutate: deleteReview, isPending: isDeleting } = useDeleteReview();
+  const { mutate: updateReview, isLoading: isUpdating } = useUpdateReview();
   
   const [editingReview, setEditingReview] = useState<string | null>(null);
   const [editRating, setEditRating] = useState(0);
   const [editComment, setEditComment] = useState('');
   const [hoveredRating, setHoveredRating] = useState(0);
 
-  const handleEdit = (review: any) => {
-    setEditingReview(review.id);
-    setEditRating(review.rating);
-    setEditComment(review.comment || '');
+  const handleEdit = (review: Record<string, unknown>) => {
+    setEditingReview(review.id as string);
+    setEditRating(review.rating as number);
+    setEditComment(review.comment as string || '');
   };
 
   const handleCancelEdit = () => {
@@ -56,52 +54,17 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
         rating: editRating,
         comment: editComment.trim() || null
       }
-    }, {
-      onSuccess: () => {
-        toast({
-          title: 'Recenzie actualizată!',
-          description: 'Recenzia ta a fost actualizată cu succes.',
-        });
-        handleCancelEdit();
-      },
-      onError: (error: any) => {
-        toast({
-          title: 'Eroare',
-          description: 'Nu s-a putut actualiza recenzia. Te rugăm să încerci din nou.',
-          variant: 'destructive',
-        });
-        console.error('Update review error:', error);
-      }
     });
+    
+    toast({
+      title: 'Recenzie actualizată!',
+      description: 'Recenzia ta a fost actualizată cu succes.',
+    });
+    handleCancelEdit();
   };
 
-  const handleDelete = (reviewId: string) => {
-    if (confirm('Ești sigur că vrei să ștergi această recenzie? Această acțiune nu poate fi anulată.')) {
-      deleteReview(reviewId, {
-        onSuccess: () => {
-          toast({
-            title: 'Recenzie ștearsă!',
-            description: 'Recenzia ta a fost ștearsă cu succes.',
-          });
-        },
-        onError: (error: any) => {
-          toast({
-            title: 'Eroare',
-            description: 'Nu s-a putut șterge recenzia. Te rugăm să încerci din nou.',
-            variant: 'destructive',
-          });
-          console.error('Delete review error:', error);
-        }
-      });
-    }
-  };
-
-  const canEditReview = (review: any) => {
-    return user?.id === review.reviewer_id;
-  };
-
-  const canDeleteReview = (review: any) => {
-    return user?.id === review.reviewer_id;
+  const canEditReview = (review: Record<string, unknown>) => {
+    return user?.id === (review.reviewer_id as string);
   };
 
   if (isLoading) {
@@ -262,16 +225,6 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {canDeleteReview(review) && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDelete(review.id)}
-                              disabled={isDeleting}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
                       )}
                     </div>

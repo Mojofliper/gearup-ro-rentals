@@ -20,10 +20,10 @@ export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 
 export interface CreatePaymentIntentParams {
   bookingId: string;
   transactionId?: string; // Optional transaction ID for transaction-based payments
-  amount: number; // in RON cents
-  rentalAmount: number; // in RON cents
-  depositAmount: number; // in RON cents
-  platformFee: number; // in RON cents
+  amount: number; // in RON
+  rentalAmount: number; // in RON
+  depositAmount: number; // in RON
+  platformFee: number; // in RON
   metadata?: Record<string, string>;
 }
 
@@ -50,11 +50,11 @@ export const formatAmountForDisplay = (amount: number): string => {
   return new Intl.NumberFormat('ro-RO', {
     style: 'currency',
     currency: 'RON',
-  }).format(amount / 100);
+  }).format(amount);
 };
 
 export const formatAmountForStripe = (amount: number): number => {
-  return Math.round(amount * 100);
+  return Math.round(amount);
 };
 
 export const calculatePlatformFee = (rentalAmount: number): number => {

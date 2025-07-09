@@ -1,202 +1,239 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { gearApi } from '@/services/apiService';
+import { authErrorHandler } from '@/utils/authErrorHandler';
+import { isSessionReady } from '@/utils/security';
 import { useGearApi } from './useApi';
-import { Database } from '@/integrations/supabase/types';
+import { useAuthQuery, useAuthMutation } from './useAuthQuery';
+import { GearData, GearUpdate } from '@/integrations/supabase/types';
+import { getGearUnavailableDates } from '@/services/apiService';
 
-type Gear = Database['public']['Tables']['gear']['Row'];
-type GearInsert = Database['public']['Tables']['gear']['Insert'];
-
-export const useGear = (id?: string) => {
-  const { getGearItem, loading, error } = useGearApi();
+export const useAllGear = () => {
+  const { getAvailableGear } = useGearApi();
   
   return useQuery({
-    queryKey: ['gear', id],
+    queryKey: ['all-gear'],
     queryFn: async () => {
-      if (!id) return null;
-      return await getGearItem(id);
+      return await getAvailableGear();
     },
-    enabled: !!id,
+    staleTime: 2 * 60 * 1000, // 2 minutes for gear listings
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      // Retry up to 3 times for network errors
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
   });
 };
 
-export const useGearList = (filters?: {
-  search?: string;
-  category?: string;
-  location?: string;
-  sortBy?: string;
-}) => {
-  const { getAvailableGear, loading, error } = useGearApi();
+export const useGearById = (gearId: string) => {
+  const { getGearItem } = useGearApi();
   
   return useQuery({
-    queryKey: ['gear', 'list', filters],
+    queryKey: ['gear', gearId],
     queryFn: async () => {
-      // Transform filters to match API service format
-      const apiFilters = {
-        category_id: filters?.category !== 'all' ? filters?.category : undefined,
-        location: filters?.location !== 'all' ? filters?.location : undefined,
-        search: filters?.search,
-        min_price: undefined,
-        max_price: undefined,
-        condition: undefined
-      };
-      
-      const result = await getAvailableGear(apiFilters);
-      
-      // Apply sorting if needed (API service handles basic sorting)
-      if (filters?.sortBy && result) {
-        switch (filters.sortBy) {
-          case 'price-low':
-            return result.sort((a, b) => a.price_per_day - b.price_per_day);
-          case 'price-high':
-            return result.sort((a, b) => b.price_per_day - a.price_per_day);
-          case 'rating':
-            return result.sort((a, b) => {
-              const ratingA = (a as any).users?.rating || 0;
-              const ratingB = (b as any).users?.rating || 0;
-              return ratingB - ratingA;
-            });
-          default:
-            return result;
-        }
-      }
-      
-      return result || [];
+      return await getGearItem(gearId);
     },
+    enabled: !!gearId,
+    staleTime: 5 * 60 * 1000, // 5 minutes for individual gear
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
   });
 };
 
 export const useCreateGear = () => {
   const queryClient = useQueryClient();
-  const { createGear, loading, error } = useGearApi();
+  const { createGear } = useGearApi();
   
   return useMutation({
-    mutationFn: async (gear: GearInsert) => {
-      return await createGear(gear);
+    mutationFn: async (gearData: Record<string, unknown>) => {
+      // Check if session is ready before making the API call
+      const sessionReady = await isSessionReady();
+      if (!sessionReady) {
+        throw new Error('Session not ready. Please try again.');
+      }
+      
+      const result = await createGear(gearData);
+      
+      // The useGearApi.createGear returns the data directly or null on error
+      if (!result) {
+        throw new Error('Failed to create gear: No result returned from API');
+      }
+      
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gear'] });
+      queryClient.invalidateQueries({ queryKey: ['all-gear'] });
+      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+    },
+    onError: (error: unknown) => {
+      console.error('useCreateGear error:', error);
+      // Handle auth errors
+      if (authErrorHandler.isAuthError(error)) {
+        authErrorHandler.handleAuthError(error).catch(console.error);
+      }
     },
   });
 };
 
 export const useUpdateGear = () => {
   const queryClient = useQueryClient();
-  const { updateGear, loading, error } = useGearApi();
+  const { updateGear } = useGearApi();
   
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Gear> }) => {
-      return await updateGear(id, updates);
+    mutationFn: async ({ gearId, updates }: { gearId: string; updates: Record<string, unknown> }) => {
+      return await updateGear(gearId, updates);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['gear'] });
-      queryClient.invalidateQueries({ queryKey: ['gear', data?.id] });
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['gear', variables.gearId] });
+      queryClient.invalidateQueries({ queryKey: ['all-gear'] });
+      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
     },
   });
 };
 
 export const useDeleteGear = () => {
   const queryClient = useQueryClient();
-  const { deleteGear, loading, error } = useGearApi();
+  const { deleteGear } = useGearApi();
   
   return useMutation({
     mutationFn: async (gearId: string) => {
       return await deleteGear(gearId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gear'] });
+      queryClient.invalidateQueries({ queryKey: ['all-gear'] });
+      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
     },
   });
 };
 
-// Categories hooks
-export const useCategories = () => {
-  const { getAllCategories, loading, error } = useGearApi();
+export const useGearByCategory = (categoryId: string) => {
+  const { getAvailableGear } = useGearApi();
   
   return useQuery({
-    queryKey: ['categories'],
+    queryKey: ['gear-by-category', categoryId],
     queryFn: async () => {
-      return await getAllCategories();
+      return await getAvailableGear({ category_id: categoryId });
     },
+    enabled: !!categoryId,
+    staleTime: 2 * 60 * 1000, // 2 minutes for category gear
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
   });
 };
 
-export const useCategoryBySlug = (slug: string) => {
-  const { getCategoryBySlug, loading, error } = useGearApi();
+export const useGearByLocation = (latitude: number, longitude: number, radius: number = 50) => {
+  const { searchByLocation } = useGearApi();
   
   return useQuery({
-    queryKey: ['category', slug],
+    queryKey: ['gear-by-location', latitude, longitude, radius],
     queryFn: async () => {
-      if (!slug) return null;
-      return await getCategoryBySlug(slug);
+      // For now, use searchByLocation with coordinates as string
+      return await searchByLocation(`${latitude},${longitude}`);
     },
-    enabled: !!slug,
+    enabled: !!(latitude && longitude),
+    staleTime: 5 * 60 * 1000, // 5 minutes for location-based gear
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
   });
 };
 
-export const useCreateCategory = () => {
-  const queryClient = useQueryClient();
-  const { createCategory, loading, error } = useGearApi();
-  
-  return useMutation({
-    mutationFn: async (categoryData: {
-      name: string;
-      slug: string;
-      description?: string;
-      icon_name?: string;
-    }) => {
-      return await createCategory(categoryData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-  });
-};
-
-// Search hooks
-export const useSearchGear = (filters: any) => {
-  const { searchGearWithFilters, loading, error } = useGearApi();
+export const useGearByOwner = (ownerId: string) => {
+  const { getAvailableGear } = useGearApi();
   
   return useQuery({
-    queryKey: ['search-gear', filters],
+    queryKey: ['gear-by-owner', ownerId],
     queryFn: async () => {
-      return await searchGearWithFilters(filters);
+      return await getAvailableGear({ owner_id: ownerId });
     },
-    enabled: !!filters,
+    enabled: !!ownerId,
+    staleTime: 2 * 60 * 1000, // 2 minutes for owner gear
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
   });
 };
 
-export const useSearchByLocation = (location: string) => {
-  const { searchByLocation, loading, error } = useGearApi();
+export const useSearchGear = (searchTerm: string) => {
+  const { searchByBrandModel } = useGearApi();
   
   return useQuery({
-    queryKey: ['search-location', location],
+    queryKey: ['search-gear', searchTerm],
     queryFn: async () => {
-      if (!location) return [];
-      return await searchByLocation(location);
-    },
-    enabled: !!location,
-  });
-};
-
-export const useSearchByBrandModel = (searchTerm: string) => {
-  const { searchByBrandModel, loading, error } = useGearApi();
-  
-  return useQuery({
-    queryKey: ['search-brand-model', searchTerm],
-    queryFn: async () => {
-      if (!searchTerm) return [];
       return await searchByBrandModel(searchTerm);
     },
-    enabled: !!searchTerm,
+    enabled: !!searchTerm && searchTerm.length >= 2,
+    staleTime: 1 * 60 * 1000, // 1 minute for search results
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
   });
 };
 
-export const useFeaturedGear = (limit: number = 10) => {
-  const { getFeaturedGear, loading, error } = useGearApi();
+export const useFeaturedGear = () => {
+  const { getAvailableGear } = useGearApi();
   
   return useQuery({
-    queryKey: ['featured-gear', limit],
+    queryKey: ['featured-gear'],
     queryFn: async () => {
-      return await getFeaturedGear(limit);
+      // Use getAvailableGear with featured filter
+      return await getAvailableGear({ featured: true });
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes for featured gear
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
+  });
+};
+
+export const useGearAvailability = (gearId: string, startDate: string, endDate: string) => {
+  const { getGearItem } = useGearApi();
+  
+  return useQuery({
+    queryKey: ['gear-availability', gearId, startDate, endDate],
+    queryFn: async () => {
+      // For now, return the gear item and calculate availability client-side
+      // This would need to be implemented in the API
+      const gearItem = await getGearItem(gearId);
+      return {
+        gear: gearItem,
+        available: true, // Placeholder
+        conflictingBookings: [] // Placeholder
+      };
+    },
+    enabled: !!(gearId && startDate && endDate),
+    staleTime: 1 * 60 * 1000, // 1 minute for availability
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
+  });
+};
+
+export const useGearUnavailableDates = (gearId: string | undefined) => {
+  return useQuery({
+    queryKey: ['gear-unavailable-dates', gearId],
+    queryFn: async () => {
+      if (!gearId) return [];
+      return await getGearUnavailableDates(gearId);
+    },
+    enabled: !!gearId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };

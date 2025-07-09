@@ -15,9 +15,9 @@ interface GearCardProps {
     id: string;
     title: string;
     description?: string;
-    daily_rate: number;
+    price_per_day: number;
     deposit_amount?: number;
-    location: string;
+    pickup_location: string;
     status: string;
     gear_photos?: Array<{ photo_url: string }>;
     categories?: { name: string };
@@ -38,7 +38,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   
   // Price is already in RON, no need to convert from cents
-      const price = gear.daily_rate;
+      const price = gear.price_per_day;
   const imageUrl = gear.gear_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
 
   const handleImageClick = () => {
@@ -74,13 +74,13 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
       gear: {
         id: gear.id,
         title: gear.title,
-        daily_rate: gear.daily_rate,
+        price_per_day: gear.price_per_day,
         deposit_amount: gear.deposit_amount || 0,
         gear_photos: gear.gear_photos?.map(photo => ({ photo_url: photo.photo_url })) || [],
         owner: {
           id: gear.owner_id || '',
           full_name: gear.users?.full_name || '',
-          location: gear.location,
+          location: gear.pickup_location,
           is_verified: gear.users?.is_verified || false
         }
       },
@@ -199,7 +199,7 @@ export const GearCard: React.FC<GearCardProps> = ({ gear }) => {
 
           <div className="flex items-center space-x-1 mb-4">
             <MapPin className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-600">{gear.location}</span>
+            <span className="text-sm text-gray-600">{gear.pickup_location}</span>
           </div>
 
           <div className="flex items-center justify-between">

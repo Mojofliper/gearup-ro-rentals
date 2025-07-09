@@ -1,59 +1,71 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useClaimsApi } from './useApi';
+import { useAuthQuery, useAuthMutation } from './useAuthQuery';
+import { ClaimData, ClaimUpdate } from '@/integrations/supabase/types';
 
-// Enhanced claims hooks
-export const useUpdateClaimStatus = () => {
+export const useCreateClaim = () => {
   const queryClient = useQueryClient();
-  const { updateClaimStatus, loading, error } = useClaimsApi();
+  const { createClaim } = useClaimsApi();
   
-  return useMutation({
-    mutationFn: async ({ claimId, updates }: {
-      claimId: string;
-      updates: {
-        status: string;
-        resolution?: string;
-        deposit_penalty?: number;
-        admin_id?: string;
-      };
-    }) => {
+  return useAuthMutation(
+    async (claimData: Record<string, unknown>) => {
+      return await createClaim(claimData);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['user-claims'] });
+        queryClient.invalidateQueries({ queryKey: ['gear-claims'] });
+      },
+    }
+  );
+};
+
+export const useUpdateClaim = () => {
+  const queryClient = useQueryClient();
+  const { updateClaimStatus } = useClaimsApi();
+  
+  return useAuthMutation(
+    async ({ claimId, updates }: { claimId: string; updates: Record<string, unknown> }) => {
       return await updateClaimStatus(claimId, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['claims'] });
-    },
-  });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['user-claims'] });
+        queryClient.invalidateQueries({ queryKey: ['gear-claims'] });
+      },
+    }
+  );
 };
 
-export const useUploadEvidence = () => {
+export const useResolveClaim = () => {
   const queryClient = useQueryClient();
-  const { uploadEvidence, loading, error } = useClaimsApi();
+  const { updateClaimStatus } = useClaimsApi();
   
-  return useMutation({
-    mutationFn: async ({ claimId, evidenceData }: {
-      claimId: string;
-      evidenceData: {
-        evidence_type: string;
-        evidence_url: string;
-        description?: string;
-      };
-    }) => {
-      return await uploadEvidence(claimId, evidenceData);
+  return useAuthMutation(
+    async ({ claimId, resolution }: { claimId: string; resolution: Record<string, unknown> }) => {
+      return await updateClaimStatus(claimId, resolution);
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['claim-evidence', variables.claimId] });
-    },
-  });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['user-claims'] });
+        queryClient.invalidateQueries({ queryKey: ['gear-claims'] });
+      },
+    }
+  );
 };
 
-export const useClaimEvidence = (claimId: string) => {
-  const { getClaimEvidence, loading, error } = useClaimsApi();
+export const useUserClaims = () => {
+  const { getBookingClaims } = useClaimsApi();
   
-  return useQuery({
-    queryKey: ['claim-evidence', claimId],
-    queryFn: async () => {
-      if (!claimId) return [];
-      return await getClaimEvidence(claimId);
+  return useAuthQuery(
+    ['user-claims'],
+    async () => {
+      // This would need to be implemented in the API to get all user claims
+      // For now, return empty array as placeholder
+      return [];
     },
-    enabled: !!claimId,
-  });
-}; 
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes for user claims
+    }
+  );
+};

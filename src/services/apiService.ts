@@ -1,17 +1,18 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { notificationService } from './notificationService';
 
-// Type definitions
-type Tables = Database['public']['Tables'];
-type User = Tables['users']['Row'];
-type Gear = Tables['gear']['Row'];
-type Booking = Tables['bookings']['Row'];
-type Payment = Tables['payments']['Row'];
-type Escrow = Tables['escrow']['Row'];
-type Review = Tables['reviews']['Row'];
-type Claim = Tables['claims']['Row'];
-type Message = Tables['messages']['Row'];
-type Notification = Tables['notifications']['Row'];
+// Remove broken Supabase type definitions
+// type Tables = Database['public']['Tables'];
+// type User = Tables['users']['Row'];
+// type Gear = Tables['gear']['Row'];
+// type Booking = Tables['bookings']['Row'];
+// type Payment = Tables['payments']['Row'];
+// type Escrow = Tables['escrow']['Row'];
+// type Review = Tables['reviews']['Row'];
+// type Claim = Tables['claims']['Row'];
+// type Message = Tables['messages']['Row'];
+// type Notification = Tables['notifications']['Row'];
 
 // API Error handling
 export class ApiError extends Error {
@@ -37,7 +38,7 @@ export interface ApiResponse<T> {
 
 export const userApi = {
   // Get current user
-  async getCurrentUser(): Promise<ApiResponse<User>> {
+  async getCurrentUser(): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -52,13 +53,13 @@ export const userApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Update user profile
-  async updateProfile(userId: string, updates: Partial<User>): Promise<ApiResponse<User>> {
+  async updateProfile(userId: string, updates: Partial<Record<string, unknown>>): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('users')
@@ -69,13 +70,13 @@ export const userApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
   // Get dashboard overview
-  async getDashboardOverview(userId: string): Promise<ApiResponse<any>> {
+  async getDashboardOverview(userId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       // Get user's bookings count
       const { count: bookingCount } = await supabase
@@ -100,13 +101,13 @@ export const userApi = {
         },
         error: null
       };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get recent activity for user
-  async getRecentActivity(userId: string, limit: number = 10): Promise<ApiResponse<any[]>> {
+  async getRecentActivity(userId: string, limit: number = 10): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       // Get recent bookings
       const { data: recentBookings } = await supabase
@@ -189,8 +190,8 @@ export const userApi = {
        .slice(0, limit);
 
       return { data: activities, error: null };
-    } catch (error: any) {
-      return { data: [], error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: [], error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -198,7 +199,7 @@ export const userApi = {
   async uploadVerificationDocument(documentData: {
     document_type: string;
     document_url: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -216,13 +217,13 @@ export const userApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPLOAD_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPLOAD_ERROR') };
     }
   },
 
   // Get user verification status
-  async getUserVerificationStatus(userId: string): Promise<ApiResponse<any>> {
+  async getUserVerificationStatus(userId: string): Promise<ApiResponse<{ is_verified: boolean }>> {
     try {
       const { data, error } = await supabase
         .from('users')
@@ -232,33 +233,33 @@ export const userApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get my equipment (owner)
-  async getMyEquipment(userId: string): Promise<ApiResponse<any[]>> {
+  async getMyEquipment(userId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('gear')
         .select(`
           *,
-          bookings(status, renter_id, start_date, end_date),
-          users!bookings!renter_id(full_name)
+          categories!category_id(name, description, icon_name),
+          gear_photos(photo_url, is_primary, description)
         `)
         .eq('owner_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get my bookings (renter)
-  async getMyBookings(userId: string): Promise<ApiResponse<any[]>> {
+  async getMyBookings(userId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -272,13 +273,13 @@ export const userApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get user notification preferences
-  async getUserPreferences(userId: string): Promise<ApiResponse<any>> {
+  async getUserPreferences(userId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       // For now, return default preferences since notification_preferences table doesn't exist
       return { 
@@ -292,8 +293,8 @@ export const userApi = {
         }, 
         error: null 
       };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -307,12 +308,12 @@ export const userApi = {
     message_notifications?: boolean;
     review_notifications?: boolean;
     marketing_emails?: boolean;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       // For now, just return success since notification_preferences table doesn't exist
       return { data: preferences, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 };
@@ -329,7 +330,7 @@ export const gearApi = {
     max_price?: number;
     location?: string;
     search?: string;
-  }): Promise<ApiResponse<Gear[]>> {
+  }): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       let query = supabase
         .from('gear')
@@ -345,13 +346,13 @@ export const gearApi = {
         query = query.eq('category_id', filters.category_id);
       }
       if (filters?.min_price) {
-        query = query.gte('daily_rate', filters.min_price);
+        query = query.gte('price_per_day', filters.min_price);
       }
       if (filters?.max_price) {
-        query = query.lte('daily_rate', filters.max_price);
+        query = query.lte('price_per_day', filters.max_price);
       }
       if (filters?.location) {
-        query = query.ilike('location', `%${filters.location}%`);
+        query = query.ilike('pickup_location', `%${filters.location}%`);
       }
       if (filters?.search) {
         query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
@@ -361,13 +362,13 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get single gear item
-  async getGearItem(gearId: string): Promise<ApiResponse<Gear>> {
+  async getGearItem(gearId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('gear')
@@ -383,23 +384,34 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Create gear listing
-  async createGear(gearData: Omit<Gear, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<Gear>> {
+  async createGear(gearData: Omit<Record<string, unknown>, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       console.log('apiService.createGear called with:', gearData);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('apiService.createGear: User not authenticated');
-        return { data: null, error: new ApiError('User not authenticated', 'AUTH_REQUIRED', 401) };
+      // First try to get the current user
+      let { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      // If user check fails, try to refresh the session
+      if (userError || !user) {
+        console.log('apiService.createGear: User check failed, attempting session refresh');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData.session?.user) {
+          console.error('apiService.createGear: Session refresh failed:', refreshError);
+          return { data: null, error: new ApiError('User not authenticated', 'AUTH_REQUIRED', 401) };
+        }
+        
+        user = refreshData.session.user;
+        console.log('apiService.createGear: Session refreshed successfully');
       }
 
-      // console.log('apiService.createGear: User authenticated:', user.id);
+      console.log('apiService.createGear: User authenticated:', user.id);
 
       // Ensure required fields are present
       const gearToCreate = {
@@ -426,14 +438,14 @@ export const gearApi = {
       
       console.log('apiService.createGear: Success, returning data:', data);
       return { data, error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('apiService.createGear: Exception caught:', error);
-      return { data: null, error: new ApiError(error.message, 'CREATE_ERROR') };
+      return { data: null, error: new ApiError((error as Error).message, 'CREATE_ERROR') };
     }
   },
 
   // Update gear listing
-  async updateGear(gearId: string, updates: Partial<Gear>): Promise<ApiResponse<Gear>> {
+  async updateGear(gearId: string, updates: Partial<Record<string, unknown>>): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('gear')
@@ -444,23 +456,46 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
   // Delete gear listing
   async deleteGear(gearId: string): Promise<ApiResponse<void>> {
     try {
-      const { error } = await supabase
-        .from('gear')
-        .delete()
-        .eq('id', gearId);
+      console.log('apiService.deleteGear called with gearId:', gearId);
+      
+      // Use the safe delete function to check permissions and handle deletion properly
+      const { data, error } = await supabase.rpc('safe_delete_gear', {
+        p_gear_id: gearId
+      });
 
-      if (error) throw error;
+      console.log('apiService.deleteGear response:', { data, error });
+
+      if (error) {
+        console.error('apiService.deleteGear error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.error('apiService.deleteGear: No data returned');
+        throw new Error('Failed to delete gear');
+      }
+
+      const result = data[0];
+      console.log('apiService.deleteGear result:', result);
+      
+      if (!result.success) {
+        console.error('apiService.deleteGear: Deletion failed:', result.message);
+        throw new Error(result.message || 'Failed to delete gear');
+      }
+
+      console.log('apiService.deleteGear: Success');
       return { data: null, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'DELETE_ERROR') };
+    } catch (error: unknown) {
+      console.error('apiService.deleteGear exception:', error);
+      return { data: null, error: new ApiError((error as Error).message, 'DELETE_ERROR') };
     }
   },
 
@@ -469,7 +504,7 @@ export const gearApi = {
     photo_url: string;
     is_primary?: boolean;
     description?: string;
-  }>): Promise<ApiResponse<any[]>> {
+  }>): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('gear_photos')
@@ -478,13 +513,13 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPLOAD_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPLOAD_ERROR') };
     }
   },
 
   // Get all categories
-  async getAllCategories(): Promise<ApiResponse<any[]>> {
+  async getAllCategories(): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -493,13 +528,13 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get category by slug
-  async getCategoryBySlug(slug: string): Promise<ApiResponse<any>> {
+  async getCategoryBySlug(slug: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -509,8 +544,8 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -519,7 +554,7 @@ export const gearApi = {
     name: string;
     description?: string;
     icon?: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -529,8 +564,8 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'CREATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'CREATE_ERROR') };
     }
   },
 
@@ -543,7 +578,7 @@ export const gearApi = {
     location?: string;
     search?: string;
     limit?: number;
-  }): Promise<ApiResponse<Gear[]>> {
+  }): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       let query = supabase
         .from('gear')
@@ -559,13 +594,13 @@ export const gearApi = {
         query = query.eq('category_id', filters.category_id);
       }
       if (filters.min_price) {
-        query = query.gte('daily_rate', filters.min_price);
+        query = query.gte('price_per_day', filters.min_price);
       }
       if (filters.max_price) {
-        query = query.lte('daily_rate', filters.max_price);
+        query = query.lte('price_per_day', filters.max_price);
       }
       if (filters.location) {
-        query = query.ilike('location', `%${filters.location}%`);
+        query = query.ilike('pickup_location', `%${filters.location}%`);
       }
       if (filters.search) {
         query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
@@ -577,13 +612,13 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Search by location
-  async searchByLocation(location: string): Promise<ApiResponse<Gear[]>> {
+  async searchByLocation(location: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('gear')
@@ -594,18 +629,18 @@ export const gearApi = {
           gear_photos(photo_url, is_primary, description)
         `)
         .eq('status', 'available')
-        .ilike('location', `%${location}%`)
+        .ilike('pickup_location', `%${location}%`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Search by brand/model
-  async searchByBrandModel(searchTerm: string): Promise<ApiResponse<Gear[]>> {
+  async searchByBrandModel(searchTerm: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('gear')
@@ -621,13 +656,13 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get featured gear
-  async getFeaturedGear(limit: number = 10): Promise<ApiResponse<Gear[]>> {
+  async getFeaturedGear(limit: number = 10): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('gear')
@@ -644,13 +679,13 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get gear images
-  async getGearImages(gearId: string): Promise<ApiResponse<any[]>> {
+  async getGearImages(gearId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('gear_photos')
@@ -660,8 +695,8 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -676,13 +711,13 @@ export const gearApi = {
 
       if (error) throw error;
       return { data: null, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'DELETE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'DELETE_ERROR') };
     }
   },
 
   // Get reviews for a specific gear
-  async getGearReviews(gearId: string): Promise<ApiResponse<Review[]>> {
+  async getGearReviews(gearId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       // First get all bookings for this gear
       const { data: bookings, error: bookingsError } = await supabase
@@ -711,8 +746,8 @@ export const gearApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 };
@@ -729,7 +764,7 @@ export const bookingApi = {
     end_date: string;
     pickup_location?: string;
     renter_notes?: string;
-  }): Promise<ApiResponse<Booking>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -739,7 +774,7 @@ export const bookingApi = {
       // Get gear details
       const { data: gear } = await supabase
         .from('gear')
-        .select('owner_id, daily_rate, deposit_amount')
+        .select('owner_id, price_per_day, deposit_amount')
         .eq('id', bookingData.gear_id)
         .single();
 
@@ -750,8 +785,18 @@ export const bookingApi = {
       // Calculate booking details
       const startDate = new Date(bookingData.start_date);
       const endDate = new Date(bookingData.end_date);
-      const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const totalAmount = gear.daily_rate * totalDays;
+      // Set both dates to midnight for accurate comparison
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+      
+      // Calculate the difference in days
+      const timeDiff = endDate.getTime() - startDate.getTime();
+      const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+      
+      // For single-day bookings (same start and end date), count as 1 day
+      // For multi-day bookings, count the actual difference + 1 (inclusive)
+      const totalDays = daysDiff === 0 ? 1 : daysDiff + 1;
+      const totalAmount = gear.price_per_day * totalDays;
       const platformFee = totalAmount * 0.10; // 10% platform fee
       const ownerAmount = totalAmount - platformFee;
 
@@ -764,7 +809,7 @@ export const bookingApi = {
           start_date: bookingData.start_date,
           end_date: bookingData.end_date,
           total_days: totalDays,
-          daily_rate: gear.daily_rate,
+          daily_rate: gear.price_per_day,
           total_amount: totalAmount,
           platform_fee: platformFee,
           owner_amount: ownerAmount,
@@ -778,13 +823,13 @@ export const bookingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'CREATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'CREATE_ERROR') };
     }
   },
 
   // Accept booking and set pickup location
-  async acceptBooking(bookingId: string, pickupLocation: string): Promise<ApiResponse<Booking>> {
+  async acceptBooking(bookingId: string, pickupLocation: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -798,13 +843,13 @@ export const bookingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
   // Get rental dashboard data
-  async getRentalDashboard(bookingId: string): Promise<ApiResponse<any>> {
+  async getRentalDashboard(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -820,13 +865,13 @@ export const bookingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Confirm return (renter)
-  async confirmReturn(bookingId: string): Promise<ApiResponse<Booking>> {
+  async confirmReturn(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -840,13 +885,13 @@ export const bookingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
   // Confirm return (owner)
-  async completeReturn(bookingId: string): Promise<ApiResponse<Booking>> {
+  async completeReturn(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -860,12 +905,12 @@ export const bookingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
-  async getUserBookings(userId: string): Promise<ApiResponse<Booking[]>> {
+  async getUserBookings(userId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       // Fetch as renter
       const { data: asRenter, error: errorRenter } = await supabase
@@ -906,7 +951,7 @@ export const bookingApi = {
       if (validGearIds.length > 0) {
         const gearRes = await supabase
           .from('gear')
-          .select('id, title, daily_rate, deposit_amount, location, status')
+          .select('id, title, price_per_day, deposit_amount, pickup_location, status')
           .in('id', validGearIds);
         gearData = gearRes.data || [];
       }
@@ -930,13 +975,13 @@ export const bookingApi = {
       }));
 
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Update booking (generic)
-  async updateBooking(bookingId: string, updates: Partial<Booking>): Promise<ApiResponse<Booking>> {
+  async updateBooking(bookingId: string, updates: Partial<Record<string, unknown>>): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -947,10 +992,77 @@ export const bookingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
-  }
+  },
+
+  // Complete rental and clean up conversations
+  async completeRental(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: new ApiError('User not authenticated', 'AUTH_REQUIRED', 401) };
+      }
+
+      // Update booking status to completed
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', bookingId)
+        .select()
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      // Delete conversation and messages
+      await this.deleteConversation(bookingId);
+
+      // Send completion notifications
+      try {
+        const { data: bookingDetails } = await supabase
+          .from('bookings')
+          .select('owner_id, renter_id, gear:gear_id(title)')
+          .eq('id', bookingId)
+          .single();
+
+        if (bookingDetails) {
+          const gearTitle = (bookingDetails.gear as unknown as Record<string, unknown>)?.title || 'Echipament';
+          
+          // Send notifications to both parties
+          await supabase
+            .from('notifications')
+            .insert([
+              {
+                user_id: bookingDetails.owner_id,
+                title: 'Închiriere finalizată',
+                message: `Închirierea pentru "${gearTitle}" a fost finalizată cu succes`,
+                type: 'booking',
+                data: { bookingId, action: 'completed' },
+                is_read: false
+              },
+              {
+                user_id: bookingDetails.renter_id,
+                title: 'Închiriere finalizată',
+                message: `Închirierea pentru "${gearTitle}" a fost finalizată cu succes`,
+                type: 'booking',
+                data: { bookingId, action: 'completed' },
+                is_read: false
+              }
+            ]);
+        }
+      } catch (notifError) {
+        console.error('Error sending completion notifications:', notifError);
+      }
+
+      return { data: booking, error: null };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'COMPLETION_ERROR') };
+    }
+  },
 };
 
 // ============================================================================
@@ -959,7 +1071,7 @@ export const bookingApi = {
 
 export const paymentApi = {
   // Create payment intent
-  async createPaymentIntent(bookingId: string): Promise<ApiResponse<any>> {
+  async createPaymentIntent(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: booking } = await supabase
         .from('bookings')
@@ -981,13 +1093,13 @@ export const paymentApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'PAYMENT_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'PAYMENT_ERROR') };
     }
   },
 
   // Get transaction details
-  async getTransactionDetails(bookingId: string): Promise<ApiResponse<any>> {
+  async getTransactionDetails(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('transactions')
@@ -997,13 +1109,13 @@ export const paymentApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Process refund
-  async processRefund(transactionId: string, refundAmount: number, reason: string): Promise<ApiResponse<any>> {
+  async processRefund(transactionId: string, refundAmount: number, reason: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       // First update the transaction record
       const { data: transactionData, error: transactionError } = await supabase
@@ -1030,13 +1142,13 @@ export const paymentApi = {
 
       if (stripeError) throw stripeError;
       return { data: { ...transactionData, stripe_refund: stripeData }, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'REFUND_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'REFUND_ERROR') };
     }
   },
 
   // Get escrow status
-  async getEscrowStatus(bookingId: string): Promise<ApiResponse<any>> {
+  async getEscrowStatus(bookingId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       // First try to get escrow transaction
       const { data: escrowTransaction, error: escrowError } = await supabase
@@ -1071,13 +1183,13 @@ export const paymentApi = {
       };
       
       return { data: escrowData, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Create Stripe Connect account
-  async createConnectedAccount(ownerId: string): Promise<ApiResponse<any>> {
+  async createConnectedAccount(ownerId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       // Call Stripe Connect edge function
       const { data, error } = await supabase.functions.invoke('stripe-connect-setup', {
@@ -1086,13 +1198,13 @@ export const paymentApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'CONNECT_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'CONNECT_ERROR') };
     }
   },
 
   // Get connected account status
-  async getConnectedAccountStatus(ownerId: string): Promise<ApiResponse<any>> {
+  async getConnectedAccountStatus(ownerId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('connected_accounts')
@@ -1102,8 +1214,8 @@ export const paymentApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -1114,7 +1226,7 @@ export const paymentApi = {
     release_type: 'automatic' | 'manual';
     rental_amount: number;
     deposit_amount: number;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       // Call escrow release edge function
       const { data, error } = await supabase.functions.invoke('escrow-release', {
@@ -1123,8 +1235,8 @@ export const paymentApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'ESCROW_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'ESCROW_ERROR') };
     }
   },
 };
@@ -1135,7 +1247,7 @@ export const paymentApi = {
 
 export const messagingApi = {
   // Send message
-  async sendMessage(bookingId: string, content: string, messageType: 'text' | 'image' = 'text'): Promise<ApiResponse<Message>> {
+  async sendMessage(bookingId: string, content: string, messageType: 'text' | 'image' | 'system' = 'text'): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -1155,13 +1267,13 @@ export const messagingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'SEND_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'SEND_ERROR') };
     }
   },
 
   // Get booking messages
-  async getBookingMessages(bookingId: string): Promise<ApiResponse<Message[]>> {
+  async getBookingMessages(bookingId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -1174,13 +1286,13 @@ export const messagingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Mark message as read
-  async markMessageAsRead(messageId: string): Promise<ApiResponse<Message>> {
+  async markMessageAsRead(messageId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -1194,13 +1306,13 @@ export const messagingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
   // Get user conversations
-  async getUserConversations(userId: string): Promise<ApiResponse<any[]>> {
+  async getUserConversations(userId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('conversations')
@@ -1214,8 +1326,8 @@ export const messagingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -1224,7 +1336,7 @@ export const messagingApi = {
     booking_id: string;
     participant1_id: string;
     participant2_id: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('conversations')
@@ -1239,8 +1351,8 @@ export const messagingApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'CREATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'CREATE_ERROR') };
     }
   },
 
@@ -1250,14 +1362,46 @@ export const messagingApi = {
       const { count, error } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
-        .or(`conversations.participant1_id.eq.${userId},conversations.participant2_id.eq.${userId}`)
         .eq('is_read', false)
-        .neq('sender_id', userId);
+        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`);
 
       if (error) throw error;
       return { data: count || 0, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
+    }
+  },
+
+  // Delete conversation and messages for a booking
+  async deleteConversation(bookingId: string): Promise<ApiResponse<void>> {
+    try {
+      // Delete messages first
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('booking_id', bookingId);
+
+      if (messagesError) throw messagesError;
+
+      // Delete conversations
+      const { error: conversationsError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('booking_id', bookingId);
+
+      if (conversationsError) throw conversationsError;
+
+      // Delete message threads
+      const { error: threadsError } = await supabase
+        .from('message_threads')
+        .delete()
+        .eq('booking_id', bookingId);
+
+      if (threadsError) throw threadsError;
+
+      return { data: null, error: null };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'DELETE_ERROR') };
     }
   },
 };
@@ -1274,7 +1418,7 @@ export const reviewApi = {
     gear_id: string;
     rating: number;
     comment: string;
-  }): Promise<ApiResponse<Review>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -1296,13 +1440,13 @@ export const reviewApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'CREATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'CREATE_ERROR') };
     }
   },
 
   // Get gear reviews
-  async getGearReviews(gearId: string): Promise<ApiResponse<Review[]>> {
+  async getGearReviews(gearId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -1319,13 +1463,13 @@ export const reviewApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Get user reviews
-  async getUserReviews(userId: string): Promise<ApiResponse<Review[]>> {
+  async getUserReviews(userId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -1342,8 +1486,8 @@ export const reviewApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -1367,8 +1511,8 @@ export const reviewApi = {
         data: { rating: averageRating, totalReviews }, 
         error: null 
       };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -1376,7 +1520,7 @@ export const reviewApi = {
   async updateReview(reviewId: string, updates: {
     rating?: number;
     comment?: string;
-  }): Promise<ApiResponse<Review>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -1387,8 +1531,23 @@ export const reviewApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
+    }
+  },
+
+  // Delete review
+  async deleteReview(reviewId: string): Promise<ApiResponse<void>> {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', reviewId);
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'DELETE_ERROR') };
     }
   },
 };
@@ -1404,7 +1563,7 @@ export const claimsApi = {
     claim_type: string;
     description: string;
     requested_amount?: number;
-  }): Promise<ApiResponse<Claim>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -1425,13 +1584,13 @@ export const claimsApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'CREATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'CREATE_ERROR') };
     }
   },
 
   // Get claims for booking
-  async getBookingClaims(bookingId: string): Promise<ApiResponse<Claim[]>> {
+  async getBookingClaims(bookingId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('claims')
@@ -1445,8 +1604,8 @@ export const claimsApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
@@ -1456,7 +1615,7 @@ export const claimsApi = {
     resolution?: string;
     deposit_penalty?: number;
     admin_id?: string;
-  }): Promise<ApiResponse<Claim>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('claims')
@@ -1470,8 +1629,8 @@ export const claimsApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
@@ -1480,7 +1639,7 @@ export const claimsApi = {
     evidence_type: string;
     evidence_url: string;
     description?: string;
-  }): Promise<ApiResponse<any>> {
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -1499,13 +1658,13 @@ export const claimsApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPLOAD_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPLOAD_ERROR') };
     }
   },
 
   // Get claim evidence
-  async getClaimEvidence(claimId: string): Promise<ApiResponse<any[]>> {
+  async getClaimEvidence(claimId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('claim_photos')
@@ -1515,8 +1674,8 @@ export const claimsApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 };
@@ -1527,7 +1686,7 @@ export const claimsApi = {
 
 export const notificationApi = {
   // Get user notifications
-  async getUserNotifications(userId: string, limit: number = 50): Promise<ApiResponse<Notification[]>> {
+  async getUserNotifications(userId: string, limit: number = 50): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -1538,13 +1697,13 @@ export const notificationApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   },
 
   // Mark notification as read
-  async markNotificationAsRead(notificationId: string): Promise<ApiResponse<Notification>> {
+  async markNotificationAsRead(notificationId: string): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -1558,8 +1717,8 @@ export const notificationApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPDATE_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPDATE_ERROR') };
     }
   },
 
@@ -1574,8 +1733,8 @@ export const notificationApi = {
 
       if (error) throw error;
       return { data: count || 0, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   }
 };
@@ -1590,8 +1749,8 @@ export const photoApi = {
     booking_id: string;
     photo_type: 'pickup_renter' | 'pickup_owner' | 'return_renter' | 'return_owner';
     photo_url: string;
-    metadata?: any;
-  }): Promise<ApiResponse<any>> {
+    metadata?: unknown;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -1612,13 +1771,13 @@ export const photoApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'UPLOAD_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'UPLOAD_ERROR') };
     }
   },
 
   // Get handover photos
-  async getHandoverPhotos(bookingId: string): Promise<ApiResponse<any[]>> {
+  async getHandoverPhotos(bookingId: string): Promise<ApiResponse<Record<string, unknown>[]>> {
     try {
       const { data, error } = await supabase
         .from('handover_photos')
@@ -1628,8 +1787,8 @@ export const photoApi = {
 
       if (error) throw error;
       return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: new ApiError(error.message, 'FETCH_ERROR') };
+    } catch (error: unknown) {
+      return { data: null, error: new ApiError((error as Error).message, 'FETCH_ERROR') };
     }
   }
 };
@@ -1651,3 +1810,10 @@ export const api = {
 };
 
 export default api; 
+
+// Fetch unavailable dates for a gear item
+export const getGearUnavailableDates = async (gearId: string): Promise<{ unavailable_date: string; booking_id: string; status: string; reason: string }[]> => {
+  const { data, error } = await supabase.rpc('get_gear_unavailable_dates', { gear_id: gearId });
+  if (error) throw error;
+  return data || [];
+}; 

@@ -1,10 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMessagingApi } from './useApi';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export const useBookingMessages = (bookingId: string) => {
   const { getBookingMessages, loading, error } = useMessagingApi();
-  
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!bookingId) return;
+    const channel = supabase
+      .channel('messages-' + bookingId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `booking_id=eq.${bookingId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['messages', bookingId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [bookingId, queryClient]);
+
   return useQuery({
     queryKey: ['messages', bookingId],
     queryFn: async () => {
@@ -18,17 +33,42 @@ export const useBookingMessages = (bookingId: string) => {
 export const useSendMessage = () => {
   const queryClient = useQueryClient();
   const { sendMessage, loading, error } = useMessagingApi();
+  const { notifyNewMessage } = useNotifications();
   
   return useMutation({
-    mutationFn: async ({ bookingId, content, messageType }: {
+    mutationFn: async ({ bookingId, content, messageType = 'text' }: {
       bookingId: string;
       content: string;
-      messageType?: 'text' | 'image';
+      messageType?: 'text' | 'image' | 'system';
     }) => {
       return await sendMessage(bookingId, content, messageType);
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['messages', variables.bookingId] });
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ['messages', data?.booking_id] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      
+      // Send notification to the other party
+      if (data && data.booking_id && data.sender_id) {
+        try {
+          // Get booking details to find the recipient
+          const { data: booking } = await supabase
+            .from('bookings')
+            .select('owner_id, renter_id, owner:owner_id(full_name), renter:renter_id(full_name)')
+            .eq('id', data.booking_id)
+            .single();
+
+          if (booking) {
+            const recipientId = data.sender_id === booking.owner_id ? booking.renter_id : booking.owner_id;
+            const senderName = data.sender_id === booking.owner_id 
+              ? (booking.owner as Record<string, unknown>)?.full_name || 'Proprietar'
+              : (booking.renter as Record<string, unknown>)?.full_name || 'Închiriat';
+
+            await notifyNewMessage(data.booking_id, senderName, recipientId);
+          }
+        } catch (notificationError) {
+          console.error('Error sending message notification:', notificationError);
+        }
+      }
     },
   });
 };
@@ -52,7 +92,19 @@ export const useUnreadMessageCountForBooking = (bookingId: string) => {
 export const useUserConversations = () => {
   const { user } = useAuth();
   const { getUserConversations, loading, error } = useMessagingApi();
-  
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel('conversations-' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `participant1_id=eq.${user.id} OR participant2_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, queryClient]);
+
   return useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
@@ -100,5 +152,20 @@ export const useUnreadMessageCount = () => {
     refetchInterval: 60000, // Refetch every 60 seconds instead of 30
     retry: 1, // Limit retries to prevent infinite loops
     retryDelay: 2000, // Wait 2 seconds between retries
+  });
+}; 
+
+export const useDeleteConversation = () => {
+  const queryClient = useQueryClient();
+  const { deleteConversation } = useMessagingApi();
+  
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      return await deleteConversation(bookingId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+    },
   });
 }; 

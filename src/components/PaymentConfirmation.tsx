@@ -18,8 +18,8 @@ import { EscrowStatusBadge } from './EscrowStatusBadge';
 import { formatAmountForDisplay } from '@/integrations/stripe/client';
 
 interface PaymentConfirmationProps {
-  booking: any;
-  escrowTransaction: any;
+  booking: Record<string, unknown>;
+  escrowTransaction: Record<string, unknown>;
   onViewBooking?: () => void;
   onClose?: () => void;
 }

@@ -18,11 +18,25 @@ export const ListingsPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const loadGear = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('gear').select('*').order('created_at', { ascending: false });
-    if (error) toast.error(error.message);
-    else setGear(data as unknown as GearRow[]);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from('gear').select('*').order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading gear:', error);
+        toast.error('Eroare la încărcarea echipamentelor');
+        setGear([]);
+        return;
+      }
+      
+      setGear(data as unknown as GearRow[]);
+    } catch (error) {
+      console.error('Error in loadGear:', error);
+      toast.error('Eroare la încărcarea echipamentelor');
+      setGear([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -30,11 +44,20 @@ export const ListingsPanel: React.FC = () => {
   }, []);
 
   const updateStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from('gear').update({ status }).eq('id', id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success('Listing updated');
+    try {
+      const { error } = await supabase.from('gear').update({ status }).eq('id', id);
+      
+      if (error) {
+        console.error('Error updating gear status:', error);
+        toast.error('Eroare la actualizarea statusului');
+        return;
+      }
+      
+      toast.success('Echipament actualizat cu succes');
       loadGear();
+    } catch (error) {
+      console.error('Error in updateStatus:', error);
+      toast.error('Eroare la actualizarea statusului');
     }
   };
 
