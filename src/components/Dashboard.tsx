@@ -399,6 +399,13 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const getUserDisplayName = (userData: any) => {
+    if (userData?.full_name) return userData.full_name;
+    if (userData?.first_name && userData?.last_name) return `${userData.first_name} ${userData.last_name}`;
+    if (userData?.email) return userData.email.split('@')[0];
+    return 'Utilizator necunoscut';
+  };
+
   // Calculate dashboard metrics
   const activeBookings = userBookings.filter(b => ['confirmed', 'active'].includes(b.status as string)).length;
   const pendingBookings = userBookings.filter(b => b.status === 'pending').length;
@@ -767,7 +774,7 @@ export const Dashboard: React.FC = () => {
                               <p className="text-xs sm:text-sm text-gray-600">
                                 {format(new Date(booking.start_date as string), 'dd MMM')} - {format(new Date(booking.end_date as string), 'dd MMM')}
                               </p>
-                              <p className="text-xs text-orange-600">Chiriaș: {String(booking.renter_name || booking.renter_id)}</p>
+                              <p className="text-xs text-orange-600">Chiriaș: {getUserDisplayName(booking.renter)}</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -801,6 +808,70 @@ export const Dashboard: React.FC = () => {
                               <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                               Respinge
                             </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Owner Bookings - Active/Confirmed */}
+              {ownerBookings.filter(b => ['confirmed', 'active', 'returned'].includes(b.status as string)).length > 0 && (
+                <Card className="bg-white shadow-sm border-0">
+                  <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 pb-4">
+                    <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                      <Package className="h-5 w-5 text-green-600" />
+                      Rezervări active
+                    </CardTitle>
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/bookings')} className="w-full sm:w-auto">
+                      Vezi toate <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 sm:space-y-4">
+                      {ownerBookings
+                        .filter(booking => ['confirmed', 'active', 'returned'].includes(booking.status as string))
+                        .slice(0, 3)
+                        .map((booking) => (
+                        <div key={booking.id as string} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg bg-green-50 border-green-200 space-y-3 sm:space-y-0">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className="p-2 bg-green-100 rounded-full">
+                              <Package className="h-4 w-4 text-green-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm sm:text-base truncate">{booking.gear_title as string}</p>
+                              <p className="text-xs sm:text-sm text-gray-600">
+                                {format(new Date(booking.start_date as string), 'dd MMM')} - {format(new Date(booking.end_date as string), 'dd MMM')}
+                              </p>
+                              <p className="text-xs text-green-600">Chiriaș: {getUserDisplayName(booking.renter)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {getStatusBadge(booking.status as string)}
+                            {booking.status === 'confirmed' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setPickupBooking(booking)}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
+                              >
+                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                Setează locația
+                              </Button>
+                            )}
+                            {booking.status === 'returned' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleCompleteRental(String(booking.id))}
+                                disabled={completingRental}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
+                              >
+                                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                Finalizează
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}

@@ -32,15 +32,24 @@ export const NotificationBell: React.FC = () => {
     if (!user) return;
     
     const load = async () => {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (!error) {
-        setNotifications(data as NotificationRow[]);
-        setUnread(data.filter(n => !n.is_read).length);
+      try {
+        console.log('Loading notifications for user:', user.id);
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        
+        if (error) {
+          console.error('Error loading notifications:', error);
+        } else {
+          console.log('Loaded notifications:', data);
+          setNotifications(data as NotificationRow[]);
+          setUnread(data.filter(n => !n.is_read).length);
+        }
+      } catch (err) {
+        console.error('Exception loading notifications:', err);
       }
       setLoading(false);
     };
@@ -49,6 +58,7 @@ export const NotificationBell: React.FC = () => {
 
     const channel = supabase.channel('notifications_' + user.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, payload => {
+        console.log('Notification change detected:', payload);
         // Reload all notifications on any change
         load();
       })
@@ -94,7 +104,7 @@ export const NotificationBell: React.FC = () => {
         ) : (
           notifications.map(n => (
             <DropdownMenuItem key={n.id} className="flex flex-col space-y-0.5 whitespace-normal">
-              <span className="text-sm font-medium {n.is_read ? 'text-muted-foreground':''}">{n.title}</span>
+              <span className={`text-sm font-medium ${n.is_read ? 'text-muted-foreground' : ''}`}>{n.title}</span>
               <span className="text-xs text-muted-foreground">{n.message}</span>
             </DropdownMenuItem>
           ))
