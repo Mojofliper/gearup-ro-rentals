@@ -46,7 +46,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     loading,
     connectedAccount,
     escrowTransaction,
-    createEscrowPaymentIntent,
+    createPaymentIntent,
     getConnectedAccountStatus,
     getEscrowTransaction,
     canReceivePayments,
@@ -144,15 +144,33 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const handleEscrowPayment = async () => {
     if (!user || !booking) return;
 
+    // Defensive parameter validation
+    if (!booking.id || isNaN(booking.rental_amount) || isNaN(booking.deposit_amount)) {
+      console.error('Invalid payment parameters:', {
+        bookingId: booking.id,
+        rentalAmount: booking.rental_amount,
+        depositAmount: booking.deposit_amount,
+      });
+      toast.error('Datele pentru plată sunt invalide. Vă rugăm să reîncercați sau să contactați suportul.');
+      return;
+    }
+
     setPaymentStatus('processing');
     setErrorMessage('');
 
+    // Defensive logging
+    console.log('Calling createPaymentIntent with:', {
+      bookingId: booking.id,
+      rentalAmount: booking.rental_amount,
+      depositAmount: booking.deposit_amount,
+    });
+
     try {
-      const result = await createEscrowPaymentIntent(
-        booking.id,
-        rentalAmount,
-        depositAmount
-      );
+      const result = await createPaymentIntent({
+        bookingId: booking.id,
+        rentalAmount: booking.rental_amount,
+        depositAmount: booking.deposit_amount,
+      });
 
       if (result && result.url) {
         // Redirect to Stripe's hosted checkout page

@@ -1,5 +1,3 @@
 export const config = {
-  auth: {
-    enabled: false
-  }
+  verifyJWT: false
 } 

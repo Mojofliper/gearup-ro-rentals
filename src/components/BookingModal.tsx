@@ -53,8 +53,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
     createBooking({
       gear_id: gear.id,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`,
+      end_date: `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`,
       pickup_location: notes || null,
       renter_notes: notes || null
     }, {

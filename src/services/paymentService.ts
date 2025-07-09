@@ -31,24 +31,26 @@ export class PaymentService {
       }
 
       // Call Supabase Edge Function to create Stripe payment intent
+      const payload = {
+        transactionId: params.transactionId,
+        bookingId: params.bookingId,
+        amount: params.amount,
+        currency: 'ron',
+        metadata: {
+          ...params.metadata,
+          gearTitle: params.gearTitle,
+          startDate: params.startDate,
+          endDate: params.endDate,
+        },
+      };
+      console.log('Sending payment intent payload:', payload);
       const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({
-          transactionId: params.transactionId || params.bookingId, // Use transactionId if available, fallback to bookingId
-          amount: params.amount,
-          currency: 'ron',
-          metadata: {
-            booking_id: params.bookingId,
-            rental_amount: params.rentalAmount,
-            deposit_amount: params.depositAmount,
-            platform_fee: params.platformFee,
-            ...params.metadata,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -213,40 +215,6 @@ export class PaymentService {
     } catch (error) {
       console.error('Stripe Connect setup error:', error);
       throw error instanceof StripeError ? error : new StripeError('Failed to setup Stripe Connect');
-    }
-  }
-
-  /**
-   * Create escrow payment intent
-   */
-  static async createEscrowPaymentIntent(
-    bookingId: string,
-    rentalAmount: number,
-    depositAmount: number
-  ) {
-    try {
-      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-escrow-transaction`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-        body: JSON.stringify({
-          bookingId,
-          rentalAmount,
-          depositAmount,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new StripeError(errorData.error || 'Failed to create escrow payment intent');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Escrow payment intent error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to create escrow payment intent');
     }
   }
 
@@ -420,6 +388,12 @@ export class PaymentService {
    */
   static async releaseEscrowFunds(bookingId: string, releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'return_confirmed' | 'completed' = 'automatic', depositToOwner: boolean = false) {
     try {
+      // Check if booking exists
+      const booking = await this.getBookingById(bookingId);
+      if (!booking) {
+        throw new StripeError(`Booking with ID ${bookingId} not found.`);
+      }
+
       const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release`, {
         method: 'POST',
         headers: {

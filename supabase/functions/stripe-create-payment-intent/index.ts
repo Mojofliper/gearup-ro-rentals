@@ -46,10 +46,12 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { transactionId, amount, currency, metadata } = await req.json()
+    const body = await req.json();
+    console.log('Received body:', body);
+    const { transactionId, bookingId, amount, currency, metadata } = body;
 
     // Validate required fields
-    if (!transactionId || !amount || !currency) {
+    if ((!transactionId && !bookingId) || !amount || !currency) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { 
@@ -71,17 +73,77 @@ serve(async (req) => {
     }
 
     // Get transaction from database to verify ownership
-    const { data: transaction, error: transactionError } = await supabaseClient
-      .from('transactions')
-      .select(`
-        *,
-        booking:bookings(
+    let transaction, transactionError;
+    if (transactionId) {
+      ({ data: transaction, error: transactionError } = await supabaseClient
+        .from('transactions')
+        .select(`
           *,
-          renter:users!renter_id(*)
-        )
-      `)
-      .eq('id', transactionId)
-      .single()
+          booking:bookings(
+            *,
+            renter:users!renter_id(*)
+          )
+        `)
+        .eq('id', transactionId)
+        .single());
+    } else {
+      ({ data: transaction, error: transactionError } = await supabaseClient
+        .from('transactions')
+        .select(`
+          *,
+          booking:bookings(
+            *,
+            renter:users!renter_id(*)
+          )
+        `)
+        .eq('booking_id', bookingId)
+        .single());
+      // If not found, create it
+      if (transactionError || !transaction) {
+        // Get booking details
+        const { data: booking, error: bookingError } = await supabaseClient
+          .from('bookings')
+          .select('id, renter_id, owner_id, rental_amount, deposit_amount')
+          .eq('id', bookingId)
+          .single();
+        if (bookingError || !booking) {
+          return new Response(
+            JSON.stringify({ error: 'Booking not found' }),
+            { 
+              status: 404, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        // Calculate platform fee and total amount
+        const platformFee = Math.round(booking.rental_amount * 0.13);
+        const totalAmount = booking.rental_amount + booking.deposit_amount + platformFee;
+        // Insert transaction
+        const { data: newTransaction, error: insertError } = await supabaseClient
+          .from('transactions')
+          .insert({
+            booking_id: booking.id,
+            amount: totalAmount,
+            platform_fee: platformFee,
+            deposit_amount: booking.deposit_amount,
+            rental_amount: booking.rental_amount,
+            status: 'pending',
+            currency: 'RON',
+          })
+          .select(`*, booking:bookings(*, renter:users!renter_id(*))`)
+          .single();
+        if (insertError || !newTransaction) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to create transaction' }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        transaction = newTransaction;
+      }
+    }
 
     if (transactionError || !transaction) {
       return new Response(
@@ -125,8 +187,14 @@ serve(async (req) => {
             price_data: {
               currency: currency,
               product_data: {
-                name: `Rental for booking ${transaction.booking_id}`,
-                description: `Gear rental payment`,
+                name: metadata?.gearTitle
+                  ? `Inchiriere: ${metadata.gearTitle}`
+                  : `Rental for booking ${transaction.booking_id}`,
+                description: [
+                  metadata?.startDate && metadata?.endDate ? `Perioada: ${metadata.startDate} - ${metadata.endDate}` : null,
+                  `Suma totală: RON ${amount.toFixed(2)}`,
+                  'Include chirie, garanție și taxă platformă.'
+                ].filter(Boolean).join(' | '),
               },
               unit_amount: amount * 100, // Convert RON to cents for Stripe
             },
@@ -134,8 +202,8 @@ serve(async (req) => {
           },
         ],
         mode: 'payment',
-        success_url: `${Deno.env.get('SUCCESS_URL') || 'https://your-app.com/payment-success'}?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${Deno.env.get('CANCEL_URL') || 'https://your-app.com/payment-cancel'}`,
+        success_url: `${Deno.env.get('SUCCESS_URL') || 'https://localhost:8080/payment-success'}?session_id={CHECKOUT_SESSION_ID}&booking_id=${transaction.booking_id}`,
+        cancel_url: `${Deno.env.get('CANCEL_URL') || 'https://localhost:8080/payment-cancel'}?booking_id=${transaction.booking_id}`,
         customer_email: transaction.booking.renter?.email,
         metadata: {
           transaction_id: transactionId,
@@ -173,7 +241,7 @@ serve(async (req) => {
         stripe_payment_intent_id: session.payment_intent,
         status: 'processing',
       })
-      .eq('id', transactionId);
+      .eq('id', transaction.id);
 
     return new Response(
       JSON.stringify({

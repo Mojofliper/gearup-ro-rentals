@@ -25,6 +25,9 @@ export interface CreatePaymentIntentParams {
   depositAmount: number; // in RON
   platformFee: number; // in RON
   metadata?: Record<string, string>;
+  gearTitle?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface PaymentIntentResponse {

@@ -305,7 +305,7 @@ const useGearApi = () => {
     }
   }, []);
 
-  const createCategory = useCallback(async (categoryData: Record<string, unknown>) => {
+  const createCategory = useCallback(async (categoryData: { name: string; description?: string; icon?: string }) => {
     setLoading(true);
     setError(null);
     
@@ -423,7 +423,7 @@ const useBookingApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const createBooking = useCallback(async (bookingData: Record<string, unknown>) => {
+  const createBooking = useCallback(async (bookingData: { gear_id: string; start_date: string; end_date: string; pickup_location?: string; renter_notes?: string }) => {
     setLoading(true);
     setError(null);
     
@@ -577,25 +577,6 @@ const useBookingApi = () => {
     }
   }, []);
 
-  const updateBookingStatus = useCallback(async (bookingId: string, status: string) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const result = await api.booking.updateBookingStatus(bookingId, status);
-      if (result.error) {
-        setError(result.error);
-        return null;
-      }
-      return result.data;
-    } catch (err: unknown) {
-      setError(new ApiError(err instanceof Error ? err.message : 'Failed to update booking status', 'UPDATE_ERROR'));
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const completeRental = useCallback(async (bookingId: string) => {
     setLoading(true);
     setError(null);
@@ -624,7 +605,6 @@ const useBookingApi = () => {
     completeReturn,
     getUserBookings,
     updateBooking,
-    updateBookingStatus,
     completeRental,
     loading,
     error
@@ -637,22 +617,8 @@ const usePaymentApi = () => {
   const [error, setError] = useState<ApiError | null>(null);
 
   const createPaymentIntent = useCallback(async (bookingId: string) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const result = await api.payment.createPaymentIntent(bookingId);
-      if (result.error) {
-        setError(result.error);
-        return null;
-      }
-      return result.data;
-    } catch (err: unknown) {
-      setError(new ApiError(err instanceof Error ? err.message : 'Failed to create payment intent', 'PAYMENT_ERROR'));
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    console.warn('Deprecated: usePaymentApi.createPaymentIntent(bookingId) is no longer supported. Use PaymentService.createPaymentIntent with full parameters instead.');
+    throw new Error('This payment flow is deprecated. Please update to use PaymentService.createPaymentIntent.');
   }, []);
 
   const getTransactionDetails = useCallback(async (bookingId: string) => {
@@ -731,7 +697,7 @@ const usePaymentApi = () => {
     }
   }, []);
 
-  const releaseEscrowFunds = useCallback(async (releaseData: Record<string, unknown>) => {
+  const releaseEscrowFunds = useCallback(async (releaseData: { transaction_id: string; booking_id: string; release_type: 'automatic' | 'manual'; rental_amount: number; deposit_amount: number }) => {
     setLoading(true);
     setError(null);
     
@@ -844,7 +810,7 @@ const useMessagingApi = () => {
     }
   }, []);
 
-  const createConversation = useCallback(async (conversationData: Record<string, unknown>) => {
+  const createConversation = useCallback(async (conversationData: { booking_id: string; participant1_id: string; participant2_id: string }) => {
     setLoading(true);
     setError(null);
     
@@ -918,7 +884,7 @@ const useReviewApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const createReview = useCallback(async (reviewData: Record<string, unknown>) => {
+  const createReview = useCallback(async (reviewData: { booking_id: string; reviewed_id: string; gear_id: string; rating: number; comment: string }) => {
     setLoading(true);
     setError(null);
     
@@ -1049,7 +1015,7 @@ const useClaimsApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const createClaim = useCallback(async (claimData: Record<string, unknown>) => {
+  const createClaim = useCallback(async (claimData: { booking_id: string; claim_type: string; description: string; requested_amount?: number }) => {
     setLoading(true);
     setError(null);
     
@@ -1087,7 +1053,7 @@ const useClaimsApi = () => {
     }
   }, []);
 
-  const updateClaimStatus = useCallback(async (claimId: string, updates: Record<string, unknown>) => {
+  const updateClaimStatus = useCallback(async (claimId: string, updates: { status: string; resolution?: string; deposit_penalty?: number; admin_id?: string }) => {
     setLoading(true);
     setError(null);
     
@@ -1106,7 +1072,7 @@ const useClaimsApi = () => {
     }
   }, []);
 
-  const uploadEvidence = useCallback(async (claimId: string, evidenceData: Record<string, unknown>) => {
+  const uploadEvidence = useCallback(async (claimId: string, evidenceData: { evidence_type: string; evidence_url: string; description?: string }) => {
     setLoading(true);
     setError(null);
     
@@ -1118,7 +1084,7 @@ const useClaimsApi = () => {
       }
       return result.data;
     } catch (err: unknown) {
-      setError(new ApiError(err instanceof Error ? err.message : 'Failed to upload evidence', 'UPLOAD_ERROR'));
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to upload evidence', 'CREATE_ERROR'));
       return null;
     } finally {
       setLoading(false);
@@ -1211,7 +1177,7 @@ const usePhotoApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const uploadHandoverPhoto = useCallback(async (photoData: Record<string, unknown>) => {
+  const uploadHandoverPhoto = useCallback(async (photoData: { booking_id: string; photo_type: 'pickup_renter' | 'pickup_owner' | 'return_renter' | 'return_owner'; photo_url: string; metadata?: unknown }) => {
     setLoading(true);
     setError(null);
     
@@ -1223,7 +1189,7 @@ const usePhotoApi = () => {
       }
       return result.data;
     } catch (err: unknown) {
-      setError(new ApiError(err instanceof Error ? err.message : 'Failed to upload photo', 'UPLOAD_ERROR'));
+      setError(new ApiError(err instanceof Error ? err.message : 'Failed to upload handover photo', 'UPLOAD_ERROR'));
       return null;
     } finally {
       setLoading(false);

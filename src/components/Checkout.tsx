@@ -157,6 +157,29 @@ export const Checkout: React.FC<CheckoutProps> = ({
             // Create transaction record
             const transaction = await PaymentService.getOrCreateTransactionForBooking(booking);
             
+            // Defensive parameter validation
+            if (!booking.id || isNaN(transaction.amount) || isNaN(transaction.rental_amount) || isNaN(transaction.deposit_amount) || isNaN(transaction.platform_fee)) {
+              console.error('Invalid payment parameters:', {
+                bookingId: booking.id,
+                transactionId: transaction.id,
+                amount: transaction.amount,
+                rentalAmount: transaction.rental_amount,
+                depositAmount: transaction.deposit_amount,
+                platformFee: transaction.platform_fee,
+              });
+              toast.error('Datele pentru plată sunt invalide. Vă rugăm să reîncercați sau să contactați suportul.');
+              break;
+            }
+            // Defensive logging
+            console.log('Calling createPaymentIntent with:', {
+              bookingId: booking.id,
+              transactionId: transaction.id,
+              amount: transaction.amount,
+              rentalAmount: transaction.rental_amount,
+              depositAmount: transaction.deposit_amount,
+              platformFee: transaction.platform_fee,
+            });
+
             // Create payment intent
             const paymentResult = await PaymentService.createPaymentIntent({
               bookingId: booking.id,

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle, CreditCard } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle, CreditCard, Package, Handshake, MapPin } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -29,22 +29,22 @@ const statusConfig = {
     badge: 'default'
   },
   pickup_confirmed: {
-    label: 'Ridicare confirmată',
-    description: 'Ambele părți au confirmat ridicarea, plata închirierii eliberată',
-    icon: CheckCircle2,
+    label: 'Predare confirmată',
+    description: 'Ambele părți au confirmat predarea echipamentului',
+    icon: Handshake,
     color: 'bg-green-100 text-green-800',
     badge: 'default'
   },
   active: {
     label: 'În curs',
-    description: 'Închirierea este activă',
-    icon: CheckCircle2,
+    description: 'Închirierea este activă - echipamentul este la chiriaș',
+    icon: Package,
     color: 'bg-green-100 text-green-800',
     badge: 'default'
   },
   return_confirmed: {
     label: 'Returnare confirmată',
-    description: 'Ambele părți au confirmat returnarea, depozitul va fi returnat',
+    description: 'Ambele părți au confirmat returnarea echipamentului',
     icon: CheckCircle2,
     color: 'bg-purple-100 text-purple-800',
     badge: 'default'
@@ -123,14 +123,15 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
       if (error) {
         toast({
           title: 'Eroare',
-          description: 'Eroare la confirmarea ridicării: ' + error.message,
+          description: 'Eroare la confirmarea predării: ' + error.message,
           variant: 'destructive',
         });
       } else {
         const role = by === 'owner' ? 'proprietar' : 'chiriaș';
+        const action = by === 'owner' ? 'predarea' : 'ridicarea';
         toast({
-          title: 'Ridicare confirmată',
-          description: `Confirmarea ${role}ului a fost înregistrată.`,
+          title: 'Predare confirmată',
+          description: `Confirmarea ${role}ului pentru ${action} a fost înregistrată.`,
         });
         onStatusUpdate?.();
       }
@@ -181,7 +182,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         const role = by === 'owner' ? 'proprietar' : 'chiriaș';
         toast({
           title: 'Returnare confirmată',
-          description: `Confirmarea ${role}ului a fost înregistrată.`,
+          description: `Confirmarea ${role}ului pentru returnare a fost înregistrată.`,
         });
         
         // Check if both parties have confirmed return
@@ -191,7 +192,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         if (newReturnConfirmedByOwner && newReturnConfirmedByRenter) {
           // Both parties confirmed return - database trigger will handle escrow release
           toast({
-            title: 'Returnare confirmată',
+            title: 'Returnare completă',
             description: 'Ambele părți au confirmat returnarea. Plățile vor fi procesate automat.',
           });
         }
@@ -212,19 +213,19 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
   const getStatusMessage = () => {
     if (currentStatus === 'confirmed') {
       if (pickupConfirmedByOwner && !pickupConfirmedByRenter) {
-        return 'Așteaptă confirmarea chiriașului pentru ridicare';
+        return 'Proprietarul a confirmat predarea. Așteaptă confirmarea chiriașului pentru ridicare.';
       } else if (pickupConfirmedByRenter && !pickupConfirmedByOwner) {
-        return 'Așteaptă confirmarea proprietarului pentru ridicare';
+        return 'Chiriașul a confirmat ridicarea. Așteaptă confirmarea proprietarului pentru predare.';
       } else if (!pickupConfirmedByOwner && !pickupConfirmedByRenter) {
-        return 'Ambele părți trebuie să confirme ridicarea';
+        return 'Ambele părți trebuie să confirme predarea/ridicarea echipamentului.';
       }
     } else if (currentStatus === 'active') {
       if (returnConfirmedByRenter && !returnConfirmedByOwner) {
-        return 'Așteaptă confirmarea proprietarului pentru returnare';
+        return 'Chiriașul a confirmat returnarea. Așteaptă confirmarea proprietarului pentru primire.';
       } else if (returnConfirmedByOwner && !returnConfirmedByRenter) {
-        return 'Așteaptă confirmarea chiriașului pentru returnare';
+        return 'Proprietarul a confirmat primirea. Așteaptă confirmarea chiriașului pentru returnare.';
       } else if (!returnConfirmedByOwner && !returnConfirmedByRenter) {
-        return 'Ambele părți trebuie să confirme returnarea';
+        return 'Ambele părți trebuie să confirme returnarea echipamentului.';
       }
     }
     return config?.description || 'Status necunoscut';
@@ -269,15 +270,18 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         {/* Payment Required Section */}
         {currentStatus === 'confirmed' && booking.payment_status !== 'completed' && (
           <div className="border rounded-lg p-4 space-y-3 bg-yellow-50 border-yellow-200">
-            <h4 className="font-medium text-yellow-800">Plată necesară</h4>
+            <h4 className="font-medium text-yellow-800 flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Plată necesară
+            </h4>
             <p className="text-sm text-yellow-700">
-              Plata trebuie finalizată înainte de a putea confirma ridicarea echipamentului.
+              Plata trebuie finalizată înainte de a putea confirma predarea echipamentului.
             </p>
             <div className="text-xs text-yellow-600 space-y-1">
               <p><strong>Fluxul corect:</strong></p>
               <p>1. Chiriașul finalizează plata (închiriere + 13% taxă platformă + depozit)</p>
-              <p>2. Proprietarul setează locația de ridicare</p>
-              <p>3. Ambele părți se întâlnesc și confirmă ridicarea</p>
+              <p>2. Proprietarul setează locația de predare</p>
+              <p>3. Ambele părți se întâlnesc și confirmă predarea/ridicarea</p>
               <p>4. După returnarea echipamentului:</p>
               <p>   • Plata închirierii → proprietarul</p>
               <p>   • Taxa platformă (13%) → platforma</p>
@@ -294,7 +298,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
             )}
             {isOwner && (
               <p className="text-sm text-yellow-600">
-                Așteaptă ca chiriașul să finalizeze plata, apoi setează locația de ridicare.
+                Așteaptă ca chiriașul să finalizeze plata, apoi setează locația de predare.
               </p>
             )}
           </div>
@@ -306,9 +310,12 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
             {/* Location Setup Reminder */}
             {isOwner && !booking.pickup_location && (
               <div className="border rounded-lg p-4 space-y-3 bg-blue-50 border-blue-200">
-                <h4 className="font-medium text-blue-800">Setează locația de ridicare</h4>
+                <h4 className="font-medium text-blue-800 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Setează locația de predare
+                </h4>
                 <p className="text-sm text-blue-700">
-                  Plata a fost finalizată. Acum trebuie să setezi locația de ridicare înainte de confirmări.
+                  Plata a fost finalizată. Acum trebuie să setezi locația de predare înainte de confirmări.
                 </p>
               </div>
             )}
@@ -316,22 +323,40 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
             {/* Pickup Confirmation */}
             {booking.pickup_location && (
           <div className="border rounded-lg p-4 space-y-3">
-            <h4 className="font-medium">Confirmare Ridicare</h4>
+            <h4 className="font-medium flex items-center gap-2">
+              <Handshake className="h-4 w-4" />
+              Confirmare Predare/Ridicare
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Ambele părți trebuie să confirme că echipamentul a fost predat și ridicat.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="flex items-center justify-between p-3 border rounded">
-                <span className="text-sm">Proprietar</span>
+                <span className="text-sm font-medium">Proprietar</span>
                 {pickupConfirmedByOwner ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-xs">Confirmat</span>
+                  </div>
                 ) : (
-                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="flex items-center gap-1 text-yellow-600">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs">În așteptare</span>
+                  </div>
                 )}
               </div>
               <div className="flex items-center justify-between p-3 border rounded">
-                <span className="text-sm">Chiriaș</span>
+                <span className="text-sm font-medium">Chiriaș</span>
                 {pickupConfirmedByRenter ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-xs">Confirmat</span>
+                  </div>
                 ) : (
-                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="flex items-center gap-1 text-yellow-600">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs">În așteptare</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -340,9 +365,10 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
               <Button
                 onClick={() => handlePickupConfirm('owner')}
                 disabled={loading}
-                className="w-full"
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                Confirmă predarea
+                <Handshake className="h-4 w-4 mr-2" />
+                Confirmă predarea echipamentului
               </Button>
             )}
             
@@ -353,15 +379,19 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
                 className="w-full"
                 variant="outline"
               >
-                Confirmă ridicarea
+                <Package className="h-4 w-4 mr-2" />
+                Confirmă ridicarea echipamentului
               </Button>
             )}
 
             {bothPickupConfirmed && (
               <div className="text-center p-3 bg-green-50 border border-green-200 rounded">
                 <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                <p className="text-sm text-green-800">
-                  Ambele părți au confirmat ridicarea. Echipamentul este acum în posesia chiriașului.
+                <p className="text-sm text-green-800 font-medium">
+                  Predare completă!
+                </p>
+                <p className="text-xs text-green-700">
+                  Ambele părți au confirmat. Echipamentul este acum în posesia chiriașului.
                 </p>
               </div>
             )}
@@ -373,22 +403,40 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         {/* Return Confirmation Section */}
         {currentStatus === 'active' && (
           <div className="border rounded-lg p-4 space-y-3">
-            <h4 className="font-medium">Confirmare Returnare</h4>
+            <h4 className="font-medium flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Confirmare Returnare
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Ambele părți trebuie să confirme că echipamentul a fost returnat și primit.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="flex items-center justify-between p-3 border rounded">
-                <span className="text-sm">Proprietar</span>
+                <span className="text-sm font-medium">Proprietar</span>
                 {returnConfirmedByOwner ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-xs">Confirmat</span>
+                  </div>
                 ) : (
-                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="flex items-center gap-1 text-yellow-600">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs">În așteptare</span>
+                  </div>
                 )}
               </div>
               <div className="flex items-center justify-between p-3 border rounded">
-                <span className="text-sm">Chiriaș</span>
+                <span className="text-sm font-medium">Chiriaș</span>
                 {returnConfirmedByRenter ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-xs">Confirmat</span>
+                  </div>
                 ) : (
-                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="flex items-center gap-1 text-yellow-600">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs">În așteptare</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -397,9 +445,10 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
               <Button
                 onClick={() => handleReturnConfirm('owner')}
                 disabled={loading}
-                className="w-full"
+                className="w-full bg-green-600 hover:bg-green-700"
               >
-                Confirmă returnarea
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Confirmă primirea echipamentului
               </Button>
             )}
             
@@ -410,15 +459,19 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
                 className="w-full"
                 variant="outline"
               >
-                Confirmă returnarea
+                <Package className="h-4 w-4 mr-2" />
+                Confirmă returnarea echipamentului
               </Button>
             )}
 
             {bothReturnConfirmed && (
               <div className="text-center p-3 bg-green-50 border border-green-200 rounded">
                 <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                <p className="text-sm text-green-800">
-                  Ambele părți au confirmat returnarea. Plata închirierii va fi eliberată proprietarului și depozitul va fi returnat chiriașului.
+                <p className="text-sm text-green-800 font-medium">
+                  Returnare completă!
+                </p>
+                <p className="text-xs text-green-700">
+                  Ambele părți au confirmat. Plata închirierii va fi eliberată proprietarului și depozitul va fi returnat chiriașului.
                 </p>
               </div>
             )}
@@ -429,8 +482,11 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         {booking.rental_amount_released && (
           <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded">
             <CheckCircle2 className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-            <p className="text-sm text-blue-800">
-              Plata închirierii a fost eliberată proprietarului
+            <p className="text-sm text-blue-800 font-medium">
+              Plata închirierii eliberată
+            </p>
+            <p className="text-xs text-blue-700">
+              Plata închirierii a fost transferată către proprietar.
             </p>
           </div>
         )}
@@ -438,8 +494,11 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         {booking.deposit_returned && (
           <div className="text-center p-3 bg-green-50 border border-green-200 rounded">
             <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
-            <p className="text-sm text-green-800">
-              Depozitul a fost returnat chiriașului
+            <p className="text-sm text-green-800 font-medium">
+              Depozit returnat
+            </p>
+            <p className="text-xs text-green-700">
+              Depozitul a fost returnat chiriașului.
             </p>
           </div>
         )}

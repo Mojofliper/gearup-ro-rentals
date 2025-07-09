@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { PaymentService } from '@/services/paymentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ConnectedAccountStatus {
   id: string;
@@ -93,12 +94,10 @@ export const useEscrowPayments = () => {
     }
   }, [user]);
 
-  // Create escrow payment intent
-  const createEscrowPaymentIntent = useCallback(async (
-    bookingId: string,
-    rentalAmount: number,
-    depositAmount: number
-  ): Promise<EscrowPaymentIntent | null> => {
+  // Create payment intent (replaces createEscrowPaymentIntent)
+  const createPaymentIntent = useCallback(async (
+    params: { bookingId: string; rentalAmount: number; depositAmount: number }
+  ): Promise<{ url: string; sessionId: string } | null> => {
     if (!user) {
       toast.error('You must be logged in to create payment');
       return null;
@@ -106,23 +105,42 @@ export const useEscrowPayments = () => {
 
     setLoading(true);
     try {
-      const result = await PaymentService.createEscrowPaymentIntent(
-        bookingId,
-        rentalAmount,
-        depositAmount
-      );
-      
+      // Fetch full booking details
+      const { data: fullBooking, error: bookingError } = await supabase
+        .from('bookings')
+        .select('id, rental_amount, deposit_amount, total_amount, start_date, end_date, gear:gear(title)')
+        .eq('id', params.bookingId)
+        .single();
+      if (bookingError || !fullBooking) {
+        throw new Error('Failed to fetch booking details');
+      }
+      // First, get or create a transaction for this booking
+      const booking = {
+        id: params.bookingId,
+        rental_amount: params.rentalAmount,
+        deposit_amount: params.depositAmount,
+        total_amount: params.rentalAmount + params.depositAmount,
+      };
+      const transaction = await PaymentService.getOrCreateTransactionForBooking(booking);
+      console.log('Transaction created/found:', transaction);
+      const platformFee = Math.round(params.rentalAmount * 0.13);
+      const amount = params.rentalAmount + params.depositAmount + platformFee;
+      const result = await PaymentService.createPaymentIntent({
+        bookingId: params.bookingId,
+        transactionId: transaction.id,
+        amount,
+        rentalAmount: params.rentalAmount,
+        depositAmount: params.depositAmount,
+        platformFee,
+        gearTitle: fullBooking.gear?.[0]?.title,
+        startDate: fullBooking.start_date,
+        endDate: fullBooking.end_date,
+      });
       toast.success('Payment intent created successfully');
       return result;
     } catch (error: unknown) {
-      console.error('Escrow payment intent error:', error);
-      
-      if ((error as Error).message?.includes('Owner account not ready')) {
-        toast.error('Owner needs to complete payment setup first');
-      } else {
-        toast.error('Failed to create payment intent');
-      }
-      
+      console.error('Payment intent error:', error);
+      toast.error('Failed to create payment intent');
       return null;
     } finally {
       setLoading(false);
@@ -186,7 +204,7 @@ export const useEscrowPayments = () => {
     escrowTransaction,
     setupStripeConnect,
     getConnectedAccountStatus,
-    createEscrowPaymentIntent,
+    createPaymentIntent,
     getEscrowTransaction,
     canReceivePayments,
     needsOnboarding,
