@@ -28,12 +28,13 @@ export const NotificationBell: React.FC = () => {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
 
+
+
   useEffect(() => {
     if (!user) return;
     
     const load = async () => {
       try {
-        console.log('Loading notifications for user:', user.id);
         const { data, error } = await supabase
           .from('notifications')
           .select('*')
@@ -44,7 +45,6 @@ export const NotificationBell: React.FC = () => {
         if (error) {
           console.error('Error loading notifications:', error);
         } else {
-          console.log('Loaded notifications:', data);
           setNotifications(data as NotificationRow[]);
           setUnread(data.filter(n => !n.is_read).length);
         }
@@ -58,7 +58,6 @@ export const NotificationBell: React.FC = () => {
 
     const channel = supabase.channel('notifications_' + user.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, payload => {
-        console.log('Notification change detected:', payload);
         // Reload all notifications on any change
         load();
       })
@@ -68,10 +67,20 @@ export const NotificationBell: React.FC = () => {
 
   const markAllRead = async () => {
     if (!user) return;
-    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    setUnread(0);
+    try {
+      const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+      if (error) {
+        console.error('Error marking notifications as read:', error);
+      } else {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setUnread(0);
+      }
+    } catch (err) {
+      console.error('Exception marking notifications as read:', err);
+    }
   };
+
+
 
   if (!user) return null;
 
