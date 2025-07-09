@@ -212,15 +212,60 @@ serve(async (req) => {
     }
 
     try {
-      // Don't create Stripe account immediately - create account link that will create account on completion
+      // First create a Stripe Connect account
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: country,
+        email: email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_type: 'individual',
+      })
+
+      console.log('Created Stripe Connect account:', account.id)
+
+      // Store the account in our database
+      const { error: insertError } = await supabaseClient
+        .from('connected_accounts')
+        .insert({
+          owner_id: userId,
+          stripe_account_id: account.id,
+          account_status: 'pending',
+          charges_enabled: account.charges_enabled,
+          payouts_enabled: account.payouts_enabled,
+          country: account.country,
+          business_type: account.business_type,
+          capabilities: account.capabilities || {},
+          requirements: account.requirements || {},
+          business_profile: account.business_profile || {},
+          company: account.company || {},
+          individual: account.individual || {}
+        })
+
+      if (insertError) {
+        console.error('Error storing new connected account:', insertError)
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to store connected account',
+            details: insertError.message
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Now create the account link for onboarding
       const isLiveMode = (stripe._apiKey || '').startsWith('sk_live_')
       const appBaseUrl = isLiveMode
         ? 'https://gearup.ro' // TODO: replace with your prod domain
         : 'http://localhost:8080'
 
-      // Create account link without a pre-existing account
-      // This will create the account only when user completes onboarding
       const accountLink = await stripe.accountLinks.create({
+        account: account.id,
         refresh_url: `${appBaseUrl}/dashboard?refresh=true`,
         return_url: `${appBaseUrl}/dashboard?success=true`,
         type: 'account_onboarding',
@@ -229,9 +274,9 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
+          accountId: account.id,
+          accountStatus: 'pending',
           onboardingUrl: accountLink.url,
-          // Flag to indicate this is a new account that will be created on completion
-          isNewAccount: true,
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

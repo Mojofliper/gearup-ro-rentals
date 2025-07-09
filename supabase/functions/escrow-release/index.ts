@@ -166,12 +166,60 @@ serve(async (req) => {
       .eq('owner_id', booking.owner_id)
       .single()
 
-    if (!connectedAccount || !connectedAccount.charges_enabled) {
-      console.error('Owner account not ready for transfers:', connectedAccount)
+    if (!connectedAccount) {
+      console.error('Owner connected account not found for owner_id:', booking.owner_id)
       return new Response(
-        JSON.stringify({ error: 'Owner account not ready for transfers' }),
+        JSON.stringify({ error: 'Owner connected account not found' }),
         { 
           status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Check actual Stripe account status instead of relying on database
+    try {
+      const stripeAccount = await stripe.accounts.retrieve(connectedAccount.stripe_account_id)
+      console.log('Retrieved Stripe account status:', {
+        id: stripeAccount.id,
+        charges_enabled: stripeAccount.charges_enabled,
+        payouts_enabled: stripeAccount.payouts_enabled,
+        details_submitted: stripeAccount.details_submitted
+      })
+
+      if (!stripeAccount.charges_enabled) {
+        console.error('Stripe account not ready for transfers:', stripeAccount)
+        return new Response(
+          JSON.stringify({ error: 'Owner account not ready for transfers' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Update our database with the current Stripe account status
+      await supabaseClient
+        .from('connected_accounts')
+        .update({
+          charges_enabled: stripeAccount.charges_enabled,
+          payouts_enabled: stripeAccount.payouts_enabled,
+          details_submitted: stripeAccount.details_submitted,
+          account_status: stripeAccount.charges_enabled ? 'active' : 'pending',
+          requirements: stripeAccount.requirements || {},
+          capabilities: stripeAccount.capabilities || {},
+          business_profile: stripeAccount.business_profile || {},
+          company: stripeAccount.company || {},
+          individual: stripeAccount.individual || {}
+        })
+        .eq('stripe_account_id', connectedAccount.stripe_account_id)
+
+    } catch (stripeError) {
+      console.error('Error retrieving Stripe account:', stripeError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify Stripe account status' }),
+        { 
+          status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
@@ -323,6 +371,14 @@ serve(async (req) => {
               throw new Error(`Failed to create deposit refund: ${refundError.message}`)
             }
           }
+          
+          // Final update: Set booking status to completed after both rental and deposit are processed
+          await supabaseClient
+            .from('bookings')
+            .update({
+              status: 'completed'
+            })
+            .eq('id', booking_id)
           break
 
         case 'completed':

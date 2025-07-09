@@ -86,7 +86,7 @@ export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onS
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const fileName = `${bookingId}/claim_${Date.now()}_${i}.${file.name.split('.').pop()}`;
+      const fileName = `${user?.id}/claim_${Date.now()}_${i}.${file.name.split('.').pop()}`;
       
       const { data, error } = await supabase.storage
         .from('claim-photos')
@@ -236,12 +236,9 @@ export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onS
                 <SelectValue placeholder="Selectează tipul revendicării" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="damaged_equipment">Echipament deteriorat</SelectItem>
-                <SelectItem value="wrong_equipment">Echipament greșit</SelectItem>
-                <SelectItem value="missing_equipment">Echipament lipsă</SelectItem>
-                <SelectItem value="poor_condition">Echipament în stare proastă</SelectItem>
-                <SelectItem value="late_delivery">Întârziere la livrare</SelectItem>
-                <SelectItem value="no_show">Proprietarul nu s-a prezentat</SelectItem>
+                <SelectItem value="damage">Echipament deteriorat</SelectItem>
+                <SelectItem value="missing_item">Echipament lipsă</SelectItem>
+                <SelectItem value="late_return">Întârziere la returnare</SelectItem>
                 <SelectItem value="other">Alt motiv</SelectItem>
               </SelectContent>
             </Select>

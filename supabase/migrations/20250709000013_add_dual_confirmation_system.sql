@@ -53,14 +53,13 @@ CREATE OR REPLACE FUNCTION public.trigger_escrow_release(booking_id UUID, releas
 RETURNS VOID AS $$
 BEGIN
   -- Call the escrow release edge function
-  PERFORM net_http_post(
+  PERFORM http_post(
     'https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release',
+    'application/json',
     json_build_object(
       'booking_id', booking_id,
       'release_type', release_type
-    )::text,
-    'application/json',
-    NULL
+    )::text
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
