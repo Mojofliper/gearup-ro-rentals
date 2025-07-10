@@ -61,6 +61,9 @@ serve(async (req) => {
       case 'checkout.session.completed':
         await handleCheckoutSessionCompleted(event.data.object, supabaseClient)
         break
+      case 'checkout.session.expired':
+        await handleCheckoutSessionExpired(event.data.object, supabaseClient)
+        break
       default:
         console.log(`Unhandled event type ${event.type}`)
     }
@@ -279,6 +282,101 @@ async function handleCheckoutSessionCompleted(session: unknown, supabaseClient: 
   }
 }
 
+async function handleCheckoutSessionExpired(session: unknown, supabaseClient: unknown) {
+  console.log('Checkout session expired:', session.id)
+  console.log('Session payment_intent:', session.payment_intent)
+  console.log('Session metadata:', session.metadata)
+
+  try {
+    const bookingId = session.metadata?.booking_id
+
+    if (!bookingId) {
+      console.error('Missing booking_id in session metadata')
+      return
+    }
+
+    if (!session.payment_intent) {
+      console.error('No payment_intent found in session')
+      return
+    }
+
+    console.log('Processing expired payment for booking:', bookingId)
+
+    // Update booking payment status to 'failed'
+    const { error: bookingError } = await supabaseClient
+      .from('bookings')
+      .update({ 
+        payment_status: 'failed',
+        payment_intent_id: session.payment_intent // Update with actual payment intent ID
+      })
+      .eq('id', bookingId)
+
+    if (bookingError) {
+      console.error('Error updating booking payment status to failed:', bookingError)
+    } else {
+      console.log('Successfully updated payment_status to failed for booking:', bookingId)
+    }
+
+    // Update escrow transaction status to 'failed'
+    const { data: existingEscrow, error: escrowQueryError } = await supabaseClient
+      .from('escrow_transactions')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .maybeSingle()
+
+    if (escrowQueryError) {
+      console.error('Error querying escrow transaction for expired session:', escrowQueryError)
+    }
+
+    if (existingEscrow) {
+      const { error: escrowUpdateError } = await supabaseClient
+        .from('escrow_transactions')
+        .update({
+          escrow_status: 'failed',
+          stripe_payment_intent_id: session.payment_intent,
+          stripe_charge_id: null, // Clear charge ID as payment failed
+          rental_amount: 0,
+          deposit_amount: 0,
+          platform_fee: 0,
+          owner_stripe_account_id: null,
+          held_until: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingEscrow.id)
+
+      if (escrowUpdateError) {
+        console.error('Error updating escrow transaction to failed:', escrowUpdateError)
+      } else {
+        console.log('Successfully updated escrow transaction to failed for expired session:', bookingId)
+      }
+    }
+
+    // Also update the transactions table for accounting purposes (if it exists)
+    if (session.metadata?.transaction_id) {
+      const { error: transactionUpdateError } = await supabaseClient
+        .from('transactions')
+        .update({
+          stripe_payment_intent_id: session.payment_intent,
+          status: 'failed',
+          stripe_charge_id: null
+        })
+        .eq('id', session.metadata.transaction_id)
+
+      if (transactionUpdateError) {
+        console.error('Error updating transaction (non-critical):', transactionUpdateError)
+      } else {
+        console.log('Successfully updated transaction for accounting purposes')
+      }
+    }
+
+    console.log('Successfully processed checkout session expiration for booking:', bookingId)
+
+  } catch (error) {
+    console.error('Error handling checkout session expiration:', error)
+    throw error // Re-throw to ensure webhook fails and Stripe retries
+  }
+}
+
 async function handlePaymentIntentSucceeded(paymentIntent: unknown, supabaseClient: unknown) {
   console.log('Payment succeeded:', paymentIntent.id)
 
@@ -357,7 +455,8 @@ async function handlePaymentIntentFailed(paymentIntent: unknown, supabaseClient:
         .from('bookings')
         .update({ 
           payment_status: 'failed',
-          status: 'cancelled' // Cancel booking if payment fails
+          // Don't automatically cancel the booking - let user decide if they want to retry payment
+          // status: 'cancelled' // Removed - only cancel if user explicitly cancels
         })
         .eq('id', escrowTransaction.booking_id)
     }

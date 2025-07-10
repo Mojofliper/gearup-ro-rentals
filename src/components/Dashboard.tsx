@@ -64,6 +64,8 @@ function getBookingBadges(booking: any, userId: string) {
       badges.push(<Badge key="pay-pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">În așteptare plată</Badge>);
     } else if (paymentStatus === 'completed') {
       badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
+    } else if (paymentStatus === 'failed') {
+      badges.push(<Badge key="pay-failed" variant="destructive" className="ml-1">Plată eșuată</Badge>);
     }
     return badges;
   }
@@ -358,9 +360,9 @@ export const Dashboard: React.FC = () => {
   const getPaymentStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
-      paid: "default",
-      refunded: "destructive",
+      completed: "default",
       failed: "destructive",
+      refunded: "destructive",
       cancelled: "destructive"
     };
     return (
@@ -386,9 +388,9 @@ export const Dashboard: React.FC = () => {
   const getPaymentStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       pending: 'În așteptare',
-      paid: 'Plătit',
-      refunded: 'Refundat',
+      completed: 'Plătit',
       failed: 'Eșuat',
+      refunded: 'Refundat',
       cancelled: 'Anulat'
     };
     return labels[status] || status;

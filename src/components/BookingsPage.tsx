@@ -148,6 +148,8 @@ export const BookingsPage: React.FC = () => {
         badges.push(<Badge key="pay-pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">În așteptare plată</Badge>);
       } else if (paymentStatus === 'completed') {
         badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
+      } else if (paymentStatus === 'failed') {
+        badges.push(<Badge key="pay-failed" variant="destructive" className="ml-1">Plată eșuată</Badge>);
       }
       return badges;
     }

@@ -255,6 +255,15 @@ serve(async (req) => {
       })
       .eq('id', transaction.id);
 
+    // Update booking payment status to 'pending' to indicate payment is in progress
+    await supabaseClient
+      .from('bookings')
+      .update({
+        payment_status: 'pending',
+        payment_intent_id: session.payment_intent,
+      })
+      .eq('id', transaction.booking_id);
+
     return new Response(
       JSON.stringify({
         url: session.url,
