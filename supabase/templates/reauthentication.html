@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmă reautentificarea GearUp</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9fafb;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .otp-code {
+            background: #f3f4f6;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #1e40af;
+            letter-spacing: 4px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 20px 0;
+            color: #1e40af;
+        }
+        .warning {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 20px 0;
+            color: #92400e;
+        }
+        .security {
+            background: #f0fdf4;
+            border: 1px solid #22c55e;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 20px 0;
+            color: #166534;
+        }
+        @media only screen and (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            .otp-code {
+                font-size: 24px;
+                letter-spacing: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">GearUp</div>
+            <h1 class="title">Cod de verificare</h1>
+        </div>
+        
+        <div class="content">
+            <p>Bună!</p>
+            
+            <p>Ai solicitat să efectuezi o acțiune care necesită verificare suplimentară pe contul tău <strong>GearUp</strong>.</p>
+            
+            <div class="security">
+                <strong>🔒 Verificare de securitate:</strong> Pentru a-ți proteja contul, am generat un cod unic de verificare.
+            </div>
+            
+            <p>Introdu codul de mai jos în aplicația GearUp:</p>
+            
+            <div class="otp-code">
+                {{ .Token }}
+            </div>
+            
+            <div class="info">
+                <strong>Informații importante:</strong>
+                <ul style="margin: 10px 0 0 20px;">
+                    <li>Acest cod va expira în 10 minute</li>
+                    <li>Poți folosi acest cod o singură dată</li>
+                    <li>Nu împărtăși acest cod cu nimeni</li>
+                    <li>Echipa GearUp nu te va contacta niciodată pentru acest cod</li>
+                </ul>
+            </div>
+            
+            <div class="warning">
+                <strong>Securitate:</strong> Dacă nu ai solicitat această verificare, schimbă-ți imediat parola și contactează-ne la support@gearup.ro
+            </div>
+            
+            <p>Dacă ai probleme cu verificarea, ne poți contacta la support@gearup.ro</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Echipa GearUp</strong></p>
+            <p>Platforma ta pentru închirieri de echipamente</p>
+            <p>Pentru asistență: support@gearup.ro</p>
+        </div>
+    </div>
+</body>
+</html> 

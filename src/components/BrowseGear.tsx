@@ -167,16 +167,16 @@ export const BrowseGear: React.FC = () => {
     return [
       filters.search,
       filters.category && filters.category !== 'all',
-      filters.minPrice > 0 || filters.maxPrice < 1000,
+    filters.minPrice > 0 || filters.maxPrice < 1000,
       filters.location && filters.location !== 'all',
       filters.condition.length > 0,
       filters.features.length > 0,
       filters.availability.length > 0,
-      filters.rating > 0,
-      filters.brand,
+    filters.rating > 0,
+    filters.brand,
       filters.model,
       filters.dateRange.start || filters.dateRange.end
-    ].filter(Boolean).length;
+  ].filter(Boolean).length;
   }, [filters]);
 
   // Handle filter changes
@@ -270,7 +270,7 @@ export const BrowseGear: React.FC = () => {
           <h1 className="text-xl font-bold text-gray-900 mb-2 leading-tight text-center">
             Găsește echipamentul
             <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">perfect pentru proiectul tău</span>
-          </h1>
+            </h1>
           <div className="flex flex-col gap-2 mt-4">
             <Button className="w-full text-base font-semibold bg-blue-700 hover:bg-blue-800 text-white shadow rounded-xl py-3">Închiriază echipament</Button>
             <Button variant="outline" className="w-full text-base font-semibold border-gray-300 text-blue-700 shadow rounded-xl py-3">Oferă spre închiriere</Button>
@@ -290,17 +290,17 @@ export const BrowseGear: React.FC = () => {
                 Închiriază echipament profesional de la creatori verificați.
               </p>
               <div className="w-full max-w-3xl mx-auto mb-8">
-                <SearchFilters 
-                  searchQuery={filters.search} 
-                  selectedLocation={filters.location} 
-                  selectedCategory={filters.category} 
-                  sortBy={filters.sortBy} 
+              <SearchFilters 
+                searchQuery={filters.search} 
+                selectedLocation={filters.location} 
+                selectedCategory={filters.category} 
+                sortBy={filters.sortBy} 
                   onSearchChange={v => setFilters(prev => ({ ...prev, search: v }))} 
                   onLocationChange={v => setFilters(prev => ({ ...prev, location: v }))} 
                   onCategoryChange={v => setFilters(prev => ({ ...prev, category: v }))} 
                   onSortChange={v => setFilters(prev => ({ ...prev, sortBy: v }))} 
-                />
-              </div>
+              />
+            </div>
               <RentOfferToggle />
             </div>
           </div>
@@ -330,7 +330,7 @@ export const BrowseGear: React.FC = () => {
                   <Button onClick={() => window.location.reload()}>
                     Încearcă din nou
                   </Button>
-                </div>
+              </div>
               </CardContent>
             </Card>
           ) : filteredGear.length === 0 ? (
@@ -339,7 +339,7 @@ export const BrowseGear: React.FC = () => {
                 <div className="max-w-md mx-auto">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Camera className="h-8 w-8 text-gray-400" />
-                  </div>
+            </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Nu am găsit echipamente</h3>
                   <p className="text-gray-600 mb-6">
                     {quickSearch || filters.search 
@@ -349,13 +349,13 @@ export const BrowseGear: React.FC = () => {
                   </p>
                   <div className="flex gap-3 justify-center">
                     <Button variant="outline" onClick={() => setFilters(defaultFilters)}>
-                      Resetează filtrele
-                    </Button>
+                  Resetează filtrele
+                </Button>
                     <Button onClick={() => window.location.href = '/add-gear'}>
                       Adaugă echipament
                     </Button>
-                  </div>
-                </div>
+              </div>
+            </div>
               </CardContent>
             </Card>
           ) : (
@@ -419,18 +419,18 @@ export const BrowseGear: React.FC = () => {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(420px,1fr))] gap-4 sm:gap-6">
                       {regularGear.map((item: Gear) => (
-                        <GearCard 
+                <GearCard 
                           key={item.id} 
                           gear={item}
                           variant={viewMode === 'list' ? 'compact' : 'default'}
-                          onViewDetails={(gearId) => {
-                            window.location.href = `/gear/${gearId}`;
-                          }}
-                          onBookNow={(gearId) => {
-                            window.location.href = `/gear/${gearId}?book=true`;
-                          }}
-                        />
-                      ))}
+                  onViewDetails={(gearId) => {
+                    window.location.href = `/gear/${gearId}`;
+                  }}
+                  onBookNow={(gearId) => {
+                    window.location.href = `/gear/${gearId}?book=true`;
+                  }}
+                />
+              ))}
                     </div>
                   </div>
                 )}
@@ -438,14 +438,14 @@ export const BrowseGear: React.FC = () => {
             </div>
           )}
         </div>
-        {/* Floating Add Gear Button */}
-        <Button 
+          {/* Floating Add Gear Button */}
+          <Button 
           className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl rounded-full p-0 h-14 w-14 flex items-center justify-center text-3xl transition-all duration-300 hover:scale-110"
-          onClick={() => window.location.href = '/add-gear'}
-          aria-label="Adaugă echipament"
-        >
-          <Plus className="h-8 w-8" />
-        </Button>
+            onClick={() => window.location.href = '/add-gear'}
+            aria-label="Adaugă echipament"
+          >
+            <Plus className="h-8 w-8" />
+          </Button>
         <Footer />
       </div>
     </ErrorBoundary>
