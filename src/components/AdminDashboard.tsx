@@ -295,7 +295,7 @@ export const AdminDashboard: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 rounded-xl">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -308,7 +308,7 @@ export const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200 rounded-xl">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -321,7 +321,7 @@ export const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200">
+        <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200 rounded-xl">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -334,7 +334,7 @@ export const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200 rounded-xl">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -350,9 +350,9 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <Card>
+        <Card className="rounded-xl">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
               <Activity className="h-5 w-5" />
               <span>Activitate Recentă</span>
             </CardTitle>
@@ -393,9 +393,9 @@ export const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
               <TrendingUp className="h-5 w-5" />
               <span>Statistici Rapide</span>
             </CardTitle>
@@ -426,25 +426,41 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
-          <CardTitle>Acțiuni Rapide</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Acțiuni Rapide</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/users')}>
+            <Button 
+              variant="outline" 
+              className="h-16 sm:h-20 flex-col space-y-2 rounded-xl" 
+              onClick={() => navigate('/admin/users')}
+            >
               <Users className="h-5 w-5 sm:h-6 sm:w-6" />
               <span className="text-xs sm:text-sm">Gestionare Utilizatori</span>
             </Button>
-            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/moderation')}>
+            <Button 
+              variant="outline" 
+              className="h-16 sm:h-20 flex-col space-y-2 rounded-xl" 
+              onClick={() => navigate('/admin/moderation')}
+            >
               <Flag className="h-5 w-5 sm:h-6 sm:w-6" />
               <span className="text-xs sm:text-sm">Moderare Conținut</span>
             </Button>
-            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/claims')}>
+            <Button 
+              variant="outline" 
+              className="h-16 sm:h-20 flex-col space-y-2 rounded-xl" 
+              onClick={() => navigate('/admin/claims')}
+            >
               <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
               <span className="text-xs sm:text-sm">Reclamații</span>
             </Button>
-            <Button variant="outline" className="h-16 sm:h-20 flex-col space-y-2" onClick={() => navigate('/admin/analytics')}>
+            <Button 
+              variant="outline" 
+              className="h-16 sm:h-20 flex-col space-y-2 rounded-xl" 
+              onClick={() => navigate('/admin/analytics')}
+            >
               <BarChart2 className="h-5 w-5 sm:h-6 sm:w-6" />
               <span className="text-xs sm:text-sm">Rapoarte</span>
             </Button>
@@ -459,7 +475,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         {/* Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-20">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="h-8 w-8 sm:h-10 sm:w-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <ShieldCheck className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
@@ -473,14 +489,14 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <Button variant="ghost" size="sm" className="hover:bg-gray-100 p-2">
+              <Button variant="ghost" size="sm" className="hover:bg-gray-100 p-2 hidden sm:flex">
                 <Bell className="h-4 w-4" />
               </Button>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
-                className="hover:bg-gray-100 p-2 sm:hidden"
+                className="hover:bg-gray-100 p-2 lg:hidden"
               >
                 <Menu className="h-4 w-4" />
               </Button>
@@ -509,7 +525,7 @@ export const AdminDashboard: React.FC = () => {
           {/* Sidebar */}
           <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-white/95 backdrop-blur-sm border-r border-gray-200/50 transition-all duration-300 transform ${
             sidebarCollapsed ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          } ${sidebarCollapsed ? 'w-64' : 'w-64'}`}>
+          } w-64 lg:w-64`}>
             <div className="p-4">
               <Button
                 variant="ghost"
@@ -531,14 +547,14 @@ export const AdminDashboard: React.FC = () => {
                     key={item.path}
                     to={`/admin/${item.path}`}
                     onClick={() => setSidebarCollapsed(false)}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+                    className={`flex items-center space-x-3 px-3 py-3 sm:py-2 rounded-xl transition-all duration-200 ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-900 border border-blue-200'
                         : 'hover:bg-gray-100 text-gray-700'
                     }`}
                   >
                     <Icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : item.color}`} />
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-medium text-sm sm:text-base">{item.label}</span>
                   </Link>
                 );
               })}

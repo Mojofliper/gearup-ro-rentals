@@ -182,178 +182,132 @@ export const SettingsPanel: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-6">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-        Se încarcă setările...
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="text-gray-600">Se încarcă setările...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Setări Platformă</h2>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={resetToDefaults} disabled={saving}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Setări Platformă</h2>
+          <p className="text-gray-600 text-sm sm:text-base">Configurează parametrii platformei</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button 
+            variant="outline" 
+            onClick={resetToDefaults} 
+            disabled={saving}
+            className="rounded-xl"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Resetare Implicit
           </Button>
-          <Button onClick={saveSettings} disabled={saving}>
+          <Button 
+            onClick={saveSettings} 
+            disabled={saving}
+            className="rounded-xl"
+          >
             {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Se salvează...
+              </>
             ) : (
-              <Save className="h-4 w-4 mr-2" />
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Salvează Setările
+              </>
             )}
-            Salvează Setările
           </Button>
         </div>
       </div>
 
+      {/* Settings Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Platform Fees */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Taxe Platformă</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="platform_fee_percentage">Taxă Platformă (%)</Label>
-              <Input
-                id="platform_fee_percentage"
-                type="number"
-                min="0"
-                max="50"
-                value={editedSettings.platform_fee_percentage || ''}
-                onChange={(e) => handleSettingChange('platform_fee_percentage', e.target.value)}
-                placeholder="10"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {getSettingDescription('platform_fee_percentage')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Escrow Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Setări Escrow</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="escrow_hold_days">Zile Retenție Escrow</Label>
-              <Input
-                id="escrow_hold_days"
-                type="number"
-                min="1"
-                max="30"
-                value={editedSettings.escrow_hold_days || ''}
-                onChange={(e) => handleSettingChange('escrow_hold_days', e.target.value)}
-                placeholder="3"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {getSettingDescription('escrow_hold_days')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Rental Limits */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Limitări Închiriere</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="max_rental_days">Zile Maxime Închiriere</Label>
-              <Input
-                id="max_rental_days"
-                type="number"
-                min="1"
-                max="365"
-                value={editedSettings.max_rental_days || ''}
-                onChange={(e) => handleSettingChange('max_rental_days', e.target.value)}
-                placeholder="30"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {getSettingDescription('max_rental_days')}
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="min_deposit_percentage">Depozit Minim (%)</Label>
-              <Input
-                id="min_deposit_percentage"
-                type="number"
-                min="0"
-                max="100"
-                value={editedSettings.min_deposit_percentage || ''}
-                onChange={(e) => handleSettingChange('min_deposit_percentage', e.target.value)}
-                placeholder="20"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {getSettingDescription('min_deposit_percentage')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Approval Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Aprobare Automată</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="auto_approval_threshold">Rating Minim Aprobare</Label>
-              <Input
-                id="auto_approval_threshold"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                value={editedSettings.auto_approval_threshold || ''}
-                onChange={(e) => handleSettingChange('auto_approval_threshold', e.target.value)}
-                placeholder="4.5"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {getSettingDescription('auto_approval_threshold')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Support Settings */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Suport Clienți</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="support_email">Email Suport</Label>
-              <Input
-                id="support_email"
-                type="email"
-                value={editedSettings.support_email || ''}
-                onChange={(e) => handleSettingChange('support_email', e.target.value)}
-                placeholder="support@gearup.ro"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {getSettingDescription('support_email')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {settings.map((setting) => (
+          <Card key={setting.setting_key} className="rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-lg sm:text-xl">
+                {getSettingDescription(setting.setting_key)}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor={setting.setting_key} className="text-sm font-medium">
+                  {setting.setting_key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </Label>
+                
+                {setting.setting_key === 'support_email' ? (
+                  <Input
+                    id={setting.setting_key}
+                    type="email"
+                    value={editedSettings[setting.setting_key] || ''}
+                    onChange={(e) => handleSettingChange(setting.setting_key, e.target.value)}
+                    className="rounded-xl"
+                    placeholder="support@gearup.ro"
+                  />
+                ) : setting.setting_key.includes('percentage') || setting.setting_key.includes('threshold') ? (
+                  <Input
+                    id={setting.setting_key}
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={editedSettings[setting.setting_key] || ''}
+                    onChange={(e) => handleSettingChange(setting.setting_key, e.target.value)}
+                    className="rounded-xl"
+                    placeholder="0"
+                  />
+                ) : setting.setting_key.includes('days') ? (
+                  <Input
+                    id={setting.setting_key}
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={editedSettings[setting.setting_key] || ''}
+                    onChange={(e) => handleSettingChange(setting.setting_key, e.target.value)}
+                    className="rounded-xl"
+                    placeholder="1"
+                  />
+                ) : (
+                  <Input
+                    id={setting.setting_key}
+                    type="text"
+                    value={editedSettings[setting.setting_key] || ''}
+                    onChange={(e) => handleSettingChange(setting.setting_key, e.target.value)}
+                    className="rounded-xl"
+                    placeholder="Valoare"
+                  />
+                )}
+                
+                <p className="text-xs text-gray-500">
+                  {getSettingDescription(setting.setting_key)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Warning */}
-      <Card className="border-yellow-200 bg-yellow-50">
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600" />
-            <p className="text-sm text-yellow-800">
-              <strong>Atenție:</strong> Modificarea acestor setări poate afecta funcționarea platformei. 
-              Asigură-te că înțelegi impactul înainte de a salva modificările.
-            </p>
+      {/* Warning Card */}
+      <Card className="rounded-xl border-orange-200 bg-orange-50">
+        <CardContent className="p-4">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-orange-900">Atenție</h3>
+              <p className="text-sm text-orange-700 mt-1">
+                Modificarea acestor setări poate afecta funcționarea platformei. Asigură-te că înțelegi 
+                impactul fiecărei modificări înainte de a salva.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

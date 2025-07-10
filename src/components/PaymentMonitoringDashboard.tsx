@@ -18,9 +18,9 @@ import {
   Users,
   Calendar
 } from 'lucide-react';
-import { usePaymentTesting } from '@/hooks/usePaymentTesting';
 import { useEscrowPayments } from '@/hooks/useEscrowPayments';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface PaymentMetrics {
   totalTransactions: number;
@@ -48,7 +48,6 @@ export const PaymentMonitoringDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const { isRunning, testResults, runAllTests } = usePaymentTesting();
   const { connectedAccount } = useEscrowPayments();
 
   useEffect(() => {
@@ -100,6 +99,11 @@ export const PaymentMonitoringDashboard: React.FC = () => {
       });
     } catch (error) {
       console.error('Error loading metrics:', error);
+      toast({
+        title: 'Eroare la încărcarea metricilor',
+        description: 'Nu s-au putut încărca datele de plată.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -144,6 +148,10 @@ export const PaymentMonitoringDashboard: React.FC = () => {
     setIsLoading(true);
     await Promise.all([loadMetrics(), checkSystemHealth()]);
     setLastUpdated(new Date());
+    toast({
+      title: 'Date actualizate',
+      description: 'Metricile au fost actualizate cu succes.',
+    });
   };
 
   const getStatusIcon = (status: 'healthy' | 'warning' | 'error') => {
@@ -172,7 +180,16 @@ export const PaymentMonitoringDashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center p-8">
         <RefreshCw className="h-6 w-6 animate-spin" />
-        <span className="ml-2">Loading payment metrics...</span>
+        <span className="ml-2">Încărcare metrici de plată...</span>
+      </div>
+    );
+  }
+
+  if (!metrics || !systemHealth) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <AlertTriangle className="h-6 w-6 text-red-600" />
+        <span className="ml-2">Nu s-au putut încărca datele</span>
       </div>
     );
   }
@@ -182,217 +199,158 @@ export const PaymentMonitoringDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Payment Monitoring Dashboard</h1>
+          <h1 className="text-2xl font-bold">Monitorizare Plăți în Timp Real</h1>
           <p className="text-muted-foreground">
-            Real-time payment system monitoring and analytics
+            Monitorizare și analiză în timp real a sistemului de plăți
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button onClick={handleRefresh} disabled={isLoading}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button onClick={runAllTests} disabled={isRunning} variant="outline">
-            <Activity className="h-4 w-4 mr-2" />
-            Run Tests
+            Actualizare
           </Button>
         </div>
       </div>
 
       {/* System Health */}
-      {systemHealth && (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Activity className="h-5 w-5 mr-2" />
+            Stare Sistem
+          </CardTitle>
+          <CardDescription>
+            Ultima actualizare: {lastUpdated.toLocaleTimeString()}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center">
+                {getStatusIcon(systemHealth.webhookStatus)}
+                <span className="ml-2">Webhooks</span>
+              </div>
+              <Badge className={getStatusColor(systemHealth.webhookStatus)}>
+                {systemHealth.webhookStatus}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center">
+                {getStatusIcon(systemHealth.databaseStatus)}
+                <span className="ml-2">Bază de Date</span>
+              </div>
+              <Badge className={getStatusColor(systemHealth.databaseStatus)}>
+                {systemHealth.databaseStatus}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center">
+                {getStatusIcon(systemHealth.stripeStatus)}
+                <span className="ml-2">Stripe</span>
+              </div>
+              <Badge className={getStatusColor(systemHealth.stripeStatus)}>
+                {systemHealth.stripeStatus}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              System Health
-            </CardTitle>
-            <CardDescription>
-              Last updated: {lastUpdated.toLocaleTimeString()}
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Tranzacții</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center">
-                  {getStatusIcon(systemHealth.webhookStatus)}
-                  <span className="ml-2">Webhooks</span>
-                </div>
-                <Badge className={getStatusColor(systemHealth.webhookStatus)}>
-                  {systemHealth.webhookStatus}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center">
-                  {getStatusIcon(systemHealth.databaseStatus)}
-                  <span className="ml-2">Database</span>
-                </div>
-                <Badge className={getStatusColor(systemHealth.databaseStatus)}>
-                  {systemHealth.databaseStatus}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center">
-                  {getStatusIcon(systemHealth.stripeStatus)}
-                  <span className="ml-2">Stripe</span>
-                </div>
-                <Badge className={getStatusColor(systemHealth.stripeStatus)}>
-                  {systemHealth.stripeStatus}
-                </Badge>
-              </div>
-            </div>
+            <div className="text-2xl font-bold">{metrics.totalTransactions}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.successfulTransactions} reușite
+            </p>
           </CardContent>
         </Card>
-      )}
 
-      {/* Payment Metrics */}
-      {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.totalTransactions}</div>
-              <p className="text-xs text-muted-foreground">
-                {metrics.successfulTransactions} successful
-              </p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rata de Succes</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.successRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.successfulTransactions} din {metrics.totalTransactions}
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.successRate.toFixed(1)}%</div>
-              <Progress value={metrics.successRate} className="mt-2" />
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sumă Totală</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.totalAmount.toFixed(2)} RON</div>
+            <p className="text-xs text-muted-foreground">
+              Medie: {metrics.averageAmount.toFixed(2)} RON
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {metrics.totalAmount.toFixed(2)} RON
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Avg: {metrics.averageAmount.toFixed(2)} RON
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Escrow Active</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.escrowTransactions}</div>
-              <p className="text-xs text-muted-foreground">
-                {metrics.activeEscrowAmount.toFixed(2)} RON held
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Escrow Activ</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.escrowTransactions}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.activeEscrowAmount.toFixed(2)} RON deținut
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Transaction Status Breakdown */}
-      {metrics && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Transaction Status Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  <span>Successful</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">{metrics.successfulTransactions}</span>
-                  <Badge variant="default">{((metrics.successfulTransactions / metrics.totalTransactions) * 100).toFixed(1)}%</Badge>
-                </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Împărțire Status Tranzacții</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                <span>Reușite</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 text-yellow-600 mr-2" />
-                  <span>Pending</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">{metrics.pendingTransactions}</span>
-                  <Badge variant="secondary">{((metrics.pendingTransactions / metrics.totalTransactions) * 100).toFixed(1)}%</Badge>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
-                  <span>Failed</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">{metrics.failedTransactions}</span>
-                  <Badge variant="destructive">{((metrics.failedTransactions / metrics.totalTransactions) * 100).toFixed(1)}%</Badge>
-                </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">{metrics.successfulTransactions}</span>
+                <Progress value={(metrics.successfulTransactions / metrics.totalTransactions) * 100} className="w-24" />
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Test Results */}
-      {testResults.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment System Tests</CardTitle>
-            <CardDescription>
-              Automated test results for payment system components
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {testResults.map((suite, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium">{suite.name}</h3>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="default">{suite.passedTests} passed</Badge>
-                      {suite.failedTests > 0 && (
-                        <Badge variant="destructive">{suite.failedTests} failed</Badge>
-                      )}
-                      <span className="text-sm text-muted-foreground">
-                        {suite.duration}ms
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {suite.tests.map((test, testIndex) => (
-                      <div key={testIndex} className="flex items-center justify-between text-sm">
-                        <span className="flex items-center">
-                          {test.status === 'passed' ? (
-                            <CheckCircle className="h-3 w-3 text-green-600 mr-2" />
-                          ) : (
-                            <AlertTriangle className="h-3 w-3 text-red-600 mr-2" />
-                          )}
-                          {test.testName}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {test.duration}ms
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 text-yellow-600 mr-2" />
+                <span>În așteptare</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">{metrics.pendingTransactions}</span>
+                <Progress value={(metrics.pendingTransactions / metrics.totalTransactions) * 100} className="w-24" />
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                <span>Eșuate</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">{metrics.failedTransactions}</span>
+                <Progress value={(metrics.failedTransactions / metrics.totalTransactions) * 100} className="w-24" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

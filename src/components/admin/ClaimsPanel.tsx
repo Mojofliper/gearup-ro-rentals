@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { 
-  Loader2, AlertTriangle, CheckCircle, XCircle, Eye, 
-  Clock, ShieldCheck, DollarSign, Calendar
+  Loader2, AlertTriangle, CheckCircle, XCircle, 
+  Clock, ShieldCheck, DollarSign, Calendar, Image, Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -22,7 +22,7 @@ interface Claim {
   claim_status: string;
   description: string;
   amount_requested?: number;
-  evidence_photos?: any;
+  evidence_photos?: string[];
   admin_notes?: string;
   created_at: string;
   updated_at: string;
@@ -41,7 +41,8 @@ interface Claim {
 export const ClaimsPanel: React.FC = () => {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'under_review' | 'approved' | 'rejected'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const loadClaims = async () => {
     try {
@@ -68,7 +69,15 @@ export const ClaimsPanel: React.FC = () => {
         return;
       }
 
-      setClaims(data || []);
+      // Parse evidence_photos if it's a string
+      const processedData = (data || []).map(claim => ({
+        ...claim,
+        evidence_photos: typeof claim.evidence_photos === 'string' 
+          ? JSON.parse(claim.evidence_photos) 
+          : claim.evidence_photos || []
+      }));
+
+      setClaims(processedData);
     } catch (error) {
       console.error('Error loading claims:', error);
       toast.error('Eroare la încărcarea reclamațiilor');
@@ -82,11 +91,14 @@ export const ClaimsPanel: React.FC = () => {
     loadClaims();
   }, [filter]);
 
-  const updateClaimStatus = async (claimId: string, status: 'approved' | 'rejected' | 'under_review') => {
+  const updateClaimStatus = async (claimId: string, status: 'approved' | 'rejected') => {
     try {
       const { error } = await supabase
         .from('claims')
-        .update({ claim_status: status })
+        .update({ 
+          claim_status: status,
+          resolved_at: new Date().toISOString()
+        })
         .eq('id', claimId);
 
       if (error) {
@@ -167,7 +179,9 @@ export const ClaimsPanel: React.FC = () => {
           toast.error('Eroare la eliberarea fondurilor din escrow');
         }
       }
-      // If claim is rejected or cancelled, no escrow release - funds stay in escrow for normal rental flow
+      
+      toast.success(`Reclamație ${status === 'approved' ? 'aprobată' : 'respinsă'} cu succes`);
+      await loadClaims(); // Reload to get updated data
     } catch (error) {
       console.error('Error in updateClaimStatus:', error);
       toast.error('Eroare la actualizarea reclamației');
@@ -177,7 +191,6 @@ export const ClaimsPanel: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: 'În așteptare', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      under_review: { label: 'În revizuire', color: 'bg-blue-100 text-blue-800', icon: Eye },
       approved: { label: 'Aprobată', color: 'bg-green-100 text-green-800', icon: CheckCircle },
       rejected: { label: 'Respinsă', color: 'bg-red-100 text-red-800', icon: XCircle },
     };
@@ -198,190 +211,333 @@ export const ClaimsPanel: React.FC = () => {
       damage: 'Daune',
       late_return: 'Întârziere returnare',
       missing_item: 'Element lipsă',
-      other: 'Altele'
+      quality_issue: 'Problemă calitate',
+      other: 'Altă problemă'
     };
     return typeLabels[type as keyof typeof typeLabels] || type;
   };
 
-  if (loading) {
+  const ImageGallery = ({ photos }: { photos: string[] }) => {
+    if (!photos || photos.length === 0) {
+      return (
+        <div className="text-center py-4 text-gray-500">
+          <Image className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+          <p className="text-sm">Nu există imagini încărcate</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex items-center justify-center p-6">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-        Se încarcă reclamațiile...
+      <div className="space-y-3">
+        <div className="flex items-center space-x-2">
+          <Image className="h-4 w-4 text-gray-600" />
+          <span className="text-sm font-medium text-gray-700">Dovezi foto ({photos.length})</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {photos.map((photo, index) => (
+            <div 
+              key={index} 
+              className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setSelectedImage(photo)}
+            >
+              <img 
+                src={photo} 
+                alt={`Dovada ${index + 1}`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = '/placeholder.svg';
+                }}
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
+                <Eye className="h-4 w-4 text-white opacity-0 hover:opacity-100 transition-opacity" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
-  }
+  };
+
+  const ImageModal = ({ image, onClose }: { image: string | null; onClose: () => void }) => {
+    if (!image) return null;
+
+    return (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div className="relative max-w-4xl max-h-full">
+          <img 
+            src={image} 
+            alt="Dovada foto"
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            className="absolute top-2 right-2 rounded-full w-8 h-8 p-0"
+          >
+            ×
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Gestionare Reclamații</h2>
-          <p className="text-gray-600">Administrează reclamațiile și dispute</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('all')}
-          >
-            Toate ({claims.length})
-          </Button>
-          <Button
-            variant={filter === 'pending' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('pending')}
-          >
-            În așteptare
-          </Button>
-          <Button
-            variant={filter === 'under_review' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('under_review')}
-          >
-            În revizuire
-          </Button>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Gestionare Reclamații</h2>
+          <p className="text-gray-600 text-sm sm:text-base">Administrează reclamațiile utilizatorilor</p>
         </div>
       </div>
 
-      {claims.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nu există reclamații</h3>
-            <p className="text-gray-600">Nu s-au găsit reclamații cu criteriile selectate.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6">
-          {claims.map((claim) => (
-            <Card key={claim.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <ShieldCheck className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <CardTitle className="text-lg">
-                        {getClaimTypeLabel(claim.claim_type)}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600">
-                        Reclamație #{claim.id.slice(0, 8)} • {format(new Date(claim.created_at), 'dd MMMM yyyy', { locale: ro })}
-                      </p>
-                    </div>
-                  </div>
-                  {getStatusBadge(claim.claim_status)}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium mb-2">Detalii Reclamație</h4>
-                    <p className="text-sm text-gray-700 mb-3">{claim.description}</p>
-                    
-                    {claim.amount_requested && (
-                      <div className="flex items-center space-x-2 mb-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium">
-                          Sumă solicitată: {claim.amount_requested} RON
-                        </span>
-                      </div>
-                    )}
+      {/* Filters */}
+      <Card className="rounded-xl">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('all')}
+              className="rounded-xl"
+            >
+              Toate
+            </Button>
+            <Button
+              variant={filter === 'pending' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('pending')}
+              className="rounded-xl"
+            >
+              În așteptare
+            </Button>
+            <Button
+              variant={filter === 'approved' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('approved')}
+              className="rounded-xl"
+            >
+              Aprobate
+            </Button>
+            <Button
+              variant={filter === 'rejected' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('rejected')}
+              className="rounded-xl"
+            >
+              Respinse
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-                    {claim.booking && (
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Calendar className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm">
-                          Rezervare: {claim.booking.total_amount} RON
-                        </span>
-                      </div>
-                    )}
-
-                    {claim.claimant && (
-                      <div className="text-sm text-gray-600">
-                        <p><strong>Reclamant:</strong> {claim.claimant.full_name || claim.claimant.email}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2">Acțiuni</h4>
-                    <div className="space-y-2">
-                      {claim.claim_status === 'pending' && (
-                        <>
-                          <Button
-                            size="sm"
-                            className="w-full"
-                            onClick={() => updateClaimStatus(claim.id, 'under_review')}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Marchează pentru revizuire
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => updateClaimStatus(claim.id, 'approved')}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Aprobă
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="w-full"
-                            onClick={() => updateClaimStatus(claim.id, 'rejected')}
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Respinge
-                          </Button>
-                        </>
-                      )}
-
-                      {claim.claim_status === 'under_review' && (
-                        <>
-                          <Button
-                            size="sm"
-                            className="w-full"
-                            onClick={() => updateClaimStatus(claim.id, 'approved')}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Aprobă
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="w-full"
-                            onClick={() => updateClaimStatus(claim.id, 'rejected')}
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Respinge
-                          </Button>
-                        </>
-                      )}
-
-                      {(claim.claim_status === 'approved' || claim.claim_status === 'rejected') && (
-                        <div className="text-sm text-gray-600">
-                          <p><strong>Status:</strong> {claim.claim_status === 'approved' ? 'Aprobată' : 'Respinsă'}</p>
-                          {claim.resolved_at && (
-                            <p><strong>Rezolvată la:</strong> {format(new Date(claim.resolved_at), 'dd MMMM yyyy', { locale: ro })}</p>
+      {/* Claims Table - Mobile Card Layout */}
+      <Card className="rounded-xl">
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl">Reclamații ({claims.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                <p className="text-gray-600">Se încarcă reclamațiile...</p>
+              </div>
+            </div>
+          ) : claims.length === 0 ? (
+            <div className="text-center py-12">
+              <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nu există reclamații</h3>
+              <p className="text-gray-600">Nu au fost găsite reclamații cu criteriile selectate.</p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Reclamant</TableHead>
+                      <TableHead>Tip</TableHead>
+                      <TableHead>Descriere</TableHead>
+                      <TableHead>Sumă</TableHead>
+                      <TableHead>Dovezi</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Acțiuni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {claims.map(claim => (
+                      <TableRow key={claim.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <ShieldCheck className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{claim.claimant?.full_name || 'Necunoscut'}</p>
+                              <p className="text-sm text-gray-500">{claim.claimant?.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{getClaimTypeLabel(claim.claim_type)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm max-w-xs truncate">{claim.description}</p>
+                        </TableCell>
+                        <TableCell>
+                          {claim.amount_requested ? (
+                            <div className="flex items-center space-x-1">
+                              <DollarSign className="h-3 w-3 text-green-600" />
+                              <span className="font-medium">{claim.amount_requested} RON</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">-</span>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                        </TableCell>
+                        <TableCell>
+                          {claim.evidence_photos && claim.evidence_photos.length > 0 ? (
+                            <div className="flex items-center space-x-1">
+                              <Image className="h-3 w-3 text-blue-600" />
+                              <span className="text-sm">{claim.evidence_photos.length} foto</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(claim.claim_status)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="h-3 w-3 text-gray-400" />
+                            <span className="text-sm">
+                              {format(new Date(claim.created_at), 'dd MMM yyyy', { locale: ro })}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {claim.claim_status === 'pending' && (
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateClaimStatus(claim.id, 'approved')}
+                                className="h-7 px-2 rounded-lg bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                              >
+                                Aprobă
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateClaimStatus(claim.id, 'rejected')}
+                                className="h-7 px-2 rounded-lg bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                              >
+                                Respinge
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-                {claim.admin_notes && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <h5 className="font-medium text-sm mb-1">Note Admin:</h5>
-                    <p className="text-sm text-gray-700">{claim.admin_notes}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              {/* Mobile Card Layout */}
+              <div className="lg:hidden space-y-4">
+                {claims.map(claim => (
+                  <Card key={claim.id} className="rounded-xl">
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        {/* Claimant Info */}
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <ShieldCheck className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-base">{claim.claimant?.full_name || 'Necunoscut'}</p>
+                            <p className="text-sm text-gray-500">{claim.claimant?.email}</p>
+                          </div>
+                          {getStatusBadge(claim.claim_status)}
+                        </div>
+
+                        {/* Claim Details */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700">Tip:</span>
+                            <Badge variant="outline">{getClaimTypeLabel(claim.claim_type)}</Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700">Sumă:</span>
+                            {claim.amount_requested ? (
+                              <div className="flex items-center space-x-1">
+                                <DollarSign className="h-3 w-3 text-green-600" />
+                                <span className="font-medium">{claim.amount_requested} RON</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-500">-</span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700">Data:</span>
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="h-3 w-3 text-gray-400" />
+                              <span className="text-sm">
+                                {format(new Date(claim.created_at), 'dd MMM yyyy', { locale: ro })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-1">Descriere:</p>
+                          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{claim.description}</p>
+                        </div>
+
+                        {/* Evidence Photos */}
+                        <ImageGallery photos={claim.evidence_photos || []} />
+
+                        {/* Actions */}
+                        {claim.claim_status === 'pending' && (
+                          <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateClaimStatus(claim.id, 'approved')}
+                              className="flex-1 rounded-xl bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                            >
+                              Aprobă
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateClaimStatus(claim.id, 'rejected')}
+                              className="flex-1 rounded-xl bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                            >
+                              Respinge
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Image Modal */}
+      <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />
     </div>
   );
 }; 

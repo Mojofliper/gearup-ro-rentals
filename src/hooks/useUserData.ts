@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUserApi, useBookingApi, useGearApi, useReviewApi } from './useApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthQuery, useAuthMutation } from './useAuthQuery';
+import { supabase } from '@/integrations/supabase/client';
 
 type Profile = Record<string, unknown>;
 
@@ -24,18 +25,16 @@ export const useUpdateProfile = () => {
   const { user } = useAuth();
   const { updateProfile } = useUserApi();
   
-  return useAuthMutation(
-    async (updates: Partial<Profile>) => {
+  return useMutation({
+    mutationFn: async (updates: Partial<Profile>) => {
       if (!user?.id) throw new Error('User not authenticated');
       return await updateProfile(user.id, updates);
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['current-user'] });
-        queryClient.invalidateQueries({ queryKey: ['user-profile'] });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['current-user'] });
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+    },
+  });
 };
 
 export const useDashboardOverview = () => {
@@ -110,20 +109,18 @@ export const useUpdateReview = () => {
   const queryClient = useQueryClient();
   const { updateReview } = useReviewApi();
   
-  return useAuthMutation(
-    async ({ reviewId, updates }: {
+  return useMutation({
+    mutationFn: async ({ reviewId, updates }: {
       reviewId: string;
       updates: { rating?: number; comment?: string };
     }) => {
       return await updateReview(reviewId, updates);
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
-        queryClient.invalidateQueries({ queryKey: ['user-stats'] });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+    },
+  });
 };
 
 export const useUserStats = () => {
@@ -139,6 +136,10 @@ export const useUserStats = () => {
         totalListings: 0,
         rating: 0,
         reviews: 0,
+        total_earnings: 0,
+        total_spent: 0,
+        average_rating: 0,
+        total_reviews: 0,
         joinDate: new Date().getFullYear().toString()
       };
       
@@ -146,12 +147,40 @@ export const useUserStats = () => {
         getDashboardOverview(user.id),
         getUserRatingStats(user.id)
       ]);
+
+      // Calculate earnings from completed bookings where user is owner
+      const { data: earningsData } = await supabase
+        .from('bookings')
+        .select('total_amount, rental_amount')
+        .eq('owner_id', user.id)
+        .eq('status', 'completed')
+        .eq('payment_status', 'completed');
+
+      // Calculate spending from completed bookings where user is renter
+      const { data: spendingData } = await supabase
+        .from('bookings')
+        .select('total_amount, rental_amount')
+        .eq('renter_id', user.id)
+        .eq('status', 'completed')
+        .eq('payment_status', 'completed');
+
+      const total_earnings = (earningsData || []).reduce((sum, booking) => {
+        return sum + (booking.rental_amount || booking.total_amount || 0);
+      }, 0);
+
+      const total_spent = (spendingData || []).reduce((sum, booking) => {
+        return sum + (booking.total_amount || booking.rental_amount || 0);
+      }, 0);
       
       return {
         totalRentals: dashboardData?.bookingCount || 0,
         totalListings: dashboardData?.gearCount || 0,
         rating: ratingStats?.rating || 0,
         reviews: ratingStats?.totalReviews || 0,
+        total_earnings,
+        total_spent,
+        average_rating: ratingStats?.rating || 0,
+        total_reviews: ratingStats?.totalReviews || 0,
         joinDate: user.created_at ? new Date(user.created_at).getFullYear().toString() : new Date().getFullYear().toString()
       };
     },

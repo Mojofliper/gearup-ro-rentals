@@ -29,7 +29,7 @@ export const PaymentCancel: React.FC = () => {
     const handlePaymentCancellation = async () => {
       if (!bookingId) {
         console.log('PaymentCancel: No booking_id in URL');
-        setError('Missing booking_id in URL');
+        setError('Lipsește booking_id din URL');
         return;
       }
 
@@ -42,7 +42,7 @@ export const PaymentCancel: React.FC = () => {
           .update({
             status: 'cancelled',
             payment_status: 'failed', // Use allowed enum value
-            cancellation_reason: 'Payment cancelled by user'
+            cancellation_reason: 'Plata a fost anulată de utilizator'
           })
           .eq('id', bookingId);
 

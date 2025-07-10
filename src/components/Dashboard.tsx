@@ -19,7 +19,7 @@ import {
   Star, MapPin, Calendar, Edit, Package, AlertCircle, Eye, 
   CheckCircle, CreditCard, Trash2, XCircle, Plus, TrendingUp, 
   DollarSign, Clock, Users, ShoppingBag, ArrowRight, MessageSquare,
-  CheckCircle2, CalendarDays, Award
+  CheckCircle2, CalendarDays, Award, X, AlertTriangle
 } from 'lucide-react';
 import { PaymentModal } from '@/components/PaymentModal';
 import { format, addDays, isToday, isTomorrow, isAfter } from 'date-fns';
@@ -150,6 +150,48 @@ export const Dashboard: React.FC = () => {
   const [claimBooking, setClaimBooking] = useState<Record<string, unknown> | null>(null);
   const [pickupBooking, setPickupBooking] = useState<Record<string, unknown> | null>(null);
   const [showBookingFlow, setShowBookingFlow] = useState<string | null>(null);
+
+  // Warning message state
+  const [showStripeWarning, setShowStripeWarning] = useState(false);
+
+  // Check if user should see the Stripe warning
+  useEffect(() => {
+    if (!user) return;
+    
+    const dismissedWarning = localStorage.getItem(`stripe-warning-dismissed-${user.id}`);
+    const hasListings = listings.length > 0;
+    const isStripeConnected = connectedAccount?.charges_enabled;
+    
+    // Debug logging
+    console.log('Warning debug:', {
+      user: user.id,
+      dismissedWarning,
+      hasListings,
+      isStripeConnected,
+      listingsLength: listings.length,
+      connectedAccount
+    });
+    
+    // Show warning if:
+    // 1. Warning hasn't been dismissed
+    // 2. AND either:
+    //    - User has listings but no Stripe account configured
+    //    - User has no listings yet (encourage them to become an owner)
+    const shouldShowWarning = !dismissedWarning && (
+      (hasListings && !isStripeConnected) || 
+      (!hasListings)
+    );
+    
+    console.log('Should show warning:', shouldShowWarning);
+    setShowStripeWarning(shouldShowWarning);
+  }, [user, listings.length, connectedAccount, connectedAccount?.charges_enabled]);
+
+  const dismissStripeWarning = () => {
+    if (user?.id) {
+      localStorage.setItem(`stripe-warning-dismissed-${user.id}`, 'true');
+      setShowStripeWarning(false);
+    }
+  };
 
   // Load claim statuses for user bookings
   const loadClaims = async () => {
@@ -397,11 +439,64 @@ export const Dashboard: React.FC = () => {
   const earningsTrend = totalEarnings > 0 ? 'up' : 'down';
   const earningsChange = totalEarnings > 0 ? '+12%' : '0%';
 
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ro-RO', {
+      style: 'currency',
+      currency: 'RON',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
         <Header />
         
+        {showStripeWarning && (
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-yellow-800 mb-1">
+                    Configurați contul de plată pentru a începe să câștigați!
+                  </h3>
+                  <p className="text-sm text-yellow-700 mb-3">
+                    Pentru a primi plăți pentru închirierile echipamentelor, trebuie să configurați contul de plată Stripe. 
+                    Acest proces durează doar câteva minute și este necesar pentru a putea primi banii în contul bancar.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                      onClick={() => setShowStripeOnboarding(true)}
+                      className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Configurare cont de plată
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate('/add-gear')}
+                      className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adaugă primul echipament
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={dismissStripeWarning}
+                className="text-yellow-600 hover:text-yellow-800 p-1 rounded-full hover:bg-yellow-100 transition-colors"
+                title="Închide"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         <main className="container mx-auto px-4 py-6">
 
           {/* Stats Cards */}
@@ -411,7 +506,11 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-gray-600">Rezervări active</p>
-                    <p className="text-lg sm:text-xl font-bold text-gray-900">{activeBookings}</p>
+                    {statsLoading ? (
+                      <div className="h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
+                    ) : (
+                      <p className="text-lg sm:text-xl font-bold text-gray-900">{activeBookings}</p>
+                    )}
                     <p className="text-xs text-gray-500">{pendingBookings} în așteptare</p>
                   </div>
                   <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
@@ -424,7 +523,11 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-gray-600">Câștiguri totale</p>
-                    <p className="text-lg sm:text-xl font-bold text-gray-900">{totalEarnings} RON</p>
+                    {statsLoading ? (
+                      <div className="h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
+                    ) : (
+                      <p className="text-lg sm:text-xl font-bold text-gray-900">{formatCurrency(totalEarnings)}</p>
+                    )}
                     <div className="flex items-center space-x-1">
                       <TrendingUp className="h-3 w-3 text-green-500" />
                       <p className="text-xs text-gray-500">{earningsChange}</p>
@@ -440,10 +543,14 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-gray-600">Rating mediu</p>
-                    <div className="flex items-center space-x-1">
-                      <p className="text-lg sm:text-xl font-bold text-gray-900">{averageRating.toFixed(1)}</p>
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    </div>
+                    {statsLoading ? (
+                      <div className="h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
+                    ) : (
+                      <div className="flex items-center space-x-1">
+                        <p className="text-lg sm:text-xl font-bold text-gray-900">{averageRating.toFixed(1)}</p>
+                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      </div>
+                    )}
                     <p className="text-xs text-gray-500">{totalReviews} recenzii</p>
                   </div>
                   <Award className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
@@ -456,7 +563,11 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-gray-600">Echipamente</p>
-                    <p className="text-lg sm:text-xl font-bold text-gray-900">{listings.length}</p>
+                    {statsLoading ? (
+                      <div className="h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
+                    ) : (
+                      <p className="text-lg sm:text-xl font-bold text-gray-900">{listings.length}</p>
+                    )}
                     <p className="text-xs text-gray-500">{listings.filter(l => l.is_available).length} disponibile</p>
                   </div>
                   <Package className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />

@@ -124,8 +124,8 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
         ));
 
         toast({
-          title: "Photo uploaded successfully",
-          description: `${upload.file.name} has been uploaded.`,
+          title: "Fotografie încărcată cu succes",
+          description: `${upload.file.name} a fost încărcat.`,
         });
 
       } catch (error) {
@@ -139,8 +139,8 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
         ));
 
         toast({
-          title: "Upload failed",
-          description: `Failed to upload ${upload.file.name}.`,
+          title: "Încărcare eșuată",
+          description: `Nu s-a putut încărca ${upload.file.name}.`,
           variant: "destructive",
         });
       }
@@ -188,8 +188,8 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
       ));
 
       toast({
-        title: "Upload retry successful",
-        description: `${upload.file.name} has been uploaded.`,
+        title: "Încărcare reîncercată cu succes",
+        description: `${upload.file.name} a fost încărcat.`,
       });
 
     } catch (error) {
@@ -203,8 +203,8 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
       ));
 
       toast({
-        title: "Retry failed",
-        description: `Failed to upload ${upload.file.name}.`,
+        title: "Reîncercare eșuată",
+        description: `Nu s-a putut încărca ${upload.file.name}.`,
         variant: "destructive",
       });
     }
@@ -241,12 +241,12 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Camera className="h-5 w-5" />
-          Photo Documentation
+          Documentație Fotografică
         </CardTitle>
         <CardDescription>
           {isOwner 
-            ? "Upload photos of the gear condition before handover to the renter"
-            : "Upload photos of the gear condition upon pickup"
+            ? "Încarcă fotografii cu starea echipamentului înainte de predarea către chiriaș"
+            : "Încarcă fotografii cu starea echipamentului la ridicare"
           }
         </CardDescription>
       </CardHeader>
@@ -255,7 +255,7 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
           <Alert>
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
-              Photo documentation complete! All photos have been uploaded successfully.
+              Documentație fotografică completă! Toate fotografiile au fost încărcate cu succes.
             </AlertDescription>
           </Alert>
         )}
@@ -263,9 +263,9 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium">Upload Photos</h4>
+              <h4 className="font-medium">Încarcă Fotografii</h4>
               <p className="text-sm text-gray-600">
-                Take photos showing the current condition of the gear
+                Luați fotografii care arată starea curentă a echipamentului
               </p>
             </div>
             <Button
@@ -274,7 +274,7 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
               className="flex items-center gap-2"
             >
               <Camera className="h-4 w-4" />
-              {isUploading ? 'Uploading...' : 'Add Photos'}
+              {isUploading ? 'Încărcare...' : 'Adăugare Fotografii'}
             </Button>
           </div>
 
@@ -290,7 +290,7 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
 
           {uploads.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium">Upload Progress</h4>
+              <h4 className="font-medium">Progres Încărcare</h4>
               {uploads.map((upload) => (
                 <div key={upload.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -308,7 +308,7 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
                           size="sm"
                           onClick={() => retryUpload(upload)}
                         >
-                          Retry
+                          Reîncercare
                         </Button>
                       )}
                       <Button
@@ -349,9 +349,9 @@ export const PhotoDocumentation: React.FC<PhotoDocumentationProps> = ({
           {uploads.length === 0 && (
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
               <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-2">No photos uploaded yet</p>
+              <p className="text-gray-600 mb-2">Nu există fotografii încărcate</p>
               <p className="text-sm text-gray-500">
-                Click "Add Photos" to start documenting the gear condition
+                Faceți clic pe "Adăugare Fotografii" pentru a începe documentarea stării echipamentului
               </p>
             </div>
           )}

@@ -91,12 +91,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     try {
       const stripeInstance = await getStripe();
       if (!stripeInstance) {
-        throw new Error('Failed to load Stripe');
+        throw new Error('Nu s-a putut încărca Stripe');
       }
       setStripe(stripeInstance);
     } catch (error: unknown) {
       console.error('Stripe initialization error:', error);
-      setErrorMessage('Failed to initialize payment system');
+      setErrorMessage('Nu s-a putut inițializa sistemul de plată');
+      return;
     }
   };
 
@@ -129,7 +130,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const handleOwnerSetup = async () => {
     if (!user) {
-      toast.error('You must be logged in to setup payments');
+      toast.error('Trebuie să fiți autentificat pentru a configura plățile');
       return;
     }
 
@@ -137,7 +138,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       await setupStripeConnect(user.email || '', 'RO');
     } catch (error: unknown) {
       console.error('Owner setup error:', error);
-      toast.error('Failed to setup payment account');
+      toast.error('Nu s-a putut configura contul de plată');
     }
   };
 
@@ -166,7 +167,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         .update({
           status: 'cancelled',
           payment_status: 'failed',
-          cancellation_reason: 'Payment cancelled by user'
+          cancellation_reason: 'Plata a fost anulată de utilizator'
         })
         .eq('id', booking.id);
 
@@ -218,12 +219,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         // Redirect to Stripe's hosted checkout page
         window.location.href = result.url;
       } else {
-        throw new Error('Failed to create checkout session');
+        throw new Error('Nu s-a putut crea sesiunea de plată');
       }
     } catch (error: unknown) {
       console.error('Escrow payment error:', error);
       setPaymentStatus('error');
-      setErrorMessage((error as Error).message || 'Failed to process payment');
+      setErrorMessage((error as Error).message || 'Nu s-a putut procesa plata');
       
       if ((error as Error).message?.includes('Owner account not ready')) {
         setShowOwnerSetup(true);

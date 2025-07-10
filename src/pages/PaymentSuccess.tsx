@@ -39,7 +39,7 @@ export const PaymentSuccess: React.FC = () => {
   useEffect(() => {
     const handlePaymentSuccess = async () => {
       if (!sessionId) {
-        setError('No payment session found');
+        setError('Nu s-a găsit sesiunea de plată');
         setLoading(false);
         return;
       }

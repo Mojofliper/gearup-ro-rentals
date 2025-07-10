@@ -56,119 +56,130 @@ export default function CleanupPanel() {
   }, [])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trash2 className="h-5 w-5" />
-          Cleanup Stale Pending Bookings
-        </CardTitle>
-        <CardDescription>
-          Automatically delete pending bookings older than 48 hours that haven't been responded to
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Statistics */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Pending</p>
-                <p className="font-semibold text-blue-900">{stats.totalPending}</p>
-              </div>
-            </div>
-                          <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-                <div>
-                  <p className="text-sm text-gray-600">Stale (&gt;48h)</p>
-                  <p className="font-semibold text-orange-900">{stats.stalePending}</p>
-                </div>
-              </div>
-            {stats.lastCleanup && (
-              <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <div>
-                  <p className="text-sm text-gray-600">Last Cleanup</p>
-                  <p className="font-semibold text-green-900">{stats.lastCleanup.deletedCount} deleted</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Manual Trigger */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">Manual Cleanup</h4>
-              <p className="text-sm text-gray-600">
-                Trigger immediate cleanup of stale pending bookings
-              </p>
-            </div>
-            <Button 
-              onClick={triggerCleanup} 
-              disabled={isLoading}
-              variant="destructive"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cleaning...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clean Now
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Auto-schedule info */}
-          <Alert>
-            <Clock className="h-4 w-4" />
-            <AlertDescription>
-              Automatic cleanup runs daily at 2:00 AM UTC. Pending bookings older than 48 hours are automatically deleted.
-            </AlertDescription>
-          </Alert>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Cleanup & Mentenanță</h2>
+          <p className="text-gray-600 text-sm sm:text-base">Gestionare rezervări în așteptare și mentenanță sistem</p>
         </div>
+      </div>
 
-        {/* Last cleanup result */}
-        {lastCleanupResult && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium mb-2">Last Cleanup Result</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Deleted bookings:</span>
-                <Badge variant="secondary">{lastCleanupResult.deletedCount}</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span>Cutoff time:</span>
-                <span className="text-gray-600">
-                  {new Date(lastCleanupResult.cutoffTime).toLocaleString()}
-                </span>
-              </div>
-              {lastCleanupResult.deletedBookings && lastCleanupResult.deletedBookings.length > 0 && (
+      <Card className="rounded-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Trash2 className="h-5 w-5" />
+            Cleanup Rezervări în Așteptare
+          </CardTitle>
+          <CardDescription className="text-sm sm:text-base">
+            Șterge automat rezervările în așteptare mai vechi de 48 de ore care nu au primit răspuns
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Statistics */}
+          {stats && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
+                <Clock className="h-5 w-5 text-blue-600" />
                 <div>
-                  <span className="block mb-1">Deleted booking IDs:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {lastCleanupResult.deletedBookings.slice(0, 5).map((booking: any) => (
-                      <Badge key={booking.id} variant="outline" className="text-xs">
-                        {booking.id}
-                      </Badge>
-                    ))}
-                    {lastCleanupResult.deletedBookings.length > 5 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{lastCleanupResult.deletedBookings.length - 5} more
-                      </Badge>
-                    )}
+                  <p className="text-sm font-medium text-gray-600">Total în Așteptare</p>
+                  <p className="text-xl font-bold text-blue-900">{stats.totalPending}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-xl">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Expirate (&gt;48h)</p>
+                  <p className="text-xl font-bold text-orange-900">{stats.stalePending}</p>
+                </div>
+              </div>
+              {stats.lastCleanup && (
+                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Ultimul Cleanup</p>
+                    <p className="text-xl font-bold text-green-900">{stats.lastCleanup.deletedCount} șterse</p>
                   </div>
                 </div>
               )}
             </div>
+          )}
+
+          {/* Manual Trigger */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h4 className="font-medium text-lg">Cleanup Manual</h4>
+                <p className="text-sm text-gray-600">
+                  Declanșează cleanup-ul imediat al rezervărilor expirate
+                </p>
+              </div>
+              <Button 
+                onClick={triggerCleanup} 
+                disabled={isLoading}
+                variant="destructive"
+                className="w-full sm:w-auto rounded-xl"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Se curăță...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Curăță Acum
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Auto-schedule info */}
+            <Alert className="rounded-xl">
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                Cleanup-ul automat rulează zilnic la 2:00 AM UTC. Rezervările în așteptare mai vechi de 48 de ore sunt șterse automat.
+              </AlertDescription>
+            </Alert>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Last cleanup result */}
+          {lastCleanupResult && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+              <h4 className="font-medium mb-4 text-lg">Rezultat Ultimul Cleanup</h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Rezervări șterse:</span>
+                  <Badge variant="secondary" className="rounded-lg">{lastCleanupResult.deletedCount}</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Timp limită:</span>
+                  <span className="text-gray-600">
+                    {new Date(lastCleanupResult.cutoffTime).toLocaleString()}
+                  </span>
+                </div>
+                {lastCleanupResult.deletedBookings && lastCleanupResult.deletedBookings.length > 0 && (
+                  <div>
+                    <span className="block mb-2 font-medium">ID-uri rezervări șterse:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {lastCleanupResult.deletedBookings.slice(0, 5).map((booking: any) => (
+                        <Badge key={booking.id} variant="outline" className="text-xs rounded-lg">
+                          {booking.id}
+                        </Badge>
+                      ))}
+                      {lastCleanupResult.deletedBookings.length > 5 && (
+                        <Badge variant="outline" className="text-xs rounded-lg">
+                          +{lastCleanupResult.deletedBookings.length - 5} mai multe
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 } 

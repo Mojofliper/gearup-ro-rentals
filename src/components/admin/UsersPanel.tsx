@@ -221,13 +221,13 @@ export const UsersPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestionare Utilizatori</h2>
-          <p className="text-gray-600">Administrează utilizatorii platformei</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Gestionare Utilizatori</h2>
+          <p className="text-gray-600 text-sm sm:text-base">Administrează utilizatorii platformei</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={loadUsers}>
+          <Button variant="outline" size="sm" onClick={loadUsers} className="rounded-xl">
             <RefreshCw className="h-4 w-4 mr-2" />
             Reîmprospătare
           </Button>
@@ -235,62 +235,62 @@ export const UsersPanel: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <UserCheck className="h-5 w-5 text-green-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Verificați</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.verified}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.verified}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <UserX className="h-5 w-5 text-yellow-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Neverificați</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.unverified}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.unverified}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Shield className="h-5 w-5 text-purple-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Admini</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.admins}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.admins}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <UserX className="h-5 w-5 text-red-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Suspendati</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.suspended}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.suspended}</p>
               </div>
             </div>
           </CardContent>
@@ -298,9 +298,9 @@ export const UsersPanel: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -308,15 +308,16 @@ export const UsersPanel: React.FC = () => {
                   placeholder="Caută după nume sau email..." 
                   value={search} 
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 rounded-xl"
                 />
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('all')}
+                className="rounded-xl"
               >
                 Toți ({stats.total})
               </Button>
@@ -324,6 +325,7 @@ export const UsersPanel: React.FC = () => {
                 variant={filter === 'verified' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('verified')}
+                className="rounded-xl"
               >
                 Verificați ({stats.verified})
               </Button>
@@ -331,6 +333,7 @@ export const UsersPanel: React.FC = () => {
                 variant={filter === 'unverified' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('unverified')}
+                className="rounded-xl"
               >
                 Neverificați ({stats.unverified})
               </Button>
@@ -338,6 +341,7 @@ export const UsersPanel: React.FC = () => {
                 variant={filter === 'admin' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('admin')}
+                className="rounded-xl"
               >
                 Admini ({stats.admins})
               </Button>
@@ -346,13 +350,14 @@ export const UsersPanel: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Users Table */}
-      <Card>
+      {/* Users Table - Mobile Card Layout */}
+      <Card className="rounded-xl">
         <CardHeader>
-          <CardTitle>Utilizatori ({filtered.length})</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Utilizatori ({filtered.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -437,7 +442,7 @@ export const UsersPanel: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => toggleVerify(user.id, !user.is_verified)}
-                          className="h-7 px-2"
+                          className="h-7 px-2 rounded-lg"
                         >
                           {user.is_verified ? 'Revocă' : 'Verifică'}
                         </Button>
@@ -445,15 +450,23 @@ export const UsersPanel: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => toggleSuspend(user.id, !user.is_suspended)}
-                          className="h-7 px-2"
+                          className="h-7 px-2 rounded-lg"
                         >
                           {user.is_suspended ? 'Reactivează' : 'Suspendă'}
                         </Button>
                         <Button
                           size="sm"
+                          variant="outline"
+                          onClick={() => changeRole(user.id, user.role === 'admin' ? 'user' : 'admin')}
+                          className="h-7 px-2 rounded-lg"
+                        >
+                          {user.role === 'admin' ? 'Elimină Admin' : 'Fă Admin'}
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="destructive"
                           onClick={() => deleteUser(user.id)}
-                          className="h-7 px-2"
+                          className="h-7 px-2 rounded-lg"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -463,6 +476,114 @@ export const UsersPanel: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile Card Layout */}
+          <div className="lg:hidden space-y-4">
+            {filtered.map(user => (
+              <Card key={user.id} className="rounded-xl">
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    {/* User Info */}
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={user.avatar_url} />
+                        <AvatarFallback className="bg-blue-100 text-blue-600">
+                          {user.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium text-base">{user.full_name || 'Necunoscut'}</p>
+                        <p className="text-sm text-gray-500">{user.role || 'user'}</p>
+                        <div className="flex items-center space-x-1 mt-1">
+                          <Mail className="h-3 w-3 text-gray-400" />
+                          <span className="text-sm text-gray-600">{user.email}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center space-x-1">
+                        <MapPin className="h-3 w-3 text-gray-400" />
+                        <span>{user.location || 'Necunoscut'}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Star className="h-3 w-3 text-yellow-400" />
+                        <span>{user.rating?.toFixed(1) || '0.0'} ({user.total_reviews || 0})</span>
+                      </div>
+                    </div>
+
+                    {/* Status Badges */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {user.is_verified && (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          <UserCheck className="h-3 w-3 mr-1" />
+                          Verificat
+                        </Badge>
+                      )}
+                      {user.is_suspended && (
+                        <Badge variant="destructive">
+                          <UserX className="h-3 w-3 mr-1" />
+                          Suspendat
+                        </Badge>
+                      )}
+                      {user.role === 'admin' && (
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Admin
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Registration Date */}
+                    <div className="flex items-center space-x-1 text-sm text-gray-500">
+                      <Calendar className="h-3 w-3" />
+                      <span>
+                        {user.created_at ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: ro }) : 'Necunoscut'}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleVerify(user.id, !user.is_verified)}
+                        className="flex-1 rounded-xl"
+                      >
+                        {user.is_verified ? 'Revocă' : 'Verifică'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleSuspend(user.id, !user.is_suspended)}
+                        className="flex-1 rounded-xl"
+                      >
+                        {user.is_suspended ? 'Reactivează' : 'Suspendă'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => changeRole(user.id, user.role === 'admin' ? 'user' : 'admin')}
+                        className="flex-1 rounded-xl"
+                      >
+                        {user.role === 'admin' ? 'Elimină Admin' : 'Fă Admin'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteUser(user.id)}
+                        className="flex-1 rounded-xl"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Șterge
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </CardContent>
       </Card>

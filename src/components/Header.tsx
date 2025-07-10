@@ -372,20 +372,32 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
           </div>
 
           {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden relative group"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <div className="relative">
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-              ) : (
-                <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-              )}
-            </div>
-          </Button>
+          <div className="lg:hidden flex items-center gap-2">
+            {!user && (
+              <Button 
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-sm" 
+                size="sm" 
+                onClick={() => handleAuthClick('signup')}
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                Înregistrează-te
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="relative group"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <div className="relative">
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+                ) : (
+                  <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+                )}
+              </div>
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Menu */}

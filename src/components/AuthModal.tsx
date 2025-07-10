@@ -206,12 +206,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-xs sm:max-w-md p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-center">
+      <DialogContent className="w-[95vw] max-w-md mx-auto p-6 sm:p-8 overflow-y-auto max-h-[90vh] rounded-2xl sm:rounded-3xl border-0 shadow-2xl bg-white">
+        <DialogHeader className="mb-6">
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-center text-gray-900">
             {mode === 'login' ? 'Conectează-te' : 'Creează un cont'}
           </DialogTitle>
-          <DialogDescription className="text-center">
+          <DialogDescription className="text-center text-gray-600 mt-2">
             {mode === 'login' 
               ? 'Introdu emailul și parola pentru a te conecta la contul tău'
               : 'Completează informațiile pentru a crea un cont nou'
@@ -219,11 +219,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {mode === 'signup' && (
             <>
               <div>
-                <Label htmlFor="fullName">Nume complet *</Label>
+                <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 mb-2 block">Nume complet *</Label>
                 <Input
                   id="fullName"
                   type="text"
@@ -231,35 +231,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
                   onChange={(e) => setFullName(e.target.value)}
                   required
                   placeholder="Ion Popescu"
-                  className="mt-1"
+                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
                 />
               </div>
 
               <div>
-                <Label htmlFor="phoneNumber">Număr de telefon (opțional)</Label>
+                <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700 mb-2 block">Număr de telefon (opțional)</Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="+40 7XX XXX XXX"
-                  className="mt-1"
+                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
                 />
               </div>
 
               <div>
-                <Label htmlFor="location">Județul tău *</Label>
+                <Label htmlFor="location" className="text-sm font-medium text-gray-700 mb-2 block">Județul tău *</Label>
                 <LocationDetector
                   onLocationChange={setLocation}
                   currentLocation={location}
-                  className="mt-1"
+                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
                 />
               </div>
             </>
           )}
 
           <div>
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">Email *</Label>
             <Input
               id="email"
               type="email"
@@ -267,12 +267,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="exemplu@email.com"
-              className="mt-1"
+              className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
             />
           </div>
 
           <div>
-            <Label htmlFor="password">Parolă *</Label>
+            <Label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">Parolă *</Label>
             <Input
               id="password"
               type="password"
@@ -281,22 +281,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               required
               placeholder="Minim 6 caractere"
               minLength={6}
-              className="mt-1"
+              className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-base" 
+            disabled={loading}
+          >
             {loading ? 'Se procesează...' : (mode === 'login' ? 'Conectează-te' : 'Creează contul')}
           </Button>
         </form>
 
-        <Separator className="my-4" />
+        <Separator className="my-6" />
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 py-3 px-6 rounded-xl transition-all duration-200 text-base font-medium"
             onClick={handleGoogleSignIn}
             disabled={googleLoading}
           >
@@ -304,7 +308,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               'Se conectează...'
             ) : (
               <>
-                <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -328,11 +332,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           </Button>
         </div>
 
-        <div className="text-center">
+        <div className="text-center mt-6">
           <button
             type="button"
             onClick={() => onSwitchMode(mode === 'login' ? 'signup' : 'login')}
-            className="text-sm text-gray-600 hover:text-gray-800"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
           >
             {mode === 'login' ? 'Nu ai cont? Înregistrează-te' : 'Ai deja cont? Conectează-te'}
           </button>

@@ -674,9 +674,6 @@ export const Messages: React.FC = () => {
               <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-blue-200 text-xs sm:text-sm">
                 {activeBookings.length} conversații
               </Badge>
-              <Button variant="ghost" size="sm" className="hover:bg-gray-100 p-2">
-                <Settings className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>
@@ -825,9 +822,9 @@ export const Messages: React.FC = () => {
 
             {/* Modern Messages Area */}
             <div className="lg:col-span-3 flex justify-center">
-              <div className="w-full max-w-2xl flex flex-col h-full">
+              <div className="w-full sm:max-w-2xl flex flex-col h-full mx-0 sm:mx-auto">
                 {selectedBooking ? (
-                  <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+                  <Card className="h-[80vh] sm:h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
                     {/* Enhanced Conversation Header */}
                     <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30 p-4">
                       <div className="flex items-center justify-between">
@@ -864,38 +861,26 @@ export const Messages: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-1 sm:space-x-2">
-                          <Link to={`/gear/${selectedBookingData?.gear_id}`} target="_blank">
-                            <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600 text-xs sm:text-sm p-2">
-                              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                              <span className="hidden sm:inline">Vezi echipament</span>
-                            </Button>
-                          </Link>
-                          <Button variant="ghost" size="sm" className="hover:bg-gray-100 p-2">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </div>
                       
-                      {/* Enhanced Pickup Location */}
-                      {selectedBookingData?.pickup_lat && selectedBookingData?.pickup_lng && selectedBookingData?.pickup_location && (
-                        <div className="mt-3 sm:mt-4 p-3 bg-white/60 rounded-lg border border-gray-200/50">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <MapPin className="h-4 w-4 text-blue-600" />
-                            <span className="font-medium text-gray-800 text-sm">Locație de ridicare</span>
-                          </div>
-                          <MapCard 
-                            lat={selectedBookingData.pickup_lat} 
-                            lng={selectedBookingData.pickup_lng} 
-                            address={selectedBookingData.pickup_location}
-                          />
-                        </div>
-                      )}
                     </CardHeader>
 
                     {/* Enhanced Messages */}
-                    <CardContent className="flex-1 p-0 flex flex-col min-h-0">
+                    <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
                       <div className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-6 space-y-4 bg-gradient-to-b from-gray-50/30 to-white/30 chat-scrollbar">
+                        {selectedBookingData?.pickup_lat && selectedBookingData?.pickup_lng && selectedBookingData?.pickup_location && (
+                          <div className="mb-4 p-3 bg-white/60 rounded-lg border border-gray-200/50 flex flex-col items-start">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <MapPin className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium text-gray-800 text-sm">Locație de ridicare</span>
+                            </div>
+                            <MapCard 
+                              lat={selectedBookingData.pickup_lat} 
+                              lng={selectedBookingData.pickup_lng} 
+                              address={selectedBookingData.pickup_location}
+                            />
+                          </div>
+                        )}
                         {messages.length === 0 ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="text-center space-y-4">
@@ -990,7 +975,7 @@ export const Messages: React.FC = () => {
                       </div>
 
                       {/* Enhanced Message Input */}
-                      <div className="border-t border-gray-200/50 p-2 sm:p-4 bg-white/80 backdrop-blur-sm">
+                      <div className="border-t border-gray-200/50 p-2 sm:p-4 bg-white/80 backdrop-blur-sm rounded-b-2xl">
                         <div className="flex items-end space-x-2 sm:space-x-3">
                           <div className="flex-1 relative">
                             <Input
@@ -1025,17 +1010,6 @@ export const Messages: React.FC = () => {
                             ) : (
                               <Send className="h-3 w-3 sm:h-4 sm:w-4" />
                             )}
-                          </Button>
-                          <Button 
-                            onClick={debugRefreshMessages}
-                            variant="outline"
-                            size="sm"
-                            className="rounded-full h-8 w-8 sm:h-10 sm:w-10 p-0"
-                            title="Debug: Refresh messages"
-                          >
-                            <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
                           </Button>
                         </div>
                         <div className="flex items-center justify-between mt-2 text-xs text-gray-500">

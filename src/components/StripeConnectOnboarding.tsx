@@ -59,7 +59,7 @@ export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = (
 
   const handleSetup = async () => {
     if (!user?.email) {
-      toast.error('Email address is required for payment setup');
+      toast.error('Adresa de email este obligatorie pentru configurarea plății');
       return;
     }
 
