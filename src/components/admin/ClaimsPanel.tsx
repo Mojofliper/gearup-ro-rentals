@@ -82,54 +82,47 @@ export const ClaimsPanel: React.FC = () => {
     loadClaims();
   }, [filter]);
 
-  const updateClaimStatus = async (claimId: string, status: string, notes?: string) => {
+  const updateClaimStatus = async (claimId: string, status: 'approved' | 'rejected' | 'under_review') => {
     try {
-      const updates: any = { 
-        claim_status: status,
-        updated_at: new Date().toISOString()
-      };
-
-      if (status === 'approved' || status === 'rejected') {
-        updates.resolved_at = new Date().toISOString();
-      }
-
-      if (notes) {
-        updates.admin_notes = notes;
-      }
-
       const { error } = await supabase
         .from('claims')
-        .update(updates)
+        .update({ claim_status: status })
         .eq('id', claimId);
 
       if (error) {
-        console.error('Error updating claim:', error);
+        console.error('Error updating claim status:', error);
         toast.error('Eroare la actualizarea reclamației');
         return;
       }
 
-      // If claim is approved, trigger escrow release
+      // Broadcast status change
+      await fetch('/functions/v1/claim-status-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          booking_id: claims.find(c => c.id === claimId)?.booking_id, 
+          claim_status: status 
+        }),
+      });
+
+      // Only trigger escrow release for APPROVED claims
       if (status === 'approved') {
         try {
-          // Get the claim details including who filed it
-          const { data: claimData } = await supabase
-            .from('claims')
-            .select('booking_id, claimant_id, owner_id, renter_id')
-            .eq('id', claimId)
-            .single();
-
-          if (claimData?.booking_id) {
+          const claim = claims.find(c => c.id === claimId);
+          if (claim) {
+            const bookingId = claim.booking_id;
+            
             // Get the booking to determine who filed the claim
             const { data: bookingData } = await supabase
               .from('bookings')
               .select('owner_id, renter_id')
-              .eq('id', claimData.booking_id)
+              .eq('id', bookingId)
               .single();
 
             if (bookingData) {
               // Determine who filed the claim by checking claimant_id against owner_id and renter_id
-              const isOwnerClaim = claimData.claimant_id === bookingData.owner_id;
-              const isRenterClaim = claimData.claimant_id === bookingData.renter_id;
+              const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
+              const isRenterClaim = claim.claimant_id === bookingData.renter_id;
               
               // Determine the correct release type based on who filed the claim
               let releaseType: string;
@@ -139,7 +132,7 @@ export const ClaimsPanel: React.FC = () => {
                 releaseType = 'claim_owner';
               } else if (isRenterClaim) {
                 // Renter filed the claim and it was approved
-                releaseType = 'claim_renter';
+                releaseType = 'claim_renter_approved';
               } else {
                 // Fallback: use the old logic if claimant_id doesn't match either
                 console.warn('Claimant ID does not match owner or renter ID, using fallback logic');
@@ -156,7 +149,7 @@ export const ClaimsPanel: React.FC = () => {
                   'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
                 },
                 body: JSON.stringify({
-                  booking_id: claimData.booking_id,
+                  booking_id: claim.booking_id,
                   release_type: releaseType,
                 }),
               });
@@ -175,6 +168,77 @@ export const ClaimsPanel: React.FC = () => {
         }
       }
       // If claim is rejected, no escrow release - funds stay in escrow for normal rental flow
+
+      // Broadcast status change
+      await fetch('/functions/v1/claim-status-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          booking_id: claims.find(c => c.id === claimId)?.booking_id, 
+          claim_status: status 
+        }),
+      });
+
+      // Get claim details to determine who filed it and trigger escrow release
+      try {
+        const claim = claims.find(c => c.id === claimId);
+        if (claim) {
+          const bookingId = claim.booking_id;
+          
+          // Get the booking to determine who filed the claim
+          const { data: bookingData } = await supabase
+            .from('bookings')
+            .select('owner_id, renter_id')
+            .eq('id', bookingId)
+            .single();
+
+          if (bookingData) {
+            // Determine who filed the claim by checking claimant_id against owner_id and renter_id
+            const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
+            const isRenterClaim = claim.claimant_id === bookingData.renter_id;
+            
+            // Determine the correct release type based on who filed and admin decision
+            let releaseType: string;
+            
+            if (isOwnerClaim) {
+              // Owner filed the claim
+              releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
+            } else if (isRenterClaim) {
+              // Renter filed the claim
+              releaseType = status === 'approved' ? 'claim_renter_approved' : 'claim_owner';
+            } else {
+              // Fallback: use the old logic if claimant_id doesn't match either
+              console.warn('Claimant ID does not match owner or renter ID, using fallback logic');
+              releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
+            }
+
+            console.log(`Claim resolution: ${isOwnerClaim ? 'Owner' : isRenterClaim ? 'Renter' : 'Unknown'} filed claim, Admin ${status}, Release type: ${releaseType}`);
+
+            // Call escrow release function with correct release type
+            const response = await fetch('https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              },
+              body: JSON.stringify({
+                booking_id: claim.booking_id,
+                release_type: releaseType,
+              }),
+            });
+
+            if (!response.ok) {
+              console.error('Escrow release failed:', await response.text());
+              toast.error('Eroare la eliberarea fondurilor din escrow');
+            } else {
+              console.log('Escrow release successful');
+            }
+          }
+        }
+      } catch (escrowError) {
+        console.error('Error triggering escrow release:', escrowError);
+        toast.error('Eroare la eliberarea fondurilor din escrow');
+      }
 
       toast.success(`Reclamația a fost ${status === 'approved' ? 'aprobată' : status === 'rejected' ? 'respinsă' : 'actualizată'} cu succes`);
       loadClaims();

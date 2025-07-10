@@ -1,5 +1,5 @@
 # Fix claim system for fund distribution
-_Exported on 7/10/2025 at 14:34:08 GMT+3 from Cursor (1.2.2)_
+_Exported on 7/10/2025 at 17:37:02 GMT+3 from Cursor (1.2.2)_
 
 ---
 
@@ -12025,7 +12025,6 @@ Let me fix both header instances:
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-md shadow-sm">
 ```
 
-
 ✅ **Color Scheme & Design Overhaul Complete!**
 
 ### What’s been done:
@@ -12089,9 +12088,7 @@ Or just proceed with a full sweep for a permanent fix?
 
 **User**
 
-a full sweep for a permanent fix
-
-cant we do a script or something
+can you give me the full escrow release trigger the full i mean with the claims system with the dual confirmation that we fixed in this conversation
 
 ---
 

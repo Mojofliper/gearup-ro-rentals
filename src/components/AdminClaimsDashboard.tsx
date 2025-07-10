@@ -63,7 +63,7 @@ export const AdminClaimsDashboard: React.FC = () => {
       body: JSON.stringify({ booking_id: claims.find(c => c.id === claimId)?.booking_id, claim_status: approve ? 'approved' : 'rejected' }),
     });
 
-    // Only trigger escrow release if claim is approved
+    // Only trigger escrow release if claim is APPROVED
     if (approve) {
       try {
         const claim = claims.find(c => c.id === claimId);
@@ -90,7 +90,7 @@ export const AdminClaimsDashboard: React.FC = () => {
               releaseType = 'claim_owner';
             } else if (isRenterClaim) {
               // Renter filed the claim and it was approved
-              releaseType = 'claim_renter';
+              releaseType = 'claim_renter_approved';
             } else {
               // Fallback: use the old logic if claimant_id doesn't match either
               console.warn('Claimant ID does not match owner or renter ID, using fallback logic');

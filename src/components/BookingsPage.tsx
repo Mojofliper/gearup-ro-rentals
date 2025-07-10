@@ -44,42 +44,11 @@ export const BookingsPage: React.FC = () => {
   const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
   const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
   const [claimBooking, setClaimBooking] = useState<any>(null);
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
-  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
 
   // Filter bookings using the actual authenticated user ID
   const userBookings = bookings.filter((b: any) => b.renter_id === user?.id);
   const ownerBookings = bookings.filter((b: any) => b.owner_id === user?.id);
-
-  // Real-time subscription for connection status
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel('bookings-page-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-          filter: `renter_id=eq.${user.id} OR owner_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('BookingsPage: Real-time update received:', payload);
-          setLastUpdateTime(new Date());
-        }
-      )
-      .subscribe((status) => {
-        console.log('BookingsPage: Real-time subscription status:', status);
-        setIsRealtimeConnected(status === 'SUBSCRIBED');
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]);
 
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
     if (status === 'confirmed') {
@@ -179,8 +148,6 @@ export const BookingsPage: React.FC = () => {
         badges.push(<Badge key="pay-pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">În așteptare plată</Badge>);
       } else if (paymentStatus === 'completed') {
         badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
-      } else if (paymentStatus === 'failed') {
-        badges.push(<Badge key="pay-failed" variant="destructive" className="ml-1">Plată eșuată</Badge>);
       }
       return badges;
     }

@@ -210,7 +210,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -228,7 +228,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Chat-specific scrollbar */
 .chat-scrollbar::-webkit-scrollbar {
-  width: 3px;
+  width: 6px;
 }
 
 .chat-scrollbar::-webkit-scrollbar-track {

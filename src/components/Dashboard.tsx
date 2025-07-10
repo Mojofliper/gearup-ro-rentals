@@ -45,54 +45,48 @@ function getBookingBadges(booking: any, userId: string) {
   const claim = booking.activeClaim || booking.resolvedClaim;
   const claimStatus = claim?.claim_status;
 
-  // Cancelled
+  // 1. Cancelled
   if (status === 'cancelled') {
     badges.push(<Badge key="cancelled" variant="destructive">Anulată</Badge>);
-    return badges;
-  }
-
-  // Pending (waiting for owner confirmation)
-  if (status === 'pending') {
-    badges.push(<Badge key="pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">În așteptare confirmare</Badge>);
-    return badges;
-  }
-
-  // Confirmed
-  if (status === 'confirmed') {
-    badges.push(<Badge key="confirmed" variant="secondary" className="bg-blue-100 text-blue-800">Confirmată</Badge>);
-    if (paymentStatus === 'pending') {
-      badges.push(<Badge key="pay-pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">În așteptare plată</Badge>);
-    } else if (paymentStatus === 'completed') {
-      badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
-    } else if (paymentStatus === 'failed') {
-      badges.push(<Badge key="pay-failed" variant="destructive" className="ml-1">Plată eșuată</Badge>);
+    if (paymentStatus === 'refunded') {
+      badges.push(<Badge key="refunded" variant="outline" className="bg-gray-100 text-gray-800 border-gray-200 ml-1">Refundat</Badge>);
     }
     return badges;
   }
 
-  // Active
-  if (status === 'active') {
-    badges.push(<Badge key="active" variant="secondary" className="bg-blue-100 text-blue-800">În curs</Badge>);
-    if (paymentStatus === 'completed') {
-      badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
-    }
-    return badges;
-  }
-
-  // Returned
-  if (status === 'returned') {
-    badges.push(<Badge key="returned" variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Returnat</Badge>);
-    if (paymentStatus === 'completed') {
-      badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
-    }
-    return badges;
-  }
-
-  // Completed
+  // 2. Completed
   if (status === 'completed') {
     badges.push(<Badge key="completed" variant="default" className="bg-green-100 text-green-800">Finalizată</Badge>);
+    if (claimStatus === 'approved') {
+      badges.push(<Badge key="claim-approved" variant="default" className="bg-green-100 text-green-800 ml-1">Revendicare aprobată</Badge>);
+    } else if (claimStatus === 'rejected') {
+      badges.push(<Badge key="claim-rejected" variant="destructive" className="ml-1">Revendicare respinsă</Badge>);
+    }
+    return badges;
   }
 
+  // 3. Active/Confirmed/Returned
+  if (status === 'confirmed') {
+    badges.push(<Badge key="confirmed" variant="secondary" className="bg-blue-100 text-blue-800">Confirmată</Badge>);
+  } else if (status === 'active') {
+    badges.push(<Badge key="active" variant="secondary" className="bg-blue-100 text-blue-800">În curs</Badge>);
+  } else if (status === 'returned') {
+    badges.push(<Badge key="returned" variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Returnat</Badge>);
+  }
+  // Claim status for active bookings
+  if (claimStatus === 'pending') {
+    badges.push(<Badge key="claim-active" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">Revendicare activă</Badge>);
+  } else if (claimStatus === 'approved') {
+    badges.push(<Badge key="claim-approved" variant="default" className="bg-green-100 text-green-800 ml-1">Revendicare aprobată</Badge>);
+  } else if (claimStatus === 'rejected') {
+    badges.push(<Badge key="claim-rejected" variant="destructive" className="ml-1">Revendicare respinsă</Badge>);
+  }
+  // Payment status for active bookings
+  if (paymentStatus === 'completed' && status !== 'completed') {
+    badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
+  } else if (paymentStatus === 'pending' && status !== 'completed') {
+    badges.push(<Badge key="pay-pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">În așteptare plată</Badge>);
+  }
   return badges;
 }
 
@@ -275,7 +269,6 @@ export const Dashboard: React.FC = () => {
     if (status === 'confirmed') {
       acceptBooking({ bookingId, pickupLocation: 'To be set' }, {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['user-bookings', user?.id] });
           toast({
             title: 'Rezervare confirmată!',
             description: 'Rezervarea a fost confirmată cu succes.',
@@ -360,9 +353,9 @@ export const Dashboard: React.FC = () => {
   const getPaymentStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
-      completed: "default",
-      failed: "destructive",
+      paid: "default",
       refunded: "destructive",
+      failed: "destructive",
       cancelled: "destructive"
     };
     return (
@@ -388,9 +381,9 @@ export const Dashboard: React.FC = () => {
   const getPaymentStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       pending: 'În așteptare',
-      completed: 'Plătit',
-      failed: 'Eșuat',
+      paid: 'Plătit',
       refunded: 'Refundat',
+      failed: 'Eșuat',
       cancelled: 'Anulat'
     };
     return labels[status] || status;
@@ -398,10 +391,7 @@ export const Dashboard: React.FC = () => {
 
   const getUserDisplayName = (userData: any) => {
     if (!userData) return 'Necunoscut';
-    if (userData.full_name) return userData.full_name;
-    if (userData.first_name || userData.last_name) return `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
-    if (userData.email) return userData.email.split('@')[0];
-    return 'Necunoscut';
+    return `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.email || 'Necunoscut';
   };
 
   // Calculate stats
@@ -566,9 +556,6 @@ export const Dashboard: React.FC = () => {
                             <div key={booking.id as string} className="p-3 border rounded-lg hover:bg-gray-50">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    {getBookingBadges(booking, user?.id)}
-                                  </div>
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
                                     <p className="font-medium text-sm truncate">{(booking.gear as any)?.title || 'Echipament necunoscut'}</p>
                                     <Badge variant="outline" className="text-xs w-fit">
@@ -584,6 +571,9 @@ export const Dashboard: React.FC = () => {
                                 </div>
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                   <div className="flex items-center gap-1">
+                                    {getBookingBadges(booking, user?.id)}
+                                  </div>
+                                  <div className="flex items-center gap-1">
                                     <Button 
                                       variant="outline" 
                                       size="sm" 
@@ -592,19 +582,6 @@ export const Dashboard: React.FC = () => {
                                     >
                                       Vezi
                                     </Button>
-                                    {/* Confirm button for owner on pending bookings */}
-                                    {isOwner && booking.status === 'pending' && (
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
-                                        disabled={acceptingBooking}
-                                        className="bg-green-600 hover:bg-green-700 text-xs px-3 py-1 h-7"
-                                      >
-                                        <CheckCircle className="h-3 w-3 mr-1" />
-                                        Confirmă
-                                      </Button>
-                                    )}
                                     {/* Claim buttons */}
                                     {(!['pending', 'cancelled'].includes(booking.status as string) && user?.id === booking.renter_id) && (
                                       <Button

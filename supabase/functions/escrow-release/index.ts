@@ -237,6 +237,7 @@ serve(async (req) => {
     let transfer;
     let rentalTransfer;
     let depositRefund;
+    let rentalRefund;
     let refundId;
     let transferId;
 
@@ -251,63 +252,63 @@ serve(async (req) => {
             console.log('Releasing rental amount to owner:', escrowTransaction.rental_amount)
             
             try {
-            // Get the payment intent to find the charge ID
-            const paymentIntent = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
-            const chargeId = paymentIntent.latest_charge
-            
-            if (!chargeId) {
-              throw new Error('No charge found in payment intent')
-            }
-            
-              // Create a transfer to the connected account using the charge as source
-            transfer = await stripe.transfers.create({
-                amount: Math.round(escrowTransaction.rental_amount * 100), // Convert RON to cents for Stripe
-              currency: 'ron',
-              destination: connectedAccount.stripe_account_id,
-              source_transaction: chargeId,
-                description: `Rental payment for booking ${booking_id}`,
-              metadata: {
-                booking_id: booking_id,
-                transfer_type: 'rental_payment',
-                release_type: release_type
+              // Get the payment intent to find the charge ID
+              const paymentIntent = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
+              const chargeId = paymentIntent.latest_charge
+              
+              if (!chargeId) {
+                throw new Error('No charge found in payment intent')
               }
-            })
-            transferId = transfer.id
-            console.log('Rental transfer created:', JSON.stringify(transfer, null, 2))
+              
+              // Create a transfer to the connected account using the charge as source
+              transfer = await stripe.transfers.create({
+                amount: Math.round(escrowTransaction.rental_amount * 100), // Convert RON to cents for Stripe
+                currency: 'ron',
+                destination: connectedAccount.stripe_account_id,
+                source_transaction: chargeId,
+                description: `Rental payment for booking ${booking_id}`,
+                metadata: {
+                  booking_id: booking_id,
+                  transfer_type: 'rental_payment',
+                  release_type: release_type
+                }
+              })
+              transferId = transfer.id
+              console.log('Rental transfer created:', JSON.stringify(transfer, null, 2))
 
-            // Update escrow transaction
-            await supabaseClient
-              .from('escrow_transactions')
-              .update({
+              // Update escrow transaction
+              await supabaseClient
+                .from('escrow_transactions')
+                .update({
                   rental_released_at: new Date().toISOString(),
                   rental_transfer_id: transfer.id,
                   transfer_id: transfer.id // Always set transfer_id for webhook compatibility
-              })
-              .eq('id', escrowTransaction.id)
+                })
+                .eq('id', escrowTransaction.id)
 
-            // Update booking
-            await supabaseClient
-              .from('bookings')
-              .update({
-                rental_amount_released: true
-              })
-              .eq('id', booking_id)
-            
-            // Send notification to owner about rental payment
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.owner_id,
-                title: 'Plată închiriere primită',
-                message: `Ai primit plata pentru închirierea "${booking.gear.title}"`,
+              // Update booking
+              await supabaseClient
+                .from('bookings')
+                .update({
+                  rental_amount_released: true
+                })
+                .eq('id', booking_id)
+              
+              // Send notification to owner about rental payment
+              await supabaseClient
+                .from('notifications')
+                .insert({
+                  user_id: booking.owner_id,
+                  title: 'Plată închiriere primită',
+                  message: `Ai primit plata pentru închirierea "${booking.gear.title}"`,
                   type: 'payment_received',
-                data: { 
-                  bookingId: booking_id, 
-                  amount: escrowTransaction.rental_amount,
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
+                  data: { 
+                    bookingId: booking_id, 
+                    amount: escrowTransaction.rental_amount,
+                    gearTitle: booking.gear.title
+                  },
+                  is_read: false
+                })
             } catch (transferError) {
               console.error('Error creating rental transfer:', JSON.stringify(transferError, null, 2))
               throw new Error(`Failed to create rental transfer: ${transferError.message}`)
@@ -375,7 +376,8 @@ serve(async (req) => {
           await supabaseClient
             .from('bookings')
             .update({
-              status: 'completed'
+              status: 'completed',
+              completed_at: new Date().toISOString()
             })
             .eq('id', booking_id)
           break
@@ -384,7 +386,6 @@ serve(async (req) => {
           console.log('Processing completed release (deposit only)')
           // Release deposit back to renter
           if (!booking.deposit_returned) {
-            console.log('Returning deposit to renter:', escrowTransaction.deposit_amount)
             try {
               depositRefund = await stripe.refunds.create({
                 payment_intent: escrowTransaction.stripe_payment_intent_id,
@@ -404,8 +405,7 @@ serve(async (req) => {
                 .update({
                   deposit_returned_at: new Date().toISOString(),
                   deposit_refund_id: refundId,
-                  escrow_status: 'released',
-                  release_reason: 'Deposit returned to renter'
+                  escrow_status: 'released'
                 })
                 .eq('id', escrowTransaction.id)
 
@@ -441,60 +441,59 @@ serve(async (req) => {
           break
 
         case 'claim_owner':
-          console.log('Processing claim_owner release (owner wins)')
-          // Owner wins claim - release rental amount and deposit to owner (minus platform fee)
+          console.log('Processing claim_owner release (owner wins claim)')
+          // Owner wins claim - transfer both rental and deposit to owner (minus platform fee)
           
           try {
-          // Get the payment intent to find the charge ID
-          const paymentIntent = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
-          const chargeId = paymentIntent.latest_charge
-          
-          if (!chargeId) {
-            throw new Error('No charge found in payment intent')
-          }
+            // Get the payment intent to find the charge ID
+            const paymentIntent = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
+            const chargeId = paymentIntent.latest_charge
             
-            // Calculate total amount to transfer to owner (rental + deposit - platform fee)
-            const totalAmountToOwner = escrowTransaction.rental_amount + escrowTransaction.deposit_amount - (escrowTransaction.platform_fee || 0)
-          
-          transfer = await stripe.transfers.create({
-              amount: Math.round(totalAmountToOwner * 100), // Convert RON to cents for Stripe
-            currency: 'ron',
-            destination: connectedAccount.stripe_account_id,
-            source_transaction: chargeId,
-              description: `Owner claim win for booking ${booking_id}`,
-            metadata: {
-              booking_id: booking_id,
-              transfer_type: 'claim_owner_win',
-                release_type: release_type,
-                rental_amount: escrowTransaction.rental_amount,
-                deposit_amount: escrowTransaction.deposit_amount,
-                platform_fee: escrowTransaction.platform_fee || 0
+            if (!chargeId) {
+              throw new Error('No charge found in payment intent')
             }
-          })
-          transferId = transfer.id;
-          console.log('Owner claim transfer created:', JSON.stringify(transfer, null, 2))
+            
+            // Calculate total amount to owner (rental + deposit - platform fee)
+            const totalAmountToOwner = escrowTransaction.rental_amount + escrowTransaction.deposit_amount - (escrowTransaction.platform_fee || 0)
+            
+            transfer = await stripe.transfers.create({
+              amount: Math.round(totalAmountToOwner * 100), // Convert RON to cents for Stripe
+              currency: 'ron',
+              destination: connectedAccount.stripe_account_id,
+              source_transaction: chargeId,
+              description: `Claim settlement for booking ${booking_id} (owner wins)`,
+              metadata: {
+                booking_id: booking_id,
+                transfer_type: 'claim_settlement',
+                release_type: release_type,
+                platform_fee: escrowTransaction.platform_fee || 0
+              }
+            })
+            transferId = transfer.id
+            console.log('Owner claim win transfer created:', JSON.stringify(transfer, null, 2))
 
-          // Update escrow transaction
-          await supabaseClient
-            .from('escrow_transactions')
-            .update({
-              escrow_status: 'released',
+            // Update escrow transaction
+            await supabaseClient
+              .from('escrow_transactions')
+              .update({
+                escrow_status: 'released',
                 released_at: new Date().toISOString(),
                 transfer_id: transfer.id,
-                release_reason: 'Owner claim approved - rental and deposit transferred to owner'
-            })
-            .eq('id', escrowTransaction.id)
+                release_reason: 'Owner claim approved - rental and deposit to owner'
+              })
+              .eq('id', escrowTransaction.id)
 
-          // Update booking
-          await supabaseClient
-            .from('bookings')
-            .update({
-              status: 'completed',
-              rental_amount_released: true,
-              deposit_returned: true,
-              escrow_release_date: new Date().toISOString()
-            })
-            .eq('id', booking_id)
+            // Update booking
+            await supabaseClient
+              .from('bookings')
+              .update({
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+                rental_amount_released: true,
+                deposit_returned: false, // Deposit goes to owner, not returned to renter
+                escrow_release_date: new Date().toISOString()
+              })
+              .eq('id', booking_id)
               
             // Send notification to owner about claim win
             await supabaseClient
@@ -518,86 +517,88 @@ serve(async (req) => {
               .insert({
                 user_id: booking.renter_id,
                 title: 'Cerere respinsă',
-                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Depozitul nu va fi returnat.`,
+                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Depozitul a fost transferat proprietarului.`,
                 type: 'claim_denied',
                 data: { 
                   bookingId: booking_id, 
+                  amount: 0,
                   gearTitle: booking.gear.title
                 },
                 is_read: false
               })
-          } catch (transferError) {
-            console.error('Error creating owner claim transfer:', JSON.stringify(transferError, null, 2))
-            throw new Error(`Failed to create owner claim transfer: ${transferError.message}`)
+          } catch (error) {
+            console.error('Error creating owner claim win transfer:', JSON.stringify(error, null, 2))
+            throw new Error(`Failed to create owner claim win transfer: ${error.message}`)
           }
           break
 
         case 'claim_denied':
-          console.log('Processing claim_denied release (owner loses)')
+          console.log('Processing claim_denied release (owner loses claim)')
           // Owner loses claim - return deposit to renter, rental amount to owner (minus platform fee)
           
           try {
-          // Get the payment intent to find the charge ID
-          const paymentIntent2 = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
-          const chargeId2 = paymentIntent2.latest_charge
-          
-          if (!chargeId2) {
-            throw new Error('No charge found in payment intent')
-          }
+            // Get the payment intent to find the charge ID
+            const paymentIntent2 = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
+            const chargeId2 = paymentIntent2.latest_charge
+            
+            if (!chargeId2) {
+              throw new Error('No charge found in payment intent')
+            }
             
             // Calculate rental amount to owner (rental - platform fee)
             const rentalAmountToOwner = escrowTransaction.rental_amount - (escrowTransaction.platform_fee || 0)
-          
-          rentalTransfer = await stripe.transfers.create({
+            
+            rentalTransfer = await stripe.transfers.create({
               amount: Math.round(rentalAmountToOwner * 100), // Convert RON to cents for Stripe
-            currency: 'ron',
-            destination: connectedAccount.stripe_account_id,
-            source_transaction: chargeId2,
+              currency: 'ron',
+              destination: connectedAccount.stripe_account_id,
+              source_transaction: chargeId2,
               description: `Rental payment for booking ${booking_id} (claim denied)`,
-            metadata: {
-              booking_id: booking_id,
-              transfer_type: 'rental_payment',
+              metadata: {
+                booking_id: booking_id,
+                transfer_type: 'rental_payment',
                 release_type: release_type,
                 platform_fee: escrowTransaction.platform_fee || 0
-            }
-          })
+              }
+            })
 
-          depositRefund = await stripe.refunds.create({
-            payment_intent: escrowTransaction.stripe_payment_intent_id,
+            depositRefund = await stripe.refunds.create({
+              payment_intent: escrowTransaction.stripe_payment_intent_id,
               amount: Math.round(escrowTransaction.deposit_amount * 100), // Convert RON to cents for Stripe
-            metadata: {
-              booking_id: booking_id,
-              refund_type: 'deposit_return',
-              release_type: release_type
-            }
-          })
+              metadata: {
+                booking_id: booking_id,
+                refund_type: 'deposit_return',
+                release_type: release_type
+              }
+            })
 
-          transferId = rentalTransfer.id;
-          refundId = depositRefund.id;
-          console.log('Claim denied transfers created - rental:', JSON.stringify(rentalTransfer, null, 2), 'deposit refund:', JSON.stringify(depositRefund, null, 2))
+            transferId = rentalTransfer.id;
+            refundId = depositRefund.id;
+            console.log('Claim denied transfers created - rental:', JSON.stringify(rentalTransfer, null, 2), 'deposit refund:', JSON.stringify(depositRefund, null, 2))
 
-          // Update escrow transaction
-          await supabaseClient
-            .from('escrow_transactions')
-            .update({
-              escrow_status: 'released',
+            // Update escrow transaction
+            await supabaseClient
+              .from('escrow_transactions')
+              .update({
+                escrow_status: 'released',
                 released_at: new Date().toISOString(),
                 transfer_id: rentalTransfer.id,
                 refund_id: depositRefund.id,
                 release_reason: 'Owner claim denied - rental to owner, deposit returned to renter'
-            })
-            .eq('id', escrowTransaction.id)
+              })
+              .eq('id', escrowTransaction.id)
 
-          // Update booking
-          await supabaseClient
-            .from('bookings')
-            .update({
-              status: 'completed',
-              rental_amount_released: true,
-              deposit_returned: true,
-              escrow_release_date: new Date().toISOString()
-            })
-            .eq('id', booking_id)
+            // Update booking
+            await supabaseClient
+              .from('bookings')
+              .update({
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+                rental_amount_released: true,
+                deposit_returned: true,
+                escrow_release_date: new Date().toISOString()
+              })
+              .eq('id', booking_id)
               
             // Send notification to owner about claim loss
             await supabaseClient
@@ -636,28 +637,26 @@ serve(async (req) => {
           }
           break
 
-        case 'claim_renter':
-          console.log('Processing claim_renter release (renter wins - gets everything back except platform fee)')
-          // Renter wins claim - return rental and deposit to renter, keep platform fee
+        case 'claim_renter_approved':
+          console.log('Processing claim_renter_approved release (renter wins claim)')
+          // Renter wins claim - return both rental and deposit to renter (minus platform fee)
           
           try {
-            // Calculate total amount to refund to renter (rental + deposit)
-            const totalAmountToRenter = escrowTransaction.rental_amount + escrowTransaction.deposit_amount
+            // Calculate total amount to refund to renter (rental + deposit - platform fee)
+            const totalRefundAmount = escrowTransaction.rental_amount + escrowTransaction.deposit_amount - (escrowTransaction.platform_fee || 0)
             
-            // Create full refund to renter (rental + deposit)
-            const fullRefund = await stripe.refunds.create({
+            rentalRefund = await stripe.refunds.create({
               payment_intent: escrowTransaction.stripe_payment_intent_id,
-              amount: Math.round(totalAmountToRenter * 100), // Convert RON to cents for Stripe
+              amount: Math.round(totalRefundAmount * 100), // Convert RON to cents for Stripe
               metadata: {
                 booking_id: booking_id,
-                refund_type: 'full_refund_renter_win',
+                refund_type: 'full_refund',
                 release_type: release_type,
                 platform_fee: escrowTransaction.platform_fee || 0
               }
             })
-
-            refundId = fullRefund.id;
-            console.log('Renter claim win refund created:', JSON.stringify(fullRefund, null, 2))
+            refundId = rentalRefund.id
+            console.log('Renter claim win refund created:', JSON.stringify(rentalRefund, null, 2))
 
             // Update escrow transaction
             await supabaseClient
@@ -665,8 +664,8 @@ serve(async (req) => {
               .update({
                 escrow_status: 'released',
                 released_at: new Date().toISOString(),
-                refund_id: fullRefund.id,
-                release_reason: 'Renter claim approved - full refund to renter, platform fee kept'
+                refund_id: rentalRefund.id,
+                release_reason: 'Renter claim approved - full refund to renter (minus platform fee)'
               })
               .eq('id', escrowTransaction.id)
 
@@ -675,26 +674,12 @@ serve(async (req) => {
               .from('bookings')
               .update({
                 status: 'completed',
-                rental_amount_released: true,
+                completed_at: new Date().toISOString(),
+                rental_amount_released: false, // Rental is refunded, not released to owner
                 deposit_returned: true,
                 escrow_release_date: new Date().toISOString()
               })
               .eq('id', booking_id)
-              
-            // Send notification to owner about claim loss
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.owner_id,
-                title: 'Cerere respinsă',
-                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Renterul a primit înapoi plata și depozitul.`,
-                type: 'claim_denied',
-                data: { 
-                  bookingId: booking_id, 
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
               
             // Send notification to renter about claim win
             await supabaseClient
@@ -706,7 +691,23 @@ serve(async (req) => {
                 type: 'claim_approved',
                 data: { 
                   bookingId: booking_id, 
-                  amount: totalAmountToRenter,
+                  amount: totalRefundAmount,
+                  gearTitle: booking.gear.title
+                },
+                is_read: false
+              })
+              
+            // Send notification to owner about claim loss
+            await supabaseClient
+              .from('notifications')
+              .insert({
+                user_id: booking.owner_id,
+                title: 'Cerere respinsă',
+                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Renterul a primit înapoi plata și depozitul.`,
+                type: 'claim_denied',
+                data: { 
+                  bookingId: booking_id, 
+                  amount: 0,
                   gearTitle: booking.gear.title
                 },
                 is_read: false
