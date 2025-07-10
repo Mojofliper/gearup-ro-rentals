@@ -21,6 +21,7 @@ import {
   DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from './NotificationBell';
+import { ThemeToggle } from './ThemeToggle';
 
 interface CartItem {
   id: string;
@@ -119,7 +120,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
 
   if (loading) {
     return (
-      <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white/95 backdrop-blur-md shadow-sm">
+      <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-md shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo skeleton */}
           <div className="flex items-center space-x-3">
@@ -154,7 +155,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white/95 backdrop-blur-md shadow-sm">
+      <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-md shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo Section */}
           <Link to="/" className="flex items-center group">
@@ -180,7 +181,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       size="sm" 
                       className={`relative transition-all duration-200 ${
                         isActiveRoute('/browse') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     >
@@ -198,7 +199,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       size="sm" 
                       className={`relative transition-all duration-200 ${
                         isActiveRoute('/dashboard') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     >
@@ -216,7 +217,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       size="sm" 
                       className={`relative transition-all duration-200 ${
                         isActiveRoute('/messages') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     >
@@ -239,7 +240,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       size="sm" 
                       className={`relative transition-all duration-200 ${
                         isActiveRoute('/reviews') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     >
@@ -254,6 +255,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
 
                 {/* Action Buttons */}
                 <div className="flex items-center space-x-2">
+                  <ThemeToggle />
                   <NotificationBell />
 
                   <Button
@@ -276,7 +278,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       <Button variant="ghost" size="sm" className="relative group">
                         <Avatar className="h-8 w-8 ring-2 ring-transparent group-hover:ring-blue-200 transition-all duration-200">
                           <AvatarImage src={avatarUrl} />
-                          <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold">
+                          <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold">
                             {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -288,7 +290,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={avatarUrl} />
-                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                            <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
                               {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
@@ -360,7 +362,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                   Conectează-te
                 </Button>
                 <Button 
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105" 
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105" 
                   size="sm" 
                   onClick={() => handleAuthClick('signup')}
                 >
@@ -396,12 +398,12 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                 <>
                   {/* User Info */}
                   <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
-                    <Avatar className="h-12 w-12 ring-2 ring-blue-200">
-                      <AvatarImage src={avatarUrl} />
-                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold">
-                        {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                                          <Avatar className="h-12 w-12 ring-2 ring-blue-200">
+                        <AvatarImage src={avatarUrl} />
+                        <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold">
+                          {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                     <div className="flex-1">
                       <div className="font-semibold text-gray-900">{profile?.full_name || 'Utilizator'}</div>
                       <div className="text-sm text-gray-600">{user.email}</div>
@@ -428,7 +430,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       to="/browse" 
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
                         isActiveRoute('/browse') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -441,7 +443,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       to="/dashboard" 
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
                         isActiveRoute('/dashboard') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -454,7 +456,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       to="/messages" 
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 relative ${
                         isActiveRoute('/messages') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -472,7 +474,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       to="/reviews" 
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
                         isActiveRoute('/reviews') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -485,7 +487,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       to="/bookings" 
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
                         isActiveRoute('/bookings') 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -517,6 +519,11 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
 
                   {/* Action Buttons */}
                   <div className="space-y-2 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between p-3">
+                      <span className="text-sm font-medium text-gray-700">Temă</span>
+                      <ThemeToggle />
+                    </div>
+                    
                     <Button
                       variant="outline"
                       className="w-full justify-start hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all duration-200"
@@ -541,6 +548,11 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                 </>
               ) : (
                 <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3">
+                    <span className="text-sm font-medium text-gray-700">Temă</span>
+                    <ThemeToggle />
+                  </div>
+                  
                   <Link 
                     to="/browse"
                     className="flex items-center space-x-3 p-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
@@ -560,7 +572,7 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       Conectează-te
                     </Button>
                     <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
                       onClick={() => handleAuthClick('signup')}
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
