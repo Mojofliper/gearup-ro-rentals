@@ -476,7 +476,7 @@ async function handlePaymentIntentFailed(paymentIntent: unknown, supabaseClient:
   }
 }
 
-async function handleChargeRefunded(charge: unknown, supabaseClient: any) {
+async function handleChargeRefunded(charge: unknown, supabaseClient: unknown) {
   console.log('Charge refunded:', charge.id)
 
   try {
@@ -647,7 +647,7 @@ async function handleAccountUpdated(account: unknown, supabaseClient: unknown) {
   }
 }
 
-async function handleTransferCreated(transfer: any, supabaseClient: any) {
+async function handleTransferCreated(transfer: unknown, supabaseClient: unknown) {
   console.log('Transfer created:', transfer.id)
 
   try {

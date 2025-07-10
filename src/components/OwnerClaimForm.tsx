@@ -12,6 +12,19 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+interface BookingData {
+  id: string;
+  owner_id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  gear: {
+    title: string;
+    price_per_day: number;
+    deposit_amount: number;
+  };
+}
+
 interface OwnerClaimFormProps {
   bookingId: string;
   onSubmitted?: () => void;
@@ -25,7 +38,7 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [eligible, setEligible] = useState<boolean | null>(null);
-  const [booking, setBooking] = useState<any>(null);
+  const [booking, setBooking] = useState<BookingData | null>(null);
 
   useEffect(() => {
     const checkEligibility = async () => {

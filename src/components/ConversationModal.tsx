@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,43 +53,6 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-
-  useEffect(() => {
-    if (isOpen && user) {
-      initializeConversation();
-    }
-  }, [isOpen, user, gearId]);
-
-  // Real-time subscription for messages
-  useEffect(() => {
-    if (!bookingId || !user) return;
-    
-    const channel = supabase
-      .channel(`messages-${bookingId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `booking_id=eq.${bookingId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages((prev) => {
-            // Check if message already exists to avoid duplicates
-            if (prev.some((msg) => msg.id === newMessage.id)) return prev;
-            return [...prev, newMessage];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [bookingId, user]);
-
   const initializeConversation = async () => {
     setLoading(true);
     try {
@@ -125,6 +88,42 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen && user) {
+      initializeConversation();
+    }
+  }, [isOpen, user, initializeConversation]);
+
+  // Real-time subscription for messages
+  useEffect(() => {
+    if (!bookingId || !user) return;
+    
+    const channel = supabase
+      .channel(`messages-${bookingId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `booking_id=eq.${bookingId}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          setMessages((prev) => {
+            // Check if message already exists to avoid duplicates
+            if (prev.some((msg) => msg.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bookingId, user]);
 
   const createTemporaryBooking = async () => {
     try {

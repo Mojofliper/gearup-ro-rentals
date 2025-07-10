@@ -621,7 +621,7 @@ export const GearDetail: React.FC = () => {
               if (!selectedDates.from) return [];
               if (!selectedDates.to) return [selectedDates.from];
               const dates = [];
-              let d = new Date(selectedDates.from);
+              const d = new Date(selectedDates.from);
               while (d <= selectedDates.to) {
                 dates.push(new Date(d));
                 d.setDate(d.getDate() + 1);

@@ -26,6 +26,46 @@ import { RenterClaimForm } from '@/components/RenterClaimForm';
 import { ClaimStatusBadge } from '@/components/ClaimStatusBadge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+interface BookingData {
+  id: string;
+  renter_id: string;
+  owner_id: string;
+  gear_id: string;
+  status: string;
+  payment_status: string;
+  start_date: string;
+  end_date: string;
+  total_amount: number;
+  deposit_amount: number;
+  pickup_location?: string;
+  pickup_lat?: number;
+  pickup_lng?: number;
+  gear: {
+    title: string;
+    price_per_day: number;
+    deposit_amount: number;
+    images: string[];
+  };
+  renter: {
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    email: string;
+  };
+  owner: {
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    email: string;
+  };
+}
+
+interface UserData {
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+}
 
 export const BookingsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,17 +78,17 @@ export const BookingsPage: React.FC = () => {
   const { mutate: confirmReturn, isPending: confirmingReturn } = useConfirmReturn();
   const { mutate: deleteConversation } = useDeleteConversation();
   
-  const [pickupBooking, setPickupBooking] = useState<any>(null);
-  const [reviewingBooking, setReviewingBooking] = useState<any>(null);
-  const [paymentBooking, setPaymentBooking] = useState<any>(null);
-  const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
+  const [pickupBooking, setPickupBooking] = useState<BookingData | null>(null);
+  const [reviewingBooking, setReviewingBooking] = useState<BookingData | null>(null);
+  const [paymentBooking, setPaymentBooking] = useState<BookingData | null>(null);
+  const [confirmationBooking, setConfirmationBooking] = useState<BookingData | null>(null);
   const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
-  const [claimBooking, setClaimBooking] = useState<any>(null);
+  const [claimBooking, setClaimBooking] = useState<BookingData | null>(null);
 
 
   // Filter bookings using the actual authenticated user ID
-  const userBookings = bookings.filter((b: any) => b.renter_id === user?.id);
-  const ownerBookings = bookings.filter((b: any) => b.owner_id === user?.id);
+  const userBookings = bookings.filter((b) => (b as unknown as BookingData).renter_id === user?.id);
+  const ownerBookings = bookings.filter((b) => (b as unknown as BookingData).owner_id === user?.id);
 
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
     if (status === 'confirmed') {
@@ -274,7 +314,7 @@ export const BookingsPage: React.FC = () => {
                             <div className="text-sm font-medium text-green-600">
                               Total: {formatPrice(booking.total_amount) || 'N/A'}
                             </div>
-                          <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
+                          <div className="flex flex-col gap-2 mt-4 w-full sm:flex-row sm:gap-3">
                               {booking.status === 'completed' && (
                                 <Button 
                                   variant="outline" 
@@ -299,28 +339,16 @@ export const BookingsPage: React.FC = () => {
                                 </Button>
                               )}
                               {(booking.status === 'confirmed' || booking.status === 'active') && user?.id === booking.renter_id && (
-                                <div className="w-full">
-                                  <BookingStatusFlow 
-                                    booking={booking} 
-                                    onStatusUpdate={() => {
-                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                    }} 
-                                    onPaymentClick={handlePaymentClick}
-                                    onSetPickupLocation={setPickupBooking}
-                                  />
-                                </div>
+                                <BookingStatusFlow 
+                                  booking={booking as BookingData} 
+                                  onStatusUpdate={() => {
+                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                  }} 
+                                  userRole={user?.id === booking.owner_id ? 'owner' : 'renter'}
+                                />
                               )}
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => navigate('/messages')}
-                              className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto rounded-xl"
-                              >
-                                <MessageSquare className="h-4 w-4 mr-1" />
-                                Mesaje
-                              </Button>
                               {(booking.status !== 'cancelled' && user?.id === booking.renter_id) && (
                                 <Button
                                   variant="outline"
@@ -332,6 +360,15 @@ export const BookingsPage: React.FC = () => {
                                   Revendică daune
                                 </Button>
                               )}
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => navigate('/messages')}
+                              className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto rounded-xl"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Mesaje
+                              </Button>
                             </div>
                           </div>
                         </CardContent>
@@ -388,7 +425,7 @@ export const BookingsPage: React.FC = () => {
                             <div className="text-sm font-medium text-green-600">
                               Total: {formatPrice(booking.total_amount) || 'N/A'}
                             </div>
-                          <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
+                          <div className="flex flex-col gap-2 mt-4 w-full sm:flex-row sm:gap-3">
                               {booking.status === 'pending' && (
                                 <>
                                   <Button 
@@ -431,32 +468,26 @@ export const BookingsPage: React.FC = () => {
                                 </>
                               )}
                               {booking.status === 'confirmed' && user?.id === booking.owner_id && (
-                                <div className="w-full">
-                                  <BookingStatusFlow 
-                                    booking={booking} 
-                                    onStatusUpdate={() => {
-                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                    }} 
-                                    onPaymentClick={handlePaymentClick}
-                                    onSetPickupLocation={setPickupBooking}
-                                  />
-                                </div>
+                                <BookingStatusFlow 
+                                  booking={booking as BookingData} 
+                                  onStatusUpdate={() => {
+                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                  }} 
+                                  userRole={user?.id === booking.owner_id ? 'owner' : 'renter'}
+                                />
                               )}
                               {booking.status === 'active' && user?.id === booking.owner_id && (
-                                <div className="w-full">
-                                  <BookingStatusFlow 
-                                    booking={booking} 
-                                    onStatusUpdate={() => {
-                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                    }} 
-                                    onPaymentClick={handlePaymentClick}
-                                    onSetPickupLocation={setPickupBooking}
-                                  />
-                                </div>
+                                <BookingStatusFlow 
+                                  booking={booking as BookingData} 
+                                  onStatusUpdate={() => {
+                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                  }} 
+                                  userRole={user?.id === booking.owner_id ? 'owner' : 'renter'}
+                                />
                               )}
                               {booking.status === 'returned' && (
                                 <Button 

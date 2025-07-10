@@ -9,10 +9,29 @@ import { useCreateReview } from '@/hooks/useReviews';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface User {
+  id: string;
+  full_name?: string;
+}
+
+interface Gear {
+  title?: string;
+}
+
+interface Booking {
+  id: string;
+  gear_id: string;
+  renter_id: string;
+  owner_id: string;
+  gear?: Gear;
+  owner?: User;
+  renter?: User;
+}
+
 interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  booking: Record<string, unknown>;
+  booking: Booking;
 }
 
 export const ReviewModal: React.FC<ReviewModalProps> = ({
@@ -27,7 +46,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const [comment, setComment] = useState('');
 
   // Determine who to review (if user is renter, review owner; if user is owner, review renter)
-  const reviewedUser = user?.id === booking.renter_id ? booking.owner : booking.renter;
+  const reviewedUser: User | undefined = user?.id === booking.renter_id ? booking.owner : booking.renter;
   const isReviewingOwner = user?.id === booking.renter_id;
 
   const handleSubmit = () => {
@@ -41,10 +60,10 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
     }
 
     createReview({
-      booking_id: (booking as any).id,
-      gear_id: (booking as any).gear_id,
+      booking_id: booking.id,
+      gear_id: booking.gear_id,
       reviewer_id: user.id,
-      reviewed_id: (reviewedUser as any).id,
+      reviewed_id: reviewedUser?.id,
       rating,
       comment: comment.trim() || null
     }, {
@@ -78,11 +97,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
             <Avatar className="h-12 w-12">
               <AvatarFallback>
-                {(reviewedUser as any)?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                {reviewedUser?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold">{(reviewedUser as any)?.full_name || 'Utilizator'}</h3>
+              <h3 className="font-semibold">{reviewedUser?.full_name || 'Utilizator'}</h3>
               <p className="text-sm text-muted-foreground">
                 {isReviewingOwner ? 'Proprietar' : 'Închiriator'}
               </p>
@@ -91,7 +110,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
           {/* Gear Info */}
           <div className="text-sm text-muted-foreground">
-            <p>Pentru închirierea: <span className="font-medium">{(booking.gear as any)?.title}</span></p>
+            <p>Pentru închirierea: <span className="font-medium">{booking.gear?.title}</span></p>
           </div>
 
           {/* Rating */}

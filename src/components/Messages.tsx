@@ -81,7 +81,7 @@ export const Messages: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedBookingRef = useRef<string>('');
   const userRef = useRef<string>('');
-  const subscriptionRef = useRef<any>(null);
+  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const [unreadConversations, setUnreadConversations] = useState<{[bookingId: string]: boolean}>({});
   const [unreadCounts, setUnreadCounts] = useState<{[bookingId: string]: number}>({});
   const isMobile = useIsMobile();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +13,7 @@ export default function CleanupPanel() {
   const [lastCleanupResult, setLastCleanupResult] = useState<CleanupResult | null>(null)
   const { toast } = useToast()
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const data = await cleanupService.getStats()
       setStats(data)
@@ -25,7 +25,7 @@ export default function CleanupPanel() {
         variant: "destructive",
       })
     }
-  }
+  }, [toast])
 
   const triggerCleanup = async () => {
     setIsLoading(true)
@@ -53,7 +53,7 @@ export default function CleanupPanel() {
   // Fetch stats on component mount
   React.useEffect(() => {
     fetchStats()
-  }, [])
+  }, [fetchStats])
 
   return (
     <div className="space-y-6">
@@ -162,7 +162,7 @@ export default function CleanupPanel() {
                   <div>
                     <span className="block mb-2 font-medium">ID-uri rezervări șterse:</span>
                     <div className="flex flex-wrap gap-2">
-                      {lastCleanupResult.deletedBookings.slice(0, 5).map((booking: any) => (
+                      {lastCleanupResult.deletedBookings.slice(0, 5).map((booking: { id: string }) => (
                         <Badge key={booking.id} variant="outline" className="text-xs rounded-lg">
                           {booking.id}
                         </Badge>

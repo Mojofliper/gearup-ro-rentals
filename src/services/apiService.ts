@@ -395,9 +395,10 @@ export const gearApi = {
       console.log('apiService.createGear called with:', gearData);
       
       // First try to get the current user
-      let { data: { user }, error: userError } = await supabase.auth.getUser();
+      const { data: { user: initialUser }, error: userError } = await supabase.auth.getUser();
       
       // If user check fails, try to refresh the session
+      let user = initialUser;
       if (userError || !user) {
         console.log('apiService.createGear: User check failed, attempting session refresh');
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();

@@ -20,7 +20,7 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
   let images: string[] = [];
   if (Array.isArray(gear.gear_photos)) {
     // Supabase join may return array of objects with photo_url
-    images = (gear.gear_photos as any[])
+    images = (gear.gear_photos as Array<{ photo_url: string } | string>)
       .map((p) => typeof p === 'string' ? p : p?.photo_url)
       .filter(Boolean);
   }
@@ -32,13 +32,13 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
   let owner = gear.owner;
   if (Array.isArray(owner)) owner = owner[0];
   owner = owner || (gear.users || (Array.isArray(gear.users) ? gear.users[0] : undefined)) || {};
-  const ownerObj = owner as Record<string, any>;
-  const ownerName = ownerObj?.full_name || 'Utilizator';
-  const ownerLocation = ownerObj?.location || 'România';
+  const ownerObj = owner as Record<string, unknown>;
+  const ownerName = (ownerObj?.full_name as string) || 'Utilizator';
+  const ownerLocation = (ownerObj?.location as string) || 'România';
   const ownerAvatar = ownerObj?.avatar_url
-    ? ownerObj.avatar_url.startsWith('http')
-      ? ownerObj.avatar_url
-      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${ownerObj.avatar_url}`
+    ? (ownerObj.avatar_url as string).startsWith('http')
+      ? ownerObj.avatar_url as string
+      : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${ownerObj.avatar_url as string}`
     : '';
   const avatarFallback = typeof ownerName === 'string' && ownerName.trim().length > 0 ? ownerName.split(' ').map((n) => n[0]).join('') : 'U';
 
@@ -46,8 +46,8 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
   let category = gear.category;
   if (Array.isArray(category)) category = category[0];
   category = category || (gear.categories || (Array.isArray(gear.categories) ? gear.categories[0] : undefined)) || {};
-  const categoryObj = category as Record<string, any>;
-  const categoryName = categoryObj?.name || 'Echipament';
+  const categoryObj = category as Record<string, unknown>;
+  const categoryName = (categoryObj?.name as string) || 'Echipament';
 
   // Price is already in RON
   const priceInRON = gear.price_per_day as number || 0;

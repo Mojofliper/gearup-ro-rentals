@@ -17,6 +17,19 @@ interface RenterClaimFormProps {
   onSubmitted: () => void;
 }
 
+interface Booking {
+  id: string;
+  renter_id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  gear?: {
+    title?: string;
+    price_per_day?: number;
+    deposit_amount?: number;
+  };
+}
+
 export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onSubmitted }) => {
   const { user } = useAuth();
   const { notifyClaimSubmitted } = useNotifications();
@@ -25,7 +38,7 @@ export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onS
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [eligible, setEligible] = useState<boolean | null>(null);
-  const [booking, setBooking] = useState<any>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     const checkEligibility = async () => {

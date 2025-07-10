@@ -177,18 +177,18 @@ export const PickupLocationModal: React.FC<Props> = ({ bookingId, isOpen, onClos
             </Button>
           </div>
           <div style={{ height: 300, width: '100%' }}>
-            {/* @ts-ignore: React Leaflet v4 type compatibility */}
+            {/* @ts-expect-error: React Leaflet v4 has different prop names than v3 */}
             <MapContainer
               center={[mapCenter.lat, mapCenter.lng]}
               zoom={14}
               style={{ height: '100%', width: '100%' }}
             >
-              {/* @ts-ignore: React Leaflet v4 type compatibility */}
+              {/* @ts-expect-error: React Leaflet v4 has different prop names than v3 */}
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
               />
-              {/* @ts-ignore: React Leaflet v4 type compatibility */}
+              {/* @ts-expect-error: React Leaflet v4 has different prop names than v3 */}
               {place && <Marker position={[place.lat, place.lng]} icon={markerIcon} />}
               <LocationPicker onPick={handleMapPick} />
             </MapContainer>

@@ -86,7 +86,7 @@ export const BrowseGear: React.FC = () => {
   const [quickSearch, setQuickSearch] = useState('');
 
   // Explicitly type gear as Gear[]
-  const { data: gear = [], isLoading, error } = useAllGear() as { data: Gear[]; isLoading: boolean; error: any };
+  const { data: gear = [], isLoading, error } = useAllGear() as { data: Gear[]; isLoading: boolean; error: unknown };
   const { data: categories = [] } = useCategories();
 
   // Memoized filtered gear
@@ -180,7 +180,7 @@ export const BrowseGear: React.FC = () => {
   }, [filters]);
 
   // Handle filter changes
-  const handleBasicFilterChange = useCallback((key: keyof AdvancedSearchFiltersType, value: any) => {
+  const handleBasicFilterChange = useCallback((key: keyof AdvancedSearchFiltersType, value: string | number | string[] | { start: string; end: string }) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   }, []);
 

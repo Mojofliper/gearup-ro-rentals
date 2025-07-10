@@ -38,7 +38,45 @@ import { BookingFlowGuard } from '@/components/BookingFlowGuard';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useDeleteConversation } from '@/hooks/useMessages';
 
-function getBookingBadges(booking: any, userId: string) {
+interface BookingData {
+  id: string;
+  status: string;
+  payment_status: string;
+  renter_id: string;
+  owner_id: string;
+  gear_id: string;
+  start_date: string;
+  end_date: string;
+  total_amount: number;
+  deposit_amount: number;
+  gear: {
+    title: string;
+    price_per_day: number;
+    deposit_amount: number;
+    images: string[];
+  };
+  renter: {
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    email: string;
+  };
+  owner: {
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    email: string;
+  };
+}
+
+interface UserData {
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+}
+
+function getBookingBadges(booking: BookingData, userId: string) {
   const badges = [];
   const status = booking.status;
   const paymentStatus = booking.payment_status;
@@ -416,7 +454,7 @@ export const Dashboard: React.FC = () => {
     return labels[status] || status;
   };
 
-  const getUserDisplayName = (userData: any) => {
+  const getUserDisplayName = (userData: UserData) => {
     if (!userData) return 'Necunoscut';
     return `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.email || 'Necunoscut';
   };
