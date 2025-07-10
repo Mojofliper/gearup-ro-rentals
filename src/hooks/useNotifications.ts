@@ -149,6 +149,26 @@ export const useNotifications = () => {
     await notificationService.notifyPickupLocationSet(bookingId, gearTitle, renterId);
   }, [user]);
 
+  const notifyPickupConfirmed = useCallback(async (
+    bookingId: string, 
+    gearTitle: string, 
+    ownerId: string, 
+    renterId: string
+  ) => {
+    if (!user) return;
+    await notificationService.notifyPickupConfirmed(bookingId, gearTitle, ownerId, renterId);
+  }, [user]);
+
+  const notifyReturnConfirmed = useCallback(async (
+    bookingId: string, 
+    gearTitle: string, 
+    ownerId: string, 
+    renterId: string
+  ) => {
+    if (!user) return;
+    await notificationService.notifyReturnConfirmed(bookingId, gearTitle, ownerId, renterId);
+  }, [user]);
+
   const notifyPickupReminder = useCallback(async (
     bookingId: string, 
     gearTitle: string, 
@@ -232,6 +252,8 @@ export const useNotifications = () => {
     
     // Pickup/Return notifications
     notifyPickupLocationSet,
+    notifyPickupConfirmed,
+    notifyReturnConfirmed,
     notifyPickupReminder,
     notifyReturnReminder,
     

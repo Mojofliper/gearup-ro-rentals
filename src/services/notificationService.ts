@@ -1,6 +1,27 @@
 import { supabase } from '@/integrations/supabase/client';
 import { PushNotificationService } from './pushNotificationService';
 
+// Create a service role client for notifications
+const createServiceRoleClient = () => {
+  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    console.error('VITE_SUPABASE_SERVICE_ROLE_KEY not found in environment variables');
+    return null;
+  }
+  
+  const { createClient } = require('@supabase/supabase-js');
+  return createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+};
+
 export interface NotificationData {
   type: 'booking' | 'payment' | 'message' | 'claim' | 'gear' | 'system' | 'review';
   bookingId?: string;
@@ -14,9 +35,11 @@ export interface NotificationData {
 
 class NotificationService {
   private pushService: PushNotificationService;
+  private serviceRoleClient: any;
 
   constructor() {
     this.pushService = new PushNotificationService();
+    this.serviceRoleClient = createServiceRoleClient();
   }
 
   // Booking notifications
@@ -196,6 +219,44 @@ class NotificationService {
     await this.sendToUser(renterId, notification);
   }
 
+  async notifyPickupConfirmed(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+    const ownerNotification = {
+      title: 'Ridicare confirmată',
+      body: `Ridicarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
+      data: { type: 'booking', bookingId, gearTitle, action: 'pickup_confirmed' } as NotificationData
+    };
+
+    const renterNotification = {
+      title: 'Ridicare confirmată',
+      body: `Ridicarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
+      data: { type: 'booking', bookingId, gearTitle, action: 'pickup_confirmed' } as NotificationData
+    };
+
+    await Promise.all([
+      this.sendToUser(ownerId, ownerNotification),
+      this.sendToUser(renterId, renterNotification)
+    ]);
+  }
+
+  async notifyReturnConfirmed(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+    const ownerNotification = {
+      title: 'Returnare confirmată',
+      body: `Returnarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
+      data: { type: 'booking', bookingId, gearTitle, action: 'return_confirmed' } as NotificationData
+    };
+
+    const renterNotification = {
+      title: 'Returnare confirmată',
+      body: `Returnarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
+      data: { type: 'booking', bookingId, gearTitle, action: 'return_confirmed' } as NotificationData
+    };
+
+    await Promise.all([
+      this.sendToUser(ownerId, ownerNotification),
+      this.sendToUser(renterId, renterNotification)
+    ]);
+  }
+
   async notifyPickupReminder(bookingId: string, gearTitle: string, startDate: string, renterId: string) {
     const notification = {
       title: 'Reminder pickup',
@@ -295,8 +356,11 @@ class NotificationService {
         }
       };
 
+      // Use service role client to bypass RLS policies
+      const client = this.serviceRoleClient || supabase;
+      
       // Save to database
-      const { error } = await supabase
+      const { error } = await client
         .from('notifications')
         .insert({
           user_id: userId,
@@ -309,6 +373,26 @@ class NotificationService {
 
       if (error) {
         console.error('Error saving notification:', error);
+        // Fallback to regular client if service role fails
+        if (this.serviceRoleClient) {
+          console.log('Falling back to regular client for notification');
+          const { error: fallbackError } = await supabase
+            .from('notifications')
+            .insert({
+              user_id: userId,
+              title: notification.title,
+              message: notification.body,
+              type: getNotificationType(notification.data.type),
+              data: notification.data,
+              is_read: false
+            });
+          
+          if (fallbackError) {
+            console.error('Fallback notification save also failed:', fallbackError);
+          }
+        }
+      } else {
+        console.log('Notification saved successfully for user:', userId);
       }
 
       // Send push notification

@@ -706,11 +706,11 @@ export const Messages: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-[calc(100vh-200px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-[calc(100vh-200px)] min-h-0">
             {/* Modern Conversations Sidebar - Desktop Only */}
-            <div className="lg:col-span-1 hidden lg:block">
-              <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-                <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30 p-4">
+            <div className="lg:col-span-1 hidden lg:block min-h-0">
+              <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg min-h-0">
+                <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30 p-4 flex-shrink-0">
                   <div className="space-y-3 sm:space-y-4">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -751,7 +751,7 @@ export const Messages: React.FC = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 p-0 overflow-hidden">
+                <CardContent className="flex-1 p-0 overflow-hidden min-h-0">
                   <div className="h-full overflow-y-auto">
                     {filteredBookings.map((booking) => {
                       const hasUnread = unreadConversations[booking.id];
@@ -820,13 +820,13 @@ export const Messages: React.FC = () => {
               </Card>
             </div>
 
-            {/* Modern Messages Area */}
-            <div className="lg:col-span-3 flex justify-center">
-              <div className="w-full sm:max-w-2xl flex flex-col h-full mx-0 sm:mx-auto">
+            {/* Modern Messages Area - Fixed Desktop Layout */}
+            <div className="lg:col-span-3 flex justify-center h-full min-h-0">
+              <div className="w-full sm:max-w-2xl flex flex-col h-full mx-0 sm:mx-auto min-h-0">
                 {selectedBooking ? (
-                  <Card className="h-[80vh] sm:h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
+                  <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-2xl min-h-0">
                     {/* Enhanced Conversation Header */}
-                    <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30 p-4">
+                    <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50/30 p-4 flex-shrink-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3 sm:space-x-4">
                           <div className="relative">
@@ -865,7 +865,7 @@ export const Messages: React.FC = () => {
                       
                     </CardHeader>
 
-                    {/* Enhanced Messages */}
+                    {/* Enhanced Messages - Fixed Scrollable Container */}
                     <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
                       <div className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-6 space-y-4 bg-gradient-to-b from-gray-50/30 to-white/30 chat-scrollbar">
                       {selectedBookingData?.pickup_lat && selectedBookingData?.pickup_lng && selectedBookingData?.pickup_location && (
@@ -974,8 +974,8 @@ export const Messages: React.FC = () => {
                         <div ref={messagesEndRef} />
                       </div>
 
-                      {/* Enhanced Message Input */}
-                      <div className="border-t border-gray-200/50 p-2 sm:p-4 bg-white/80 backdrop-blur-sm rounded-b-2xl">
+                      {/* Enhanced Message Input - Fixed Position */}
+                      <div className="border-t border-gray-200/50 p-2 sm:p-4 bg-white/80 backdrop-blur-sm rounded-b-2xl flex-shrink-0">
                         <div className="flex items-end space-x-2 sm:space-x-3">
                           <div className="flex-1 relative">
                             <Input

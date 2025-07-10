@@ -35,6 +35,7 @@ export const NotificationBell: React.FC = () => {
     
     const load = async () => {
       try {
+        console.log('NotificationBell: Loading notifications for user:', user.id);
         const { data, error } = await supabase
           .from('notifications')
           .select('*')
@@ -43,13 +44,14 @@ export const NotificationBell: React.FC = () => {
           .limit(20);
         
         if (error) {
-          console.error('Error loading notifications:', error);
+          console.error('NotificationBell: Error loading notifications:', error);
         } else {
+          console.log('NotificationBell: Loaded notifications:', data);
           setNotifications(data as NotificationRow[]);
           setUnread(data.filter(n => !n.is_read).length);
         }
       } catch (err) {
-        console.error('Exception loading notifications:', err);
+        console.error('NotificationBell: Exception loading notifications:', err);
       }
       setLoading(false);
     };
@@ -58,6 +60,7 @@ export const NotificationBell: React.FC = () => {
 
     const channel = supabase.channel('notifications_' + user.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, payload => {
+        console.log('NotificationBell: Real-time notification change detected:', payload);
         // Reload all notifications on any change
         load();
       })
@@ -80,6 +83,30 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
+  const testNotification = async () => {
+    if (!user) return;
+    try {
+      console.log('NotificationBell: Testing notification creation...');
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: 'Test Notification',
+          message: 'This is a test notification to verify the system is working.',
+          type: 'admin_message',
+          data: { type: 'system', action: 'test' },
+          is_read: false
+        });
+      
+      if (error) {
+        console.error('NotificationBell: Test notification failed:', error);
+      } else {
+        console.log('NotificationBell: Test notification created successfully');
+      }
+    } catch (err) {
+      console.error('NotificationBell: Exception creating test notification:', err);
+    }
+  };
 
 
   if (!user) return null;
@@ -103,6 +130,10 @@ export const NotificationBell: React.FC = () => {
             <Button variant="link" size="sm" onClick={markAllRead}>Marchează citite</Button>
           )}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={testNotification} className="text-xs text-blue-600">
+          🧪 Test Notification
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {loading ? (
           <div className="p-4 space-y-2">

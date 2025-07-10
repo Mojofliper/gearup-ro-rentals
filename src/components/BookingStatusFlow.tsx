@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface BookingStatusFlowProps {
   booking: any;
@@ -76,6 +77,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { notifyPickupConfirmed, notifyReturnConfirmed } = useNotifications();
 
   const isOwner = user?.id === booking.owner_id;
   const isRenter = user?.id === booking.renter_id;
@@ -139,6 +141,20 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         });
         onStatusUpdate?.();
         queryClient.invalidateQueries({ queryKey: ['bookings', booking.id] });
+        
+        // Check if both parties have confirmed pickup
+        const newPickupConfirmedByOwner = by === 'owner' ? true : pickupConfirmedByOwner;
+        const newPickupConfirmedByRenter = by === 'renter' ? true : pickupConfirmedByRenter;
+        
+        if (newPickupConfirmedByOwner && newPickupConfirmedByRenter) {
+          // Both parties confirmed pickup - send notification
+          try {
+            const gearTitle = (booking.gear as Record<string, unknown>)?.title as string || 'Echipament';
+            await notifyPickupConfirmed(booking.id, gearTitle, booking.owner_id, booking.renter_id);
+          } catch (notifError) {
+            console.error('Error sending pickup confirmation notification:', notifError);
+          }
+        }
       }
     } catch (error) {
       toast({
@@ -195,11 +211,13 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         const newReturnConfirmedByRenter = by === 'renter' ? true : returnConfirmedByRenter;
         
         if (newReturnConfirmedByOwner && newReturnConfirmedByRenter) {
-          // Both parties confirmed return - database trigger will handle escrow release
-          toast({
-            title: 'Returnare completă',
-            description: 'Ambele părți au confirmat returnarea. Plățile vor fi procesate automat.',
-          });
+          // Both parties confirmed return - send notification
+          try {
+            const gearTitle = (booking.gear as Record<string, unknown>)?.title as string || 'Echipament';
+            await notifyReturnConfirmed(booking.id, gearTitle, booking.owner_id, booking.renter_id);
+          } catch (notifError) {
+            console.error('Error sending return confirmation notification:', notifError);
+          }
         }
         
         onStatusUpdate?.();
