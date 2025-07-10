@@ -462,13 +462,13 @@ export const Messages: React.FC = () => {
   };
 
   // Filter out cancelled bookings for the sidebar
-  const activeBookings = bookings.filter(b => b.status !== 'cancelled');
+  const activeBookings = bookings.filter(b => !['cancelled', 'completed', 'returned', 'disputed'].includes(b.status));
 
-  // Auto-deselect if the selected booking is cancelled
+  // Auto-deselect if the selected booking is finished (cancelled, completed, returned, or disputed)
   useEffect(() => {
     if (selectedBooking) {
       const selected = bookings.find(b => b.id === selectedBooking);
-      if (selected && selected.status === 'cancelled') {
+      if (selected && ['cancelled', 'completed', 'returned', 'disputed'].includes(selected.status)) {
         setSelectedBooking('');
       }
     }

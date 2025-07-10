@@ -22,6 +22,7 @@ const ListingsPanel = React.lazy(() => import('./admin/ListingsPanel').then(m =>
 const ClaimsPanel = React.lazy(() => import('./admin/ClaimsPanel').then(m => ({ default: m.ClaimsPanel })));
 const AnalyticsPanel = React.lazy(() => import('./admin/AnalyticsPanel').then(m => ({ default: m.AnalyticsPanel })));
 const SettingsPanel = React.lazy(() => import('./admin/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
+const CleanupPanel = React.lazy(() => import('./admin/CleanupPanel').then(m => ({ default: m.default })));
 
 const navigationItems = [
   { path: 'overview', label: 'Vizualizare generală', icon: Home, color: 'text-blue-600' },
@@ -30,6 +31,7 @@ const navigationItems = [
   { path: 'claims', label: 'Reclamații', icon: ShieldCheck, color: 'text-red-600' },
   { path: 'moderation', label: 'Moderare', icon: Flag, color: 'text-orange-600' },
   { path: 'analytics', label: 'Analytics', icon: BarChart2, color: 'text-indigo-600' },
+  { path: 'cleanup', label: 'Cleanup', icon: Trash2, color: 'text-red-600' },
   { path: 'settings', label: 'Setări', icon: Settings, color: 'text-gray-600' },
 ];
 
@@ -561,6 +563,7 @@ export const AdminDashboard: React.FC = () => {
                 <Route path="claims" element={<ClaimsPanel />} />
                 <Route path="moderation" element={<AdminModerationQueue isOpen={true} onClose={() => navigate('/admin/overview')} />} />
                 <Route path="analytics" element={<AnalyticsPanel />} />
+                <Route path="cleanup" element={<CleanupPanel />} />
                 <Route path="settings" element={<SettingsPanel />} />
               </Routes>
             </React.Suspense>

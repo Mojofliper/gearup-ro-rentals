@@ -102,10 +102,10 @@ export const MyListings: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
-            <span className="ml-2 text-blue-500">Se încarcă echipamentele...</span>
+        <div className="container mx-auto px-4 py-6 sm:py-8">
+          <div className="flex items-center justify-center py-8 sm:py-12">
+            <Loader2 className="animate-spin h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+            <span className="ml-2 text-sm sm:text-base text-blue-500">Se încarcă echipamentele...</span>
           </div>
         </div>
         <Footer />
@@ -117,11 +117,11 @@ export const MyListings: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-12">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Eroare la încărcare</h2>
-            <p className="text-gray-600 mb-4">Nu s-au putut încărca echipamentele tale.</p>
+        <div className="container mx-auto px-4 py-6 sm:py-8">
+          <div className="text-center py-8 sm:py-12">
+            <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Eroare la încărcare</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4">Nu s-au putut încărca echipamentele tale.</p>
             <Button onClick={() => refetch()}>Încearcă din nou</Button>
           </div>
         </div>
@@ -134,77 +134,77 @@ export const MyListings: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 sm:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="w-fit">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Înapoi la Dashboard
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Echipamentele mele</h1>
-              <p className="text-gray-600">Gestionează echipamentele tale pentru închiriere</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Echipamentele mele</h1>
+              <p className="text-sm sm:text-base text-gray-600">Gestionează echipamentele tale pentru închiriere</p>
             </div>
           </div>
-          <Button onClick={() => navigate('/add-gear')} className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <Button onClick={() => navigate('/add-gear')} className="bg-gradient-to-r from-blue-600 to-purple-600 w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Adaugă echipament
           </Button>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="bg-white shadow-sm border-0">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total echipamente</p>
-                  <p className="text-2xl font-bold text-gray-900">{myGear?.length || 0}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total echipamente</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">{myGear?.length || 0}</p>
                 </div>
-                <Package className="h-8 w-8 text-blue-500" />
+                <Package className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-white shadow-sm border-0">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Disponibile</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Disponibile</p>
+                  <p className="text-lg sm:text-2xl font-bold text-green-600">
                     {myGear?.filter(gear => gear.status === 'available').length || 0}
                   </p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
+                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-white shadow-sm border-0">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Închiriate</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Închiriate</p>
+                  <p className="text-lg sm:text-2xl font-bold text-blue-600">
                     {myGear?.filter(gear => gear.status === 'rented').length || 0}
                   </p>
                 </div>
-                <Clock className="h-8 w-8 text-blue-500" />
+                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-white shadow-sm border-0">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">În așteptare</p>
-                  <p className="text-2xl font-bold text-yellow-600">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">În așteptare</p>
+                  <p className="text-lg sm:text-2xl font-bold text-yellow-600">
                     {myGear?.filter(gear => gear.moderation_status === 'pending').length || 0}
                   </p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-yellow-500" />
+                <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
@@ -212,16 +212,16 @@ export const MyListings: React.FC = () => {
 
         {/* Gear Listings */}
         {myGear && myGear.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {myGear.map((gear) => (
               <Card key={String(gear.id)} className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">
+                      <h3 className="font-semibold text-base sm:text-lg text-gray-900 line-clamp-2">
                         {gear.title as string}
                       </h3>
-                      <div className="flex items-center space-x-2 mt-2">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
                         {getStatusBadge(gear.status as string)}
                         {getModerationBadge(gear.moderation_status as string)}
                       </div>
@@ -229,7 +229,7 @@ export const MyListings: React.FC = () => {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3 sm:space-y-4">
                   {/* Gear Image */}
                   <div className="aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden">
                     {gear.gear_photos && Array.isArray(gear.gear_photos) && gear.gear_photos.length > 0 ? (
@@ -240,7 +240,7 @@ export const MyListings: React.FC = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-12 w-12 text-gray-400" />
+                        <Package className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
                       </div>
                     )}
                   </div>
@@ -248,56 +248,56 @@ export const MyListings: React.FC = () => {
                   {/* Gear Info */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-blue-600">
+                      <span className="text-xl sm:text-2xl font-bold text-blue-600">
                         {formatPrice(Number(gear.price_per_day))}
                       </span>
-                      <span className="text-gray-500 text-sm">pe zi</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">pe zi</span>
                     </div>
                     
-                    <div className="flex items-center space-x-1 text-sm text-gray-600">
-                      <MapPin className="h-4 w-4" />
-                      <span>{gear.pickup_location as string || 'Locație necunoscută'}</span>
+                    <div className="flex items-center space-x-1 text-xs sm:text-sm text-gray-600">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="truncate">{gear.pickup_location as string || 'Locație necunoscută'}</span>
                     </div>
                     
                     {gear.view_count && (
-                      <div className="flex items-center space-x-1 text-sm text-gray-500">
-                        <Eye className="h-4 w-4" />
+                      <div className="flex items-center space-x-1 text-xs sm:text-sm text-gray-500">
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         <span>{Number(gear.view_count)} vizualizări</span>
                       </div>
                     )}
                     
-                    <div className="text-sm text-gray-500">
+                    <div className="text-xs sm:text-sm text-gray-500">
                       Adăugat pe {format(new Date(gear.created_at as string), 'dd MMM yyyy')}
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex space-x-2 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleViewGear(gear)}
-                      className="flex-1"
+                      className="flex-1 text-xs sm:text-sm"
                     >
-                      <Eye className="h-4 w-4 mr-1" />
+                      <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Vezi
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditGear(gear)}
-                      className="flex-1"
+                      className="flex-1 text-xs sm:text-sm"
                     >
-                      <Edit className="h-4 w-4 mr-1" />
+                      <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Editează
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteClick(gear)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -306,10 +306,10 @@ export const MyListings: React.FC = () => {
           </div>
         ) : (
           <Card className="bg-white shadow-sm border-0">
-            <CardContent className="p-12 text-center">
-              <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Nu ai echipamente încă</h3>
-              <p className="text-gray-600 mb-6">
+            <CardContent className="p-8 sm:p-12 text-center">
+              <Package className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Nu ai echipamente încă</h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-6">
                 Începe să câștigi bani închiriind echipamentele tale!
               </p>
               <Button onClick={() => navigate('/add-gear')} className="bg-gradient-to-r from-blue-600 to-purple-600">
@@ -325,18 +325,19 @@ export const MyListings: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Șterge echipament</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Șterge echipament</DialogTitle>
+            <DialogDescription className="text-sm sm:text-base">
               Ești sigur că vrei să ștergi "{gearToDelete?.title as string}"? Această acțiune nu poate fi anulată.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
+              className="w-full sm:w-auto"
             >
               Anulează
             </Button>
@@ -344,6 +345,7 @@ export const MyListings: React.FC = () => {
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
+              className="w-full sm:w-auto"
             >
               {isDeleting ? (
                 <>

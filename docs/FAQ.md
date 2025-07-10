@@ -152,6 +152,15 @@ Refunds are processed according to our cancellation policy:
 - **2-24 hours before**: 50% refund
 - **Less than 2 hours**: No refund
 
+### How long do refunds take to appear on my statement?
+Refund processing times vary by payment method:
+- **Credit/Debit Cards**: 5-10 business days
+- **International Cards**: Up to 14 business days
+- **Apple Pay/Google Pay**: 3-5 business days
+- **Bank Transfers**: 3-5 business days
+
+**Note**: Refunds are processed immediately by our platform, but the time to appear on your bank statement depends on your bank's processing time.
+
 ### What is the deposit for?
 The deposit covers potential damage or late returns. It's held securely and returned after the rental period ends.
 

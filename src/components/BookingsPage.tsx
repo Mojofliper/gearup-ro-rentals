@@ -23,6 +23,8 @@ import OwnerClaimForm from '@/components/OwnerClaimForm';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { RenterClaimForm } from '@/components/RenterClaimForm';
+import { ClaimStatusBadge } from '@/components/ClaimStatusBadge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 export const BookingsPage: React.FC = () => {
@@ -122,58 +124,59 @@ export const BookingsPage: React.FC = () => {
     setPaymentBooking(booking);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Finalizat</Badge>;
-      case 'active':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">În curs</Badge>;
-      case 'confirmed':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Confirmat</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">În așteptare</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive">Anulat</Badge>;
-      case 'returned':
-        return <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Returnat</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  function getBookingBadges(booking: any, userId: string) {
+    const badges = [];
+    const status = booking.status;
+    const paymentStatus = booking.payment_status;
 
-  const getPaymentStatusBadge = (paymentStatus: string) => {
-    switch (paymentStatus) {
-      case 'completed':
-        return <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
-          <DollarSign className="h-3 w-3" />
-          Plătit
-        </Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200 flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" />
-          În așteptare
-        </Badge>;
-      case 'processing':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 flex items-center gap-1">
-          <Clock className="h-3 w-3 animate-spin" />
-          Procesare
-        </Badge>;
-      case 'failed':
-        return <Badge variant="destructive" className="flex items-center gap-1">
-          <XCircle className="h-3 w-3" />
-          Eșuat
-        </Badge>;
-      case 'refunded':
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200 flex items-center gap-1">
-          <Package className="h-3 w-3" />
-          Rambursat
-        </Badge>;
-      default:
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
-          {paymentStatus || 'Necunoscut'}
-        </Badge>;
+    // Cancelled
+    if (status === 'cancelled') {
+      badges.push(<Badge key="cancelled" variant="destructive">Anulată</Badge>);
+      return badges;
     }
-  };
+
+    // Pending (waiting for owner confirmation)
+    if (status === 'pending') {
+      badges.push(<Badge key="pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">În așteptare confirmare</Badge>);
+      return badges;
+    }
+
+    // Confirmed
+    if (status === 'confirmed') {
+      badges.push(<Badge key="confirmed" variant="secondary" className="bg-blue-100 text-blue-800">Confirmată</Badge>);
+      if (paymentStatus === 'pending') {
+        badges.push(<Badge key="pay-pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">În așteptare plată</Badge>);
+      } else if (paymentStatus === 'completed') {
+        badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
+      }
+      return badges;
+    }
+
+    // Active
+    if (status === 'active') {
+      badges.push(<Badge key="active" variant="secondary" className="bg-blue-100 text-blue-800">În curs</Badge>);
+      if (paymentStatus === 'completed') {
+        badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
+      }
+      return badges;
+    }
+
+    // Returned
+    if (status === 'returned') {
+      badges.push(<Badge key="returned" variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Returnat</Badge>);
+      if (paymentStatus === 'completed') {
+        badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
+      }
+      return badges;
+    }
+
+    // Completed
+    if (status === 'completed') {
+      badges.push(<Badge key="completed" variant="default" className="bg-green-100 text-green-800">Finalizată</Badge>);
+    }
+
+    return badges;
+  }
 
   const getUserDisplayName = (userData: any) => {
     if (userData?.full_name) return userData.full_name;
@@ -239,8 +242,25 @@ export const BookingsPage: React.FC = () => {
                               </CardDescription>
                             </div>
                             <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
-                              {getStatusBadge(booking.status)}
-                              {getPaymentStatusBadge(booking.payment_status)}
+                              <div className="flex items-center gap-1">
+                                {getBookingBadges(booking, user?.id)}
+                                {(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.activeClaim as any).claim_status}
+                                    claim={booking.activeClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                                {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.resolvedClaim as any).claim_status}
+                                    claim={booking.resolvedClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
                         </CardHeader>
@@ -290,6 +310,7 @@ export const BookingsPage: React.FC = () => {
                                       queryClient.invalidateQueries({ queryKey: ['user-listings'] });
                                     }} 
                                     onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
                                   />
                                 </div>
                               )}
@@ -302,7 +323,8 @@ export const BookingsPage: React.FC = () => {
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Mesaje
                               </Button>
-                              {(['confirmed', 'active', 'returned'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.renter_id) && (
+                              {/* Renter can claim at any step except pending/cancelled */}
+                              {(!['pending', 'cancelled'].includes(booking.status) && user?.id === booking.renter_id) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -339,8 +361,25 @@ export const BookingsPage: React.FC = () => {
                               </CardDescription>
                             </div>
                             <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
-                              {getStatusBadge(booking.status)}
-                              {getPaymentStatusBadge(booking.payment_status)}
+                              <div className="flex items-center gap-1">
+                                {getBookingBadges(booking, user?.id)}
+                                {(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.activeClaim as any).claim_status}
+                                    claim={booking.activeClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                                {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.resolvedClaim as any).claim_status}
+                                    claim={booking.resolvedClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
                         </CardHeader>
@@ -367,16 +406,24 @@ export const BookingsPage: React.FC = () => {
                                     <MapPin className="h-4 w-4 mr-1" />
                                     Setează locația
                                   </Button>
-                                  <Button 
-                                    variant="default" 
-                                    size="sm" 
-                                    onClick={() => handleBookingAction(booking.id, 'confirmed')}
-                                    disabled={acceptingBooking}
-                                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Confirmă
-                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span>
+                                          <Button 
+                                            variant="default" 
+                                            size="sm" 
+                                            onClick={() => handleBookingAction(booking.id, 'confirmed')}
+                                            disabled={acceptingBooking}
+                                            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                                          >
+                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                            Confirmă
+                                          </Button>
+                                        </span>
+                                      </TooltipTrigger>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
@@ -390,28 +437,18 @@ export const BookingsPage: React.FC = () => {
                                 </>
                               )}
                               {booking.status === 'confirmed' && user?.id === booking.owner_id && (
-                                <>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => setPickupBooking(booking)}
-                                    className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
-                                  >
-                                    <MapPin className="h-4 w-4 mr-1" />
-                                    Setează locația
-                                  </Button>
-                                  <div className="w-full">
-                                    <BookingStatusFlow 
-                                      booking={booking} 
-                                      onStatusUpdate={() => {
-                                        queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                        queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                        queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                      }} 
-                                      onPaymentClick={handlePaymentClick}
-                                    />
-                                  </div>
-                                </>
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => {
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
+                                    onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
+                                  />
+                                </div>
                               )}
                               {booking.status === 'active' && user?.id === booking.owner_id && (
                                 <div className="w-full">
@@ -423,6 +460,7 @@ export const BookingsPage: React.FC = () => {
                                       queryClient.invalidateQueries({ queryKey: ['user-listings'] });
                                     }} 
                                     onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
                                   />
                                 </div>
                               )}
@@ -438,7 +476,8 @@ export const BookingsPage: React.FC = () => {
                                   Finalizează
                                 </Button>
                               )}
-                              {(['confirmed', 'active', 'returned'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.owner_id) && (
+                              {/* Owner can only claim after payment is completed */}
+                              {(['confirmed', 'active', 'returned', 'completed'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.owner_id) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -480,7 +519,7 @@ export const BookingsPage: React.FC = () => {
           onClose={() => setPickupBooking(null)}
           onSaved={() => {
             setPickupBooking(null);
-            // The booking data will be refreshed automatically via real-time updates
+            queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
           }}
         />
       )}
@@ -512,44 +551,47 @@ export const BookingsPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['user-listings'] });
           }}
           onPaymentClick={handlePaymentClick}
+          onSetPickupLocation={setPickupBooking}
         />
       )}
 
       {claimBooking && (
         <Dialog open={!!claimBooking} onOpenChange={() => setClaimBooking(null)}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Revendicare daune</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-lg sm:text-xl">Revendicare daune</DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
                 {user?.id === claimBooking.owner_id 
                   ? 'Descrie daunele și încarcă dovezi foto.' 
                   : 'Descrie problema întâlnită și încarcă dovezi foto.'
                 }
               </DialogDescription>
             </DialogHeader>
-            {user?.id === claimBooking.owner_id ? (
-              <OwnerClaimForm
-                bookingId={String(claimBooking.id)}
-                onSubmitted={() => {
-                  setClaimBooking(null);
-                  // Invalidate queries to trigger real-time updates
-                  queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                  queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                  queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                }}
-              />
-            ) : (
-              <RenterClaimForm
-                bookingId={String(claimBooking.id)}
-                onSubmitted={() => {
-                  setClaimBooking(null);
-                  // Invalidate queries to trigger real-time updates
-                  queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                  queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                  queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                }}
-              />
-            )}
+            <div className="space-y-4">
+              {user?.id === claimBooking.owner_id ? (
+                <OwnerClaimForm
+                  bookingId={String(claimBooking.id)}
+                  onSubmitted={() => {
+                    setClaimBooking(null);
+                    // Invalidate queries to trigger real-time updates
+                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                  }}
+                />
+              ) : (
+                <RenterClaimForm
+                  bookingId={String(claimBooking.id)}
+                  onSubmitted={() => {
+                    setClaimBooking(null);
+                    // Invalidate queries to trigger real-time updates
+                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                  }}
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       )}

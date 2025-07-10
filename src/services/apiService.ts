@@ -1097,13 +1097,38 @@ export const bookingApi = {
         userData = userRes.data || [];
       }
 
+      // Fetch claim data for all bookings
+      let claimData = [];
+      if (bookingIds.length > 0) {
+        const claimRes = await supabase
+          .from('claims')
+          .select('id, booking_id, claim_status, claim_type, created_at, resolved_at, claimant_id')
+          .in('booking_id', bookingIds);
+        claimData = claimRes.data || [];
+      }
+
       // Map the data
-      const data = allBookings.map(booking => ({
-        ...booking,
-        gear: gearData.find(g => g.id === booking.gear_id) || null,
-        renter: userData.find(u => u.id === booking.renter_id) || null,
-        owner: userData.find(u => u.id === booking.owner_id) || null,
-      }));
+      const data = allBookings.map(booking => {
+        const bookingClaims = claimData.filter(c => c.booking_id === booking.id);
+        // Get the most recent active claim (pending or under_review)
+        const activeClaim = bookingClaims
+          .filter(c => ['pending', 'under_review'].includes(c.claim_status))
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] || null;
+        // Get the most recent resolved claim (approved or rejected)
+        const resolvedClaim = bookingClaims
+          .filter(c => ['approved', 'rejected'].includes(c.claim_status))
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] || null;
+        
+        return {
+          ...booking,
+          gear: gearData.find(g => g.id === booking.gear_id) || null,
+          renter: userData.find(u => u.id === booking.renter_id) || null,
+          owner: userData.find(u => u.id === booking.owner_id) || null,
+          claims: bookingClaims,
+          activeClaim: activeClaim || null,
+          resolvedClaim: resolvedClaim || null,
+        };
+      });
 
       return { data, error: null };
     } catch (error: unknown) {

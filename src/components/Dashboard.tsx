@@ -38,6 +38,58 @@ import { BookingFlowGuard } from '@/components/BookingFlowGuard';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useDeleteConversation } from '@/hooks/useMessages';
 
+function getBookingBadges(booking: any, userId: string) {
+  const badges = [];
+  const status = booking.status;
+  const paymentStatus = booking.payment_status;
+  const claim = booking.activeClaim || booking.resolvedClaim;
+  const claimStatus = claim?.claim_status;
+
+  // 1. Cancelled
+  if (status === 'cancelled') {
+    badges.push(<Badge key="cancelled" variant="destructive">Anulată</Badge>);
+    if (paymentStatus === 'refunded') {
+      badges.push(<Badge key="refunded" variant="outline" className="bg-gray-100 text-gray-800 border-gray-200 ml-1">Refundat</Badge>);
+    }
+    return badges;
+  }
+
+  // 2. Completed
+  if (status === 'completed') {
+    badges.push(<Badge key="completed" variant="default" className="bg-green-100 text-green-800">Finalizată</Badge>);
+    if (claimStatus === 'approved') {
+      badges.push(<Badge key="claim-approved" variant="default" className="bg-green-100 text-green-800 ml-1">Revendicare aprobată</Badge>);
+    } else if (claimStatus === 'rejected') {
+      badges.push(<Badge key="claim-rejected" variant="destructive" className="ml-1">Revendicare respinsă</Badge>);
+    }
+    return badges;
+  }
+
+  // 3. Active/Confirmed/Returned
+  if (status === 'confirmed') {
+    badges.push(<Badge key="confirmed" variant="secondary" className="bg-blue-100 text-blue-800">Confirmată</Badge>);
+  } else if (status === 'active') {
+    badges.push(<Badge key="active" variant="secondary" className="bg-blue-100 text-blue-800">În curs</Badge>);
+  } else if (status === 'returned') {
+    badges.push(<Badge key="returned" variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Returnat</Badge>);
+  }
+  // Claim status for active bookings
+  if (claimStatus === 'pending') {
+    badges.push(<Badge key="claim-active" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">Revendicare activă</Badge>);
+  } else if (claimStatus === 'approved') {
+    badges.push(<Badge key="claim-approved" variant="default" className="bg-green-100 text-green-800 ml-1">Revendicare aprobată</Badge>);
+  } else if (claimStatus === 'rejected') {
+    badges.push(<Badge key="claim-rejected" variant="destructive" className="ml-1">Revendicare respinsă</Badge>);
+  }
+  // Payment status for active bookings
+  if (paymentStatus === 'completed' && status !== 'completed') {
+    badges.push(<Badge key="paid" variant="default" className="bg-green-100 text-green-800 ml-1">Plătit</Badge>);
+  } else if (paymentStatus === 'pending' && status !== 'completed') {
+    badges.push(<Badge key="pay-pending" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">În așteptare plată</Badge>);
+  }
+  return badges;
+}
+
 export const Dashboard: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
   const queryClient = useQueryClient();
@@ -298,6 +350,21 @@ export const Dashboard: React.FC = () => {
     );
   };
 
+  const getPaymentStatusBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      pending: "secondary",
+      paid: "default",
+      refunded: "destructive",
+      failed: "destructive",
+      cancelled: "destructive"
+    };
+    return (
+      <Badge variant={variants[status] || "secondary"} className="text-xs">
+        {getPaymentStatusLabel(status)}
+      </Badge>
+    );
+  };
+
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       pending: 'În așteptare',
@@ -307,6 +374,17 @@ export const Dashboard: React.FC = () => {
       completed: 'Finalizată',
       cancelled: 'Anulată',
       rejected: 'Respinse'
+    };
+    return labels[status] || status;
+  };
+
+  const getPaymentStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'În așteptare',
+      paid: 'Plătit',
+      refunded: 'Refundat',
+      failed: 'Eșuat',
+      cancelled: 'Anulat'
     };
     return labels[status] || status;
   };
@@ -340,94 +418,63 @@ export const Dashboard: React.FC = () => {
         <Header />
         
         <main className="container mx-auto px-4 py-6">
-          {/* Welcome Section */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={currentAvatarUrl} alt={profile.full_name} />
-                  <AvatarFallback className="text-sm">
-                    {profile.first_name?.[0]}{profile.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Bună, {profile.first_name}!
-                  </h1>
-                  <p className="text-sm text-gray-600">
-                    {profile.location} • Membru din {format(new Date(profile.created_at || Date.now()), 'MMMM yyyy')}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editează profilul
-                </Button>
-                <Button onClick={() => navigate('/add-gear')} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adaugă echipament
-                </Button>
-              </div>
-            </div>
-          </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card className="bg-white">
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Rezervări active</p>
-                    <p className="text-xl font-bold text-gray-900">{activeBookings}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Rezervări active</p>
+                    <p className="text-lg sm:text-xl font-bold text-gray-900">{activeBookings}</p>
                     <p className="text-xs text-gray-500">{pendingBookings} în așteptare</p>
                   </div>
-                  <Calendar className="h-6 w-6 text-blue-600" />
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white">
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Câștiguri totale</p>
-                    <p className="text-xl font-bold text-gray-900">{totalEarnings} RON</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Câștiguri totale</p>
+                    <p className="text-lg sm:text-xl font-bold text-gray-900">{totalEarnings} RON</p>
                     <div className="flex items-center space-x-1">
                       <TrendingUp className="h-3 w-3 text-green-500" />
                       <p className="text-xs text-gray-500">{earningsChange}</p>
                     </div>
                   </div>
-                  <DollarSign className="h-6 w-6 text-green-600" />
+                  <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white">
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Rating mediu</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Rating mediu</p>
                     <div className="flex items-center space-x-1">
-                      <p className="text-xl font-bold text-gray-900">{averageRating.toFixed(1)}</p>
+                      <p className="text-lg sm:text-xl font-bold text-gray-900">{averageRating.toFixed(1)}</p>
                       <Star className="h-4 w-4 text-yellow-400 fill-current" />
                     </div>
                     <p className="text-xs text-gray-500">{totalReviews} recenzii</p>
                   </div>
-                  <Award className="h-6 w-6 text-yellow-600" />
+                  <Award className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white">
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Echipamente</p>
-                    <p className="text-xl font-bold text-gray-900">{listings.length}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Echipamente</p>
+                    <p className="text-lg sm:text-xl font-bold text-gray-900">{listings.length}</p>
                     <p className="text-xs text-gray-500">{listings.filter(l => l.is_available).length} disponibile</p>
                   </div>
-                  <Package className="h-6 w-6 text-purple-600" />
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
               </CardContent>
             </Card>
@@ -439,54 +486,54 @@ export const Dashboard: React.FC = () => {
               <CardTitle className="text-lg">Acțiuni rapide</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                 <Button 
                   variant="outline" 
-                  className="h-auto p-3 flex flex-col items-center space-y-2"
+                  className="h-auto p-2 sm:p-3 flex flex-col items-center space-y-1 sm:space-y-2"
                   onClick={() => navigate('/add-gear')}
                 >
-                  <Plus className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-medium">Adaugă echipament</span>
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  <span className="text-xs sm:text-sm font-medium">Adaugă echipament</span>
                 </Button>
                 
                 <Button 
                   variant="outline" 
-                  className="h-auto p-3 flex flex-col items-center space-y-2"
+                  className="h-auto p-2 sm:p-3 flex flex-col items-center space-y-1 sm:space-y-2"
                   onClick={() => navigate('/browse')}
                 >
-                  <ShoppingBag className="h-5 w-5 text-green-600" />
-                  <span className="text-sm">Caută echipamente</span>
+                  <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  <span className="text-xs sm:text-sm">Caută echipamente</span>
                 </Button>
                 
                 <Button 
                   variant="outline" 
-                  className="h-auto p-3 flex flex-col items-center space-y-2"
+                  className="h-auto p-2 sm:p-3 flex flex-col items-center space-y-1 sm:space-y-2"
                   onClick={() => setShowStripeOnboarding(true)}
                 >
-                  <CreditCard className="h-5 w-5 text-purple-600" />
-                  <span className="text-sm">Configurare plată</span>
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                  <span className="text-xs sm:text-sm">Configurare plată</span>
                 </Button>
                 
                 <Button 
                   variant="outline" 
-                  className="h-auto p-3 flex flex-col items-center space-y-2"
+                  className="h-auto p-2 sm:p-3 flex flex-col items-center space-y-1 sm:space-y-2"
                   onClick={() => navigate('/messages')}
                 >
-                  <MessageSquare className="h-5 w-5 text-orange-600" />
-                  <span className="text-sm">Mesaje</span>
+                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                  <span className="text-xs sm:text-sm">Mesaje</span>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
           {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             {/* Bookings Section */}
             <Card className="bg-white">
-              <CardHeader className="flex items-center justify-between pb-3">
-                <CardTitle className="text-lg">Rezervări</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/bookings')}>
-                  Vezi toate <ArrowRight className="h-4 w-4 ml-1" />
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 gap-2">
+                <CardTitle className="text-base sm:text-lg">Rezervări recente</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/bookings')} className="text-xs sm:text-sm">
+                  Vezi toate <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                 </Button>
               </CardHeader>
               <CardContent>
@@ -496,56 +543,149 @@ export const Dashboard: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Upcoming bookings */}
-                    {upcomingBookings.slice(0, 2).map((booking) => (
-                      <div key={booking.id as string} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{booking.gear_title as string}</p>
-                          <p className="text-xs text-gray-600">
-                            {format(new Date(booking.start_date as string), 'dd MMM')} - {format(new Date(booking.end_date as string), 'dd MMM')}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {getStatusBadge(booking.status as string)}
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                    {/* Recent bookings for both renter and owner */}
+                    {(() => {
+                      const allBookings = [...userBookings, ...ownerBookings]
+                        .sort((a, b) => new Date((b as any).created_at).getTime() - new Date((a as any).created_at).getTime())
+                        .slice(0, 3);
+                      
+                      if (allBookings.length > 0) {
+                        return allBookings.map((booking) => {
+                          const isOwner = booking.owner_id === user?.id;
+                          return (
+                            <div key={booking.id as string} className="p-3 border rounded-lg hover:bg-gray-50">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                                    <p className="font-medium text-sm truncate">{(booking.gear as any)?.title || 'Echipament necunoscut'}</p>
+                                    <Badge variant="outline" className="text-xs w-fit">
+                                      {isOwner ? 'Ca proprietar' : 'Ca chiriaș'}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs text-gray-600">
+                                    {format(new Date(booking.start_date as string), 'dd MMM yyyy')} - {format(new Date(booking.end_date as string), 'dd MMM yyyy')}
+                                  </p>
+                                  <p className="text-xs text-gray-600 truncate">
+                                    {isOwner ? `Chiriaș: ${getUserDisplayName(booking.renter as any)}` : `Proprietar: ${getUserDisplayName(booking.owner as any)}`}
+                                  </p>
+                                </div>
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    {getBookingBadges(booking, user?.id)}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => navigate('/bookings')}
+                                      className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs px-2 py-1 h-7"
+                                    >
+                                      Vezi
+                                    </Button>
+                                    {/* Claim buttons */}
+                                    {(!['pending', 'cancelled'].includes(booking.status as string) && user?.id === booking.renter_id) && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setClaimBooking(booking)}
+                                        className="text-red-600 border-red-200 hover:bg-red-50 text-xs px-2 py-1 h-7"
+                                        title="Depune reclamare"
+                                      >
+                                        <AlertCircle className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                    {(['confirmed', 'active', 'returned', 'completed'].includes(booking.status as string) && (booking.payment_status as string) === 'completed' && user?.id === booking.owner_id) && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setClaimBooking(booking)}
+                                        className="text-red-600 border-red-200 hover:bg-red-50 text-xs px-2 py-1 h-7"
+                                        title="Depune reclamare"
+                                      >
+                                        <AlertCircle className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        });
+                      }
+                      return null;
+                    })()}
 
                     {/* Pending owner bookings */}
                     {ownerBookings
                       .filter(booking => booking.status === 'pending')
                       .slice(0, 2)
                       .map((booking) => (
-                      <div key={booking.id as string} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{booking.gear_title as string}</p>
-                          <p className="text-xs text-gray-600">Chiriaș: {getUserDisplayName(booking.renter)}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {getStatusBadge(booking.status as string)}
-                          <Button 
-                            variant="default" 
-                            size="sm" 
-                            onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
-                            disabled={acceptingBooking}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Confirmă
-                          </Button>
+                      <div key={booking.id as string} className="p-3 border rounded-lg bg-orange-50">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{(booking.gear as any)?.title || 'Echipament necunoscut'}</p>
+                            <p className="text-xs text-gray-600 truncate">Chiriaș: {getUserDisplayName(booking.renter as any)}</p>
+                            <p className="text-xs text-gray-600">
+                              {format(new Date(booking.start_date as string), 'dd MMM yyyy')} - {format(new Date(booking.end_date as string), 'dd MMM yyyy')}
+                            </p>
+                          </div>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              {getStatusBadge(booking.status as string)}
+                              {(booking.activeClaim as any) && (
+                                <ClaimStatusBadge 
+                                  status={(booking.activeClaim as any).claim_status}
+                                  claim={booking.activeClaim}
+                                  booking={booking}
+                                  currentUserId={user?.id}
+                                />
+                              )}
+                              {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
+                                <ClaimStatusBadge 
+                                  status={(booking.resolvedClaim as any).claim_status}
+                                  claim={booking.resolvedClaim}
+                                  booking={booking}
+                                  currentUserId={user?.id}
+                                />
+                              )}
+                            </div>
+                            <Button 
+                              variant="default" 
+                              size="sm" 
+                              onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
+                              disabled={acceptingBooking}
+                              className="bg-green-600 hover:bg-green-700 text-xs px-3 py-1 h-7"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Confirmă
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
 
-                    {upcomingBookings.length === 0 && ownerBookings.filter(b => b.status === 'pending').length === 0 && (
-                      <div className="text-center py-8">
-                        <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-sm text-gray-600">Nu ai rezervări active</p>
-                      </div>
-                    )}
+                    {(() => {
+                      const hasBookings = [...userBookings, ...ownerBookings].length > 0;
+                      const hasPendingBookings = ownerBookings.some(b => b.status === 'pending');
+                      
+                      if (!hasBookings && !hasPendingBookings) {
+                        return (
+                          <div className="text-center py-8">
+                            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-sm text-gray-600">Nu ai rezervări</p>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => navigate('/browse')}
+                              className="mt-2"
+                            >
+                              Caută echipamente
+                            </Button>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 )}
               </CardContent>
@@ -553,10 +693,10 @@ export const Dashboard: React.FC = () => {
 
             {/* Listings Section */}
             <Card className="bg-white">
-              <CardHeader className="flex items-center justify-between pb-3">
-                <CardTitle className="text-lg">Echipamentele mele</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/my-listings')}>
-                  Vezi toate <ArrowRight className="h-4 w-4 ml-1" />
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 gap-2">
+                <CardTitle className="text-base sm:text-lg">Echipamentele mele</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/my-listings')} className="text-xs sm:text-sm">
+                  Vezi toate <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                 </Button>
               </CardHeader>
               <CardContent>
@@ -580,18 +720,20 @@ export const Dashboard: React.FC = () => {
                 ) : (
                   <div className="space-y-3">
                     {listings.slice(0, 3).map((listing) => (
-                      <div key={listing.id as string} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{listing.title as string}</p>
-                          <p className="text-xs text-gray-600">{listing.price_per_day as number} RON/zi</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={listing.is_available ? "default" : "secondary"} className="text-xs">
-                            {listing.is_available ? "Disponibil" : "Închiriat"}
-                          </Badge>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                      <div key={listing.id as string} className="p-3 border rounded-lg hover:bg-gray-50">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{listing.title as string}</p>
+                            <p className="text-xs text-gray-600">{listing.price_per_day as number} RON/zi</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={listing.is_available ? "default" : "secondary"} className="text-xs">
+                              {listing.is_available ? "Disponibil" : "Închiriat"}
+                            </Badge>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -643,31 +785,33 @@ export const Dashboard: React.FC = () => {
 
         {claimBooking && (
           <Dialog open={!!claimBooking} onOpenChange={() => setClaimBooking(null)}>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Revendicare daune</DialogTitle>
-                <DialogDescription>
+            <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-lg sm:text-xl">Revendicare daune</DialogTitle>
+                <DialogDescription className="text-sm sm:text-base">
                   {user?.id === claimBooking.owner_id 
                     ? 'Descrie daunele și încarcă dovezi foto.' 
                     : 'Descrie problema întâlnită și încarcă dovezi foto.'
                   }
                 </DialogDescription>
               </DialogHeader>
-              {user?.id === claimBooking.owner_id ? (
-                <OwnerClaimForm
-                  bookingId={String(claimBooking.id)}
-                  onSubmitted={() => {
-                    setClaimBooking(null);
-                  }}
-                />
-              ) : (
-                <RenterClaimForm
-                  bookingId={String(claimBooking.id)}
-                  onSubmitted={() => {
-                    setClaimBooking(null);
-                  }}
-                />
-              )}
+              <div className="space-y-4">
+                {user?.id === claimBooking.owner_id ? (
+                  <OwnerClaimForm
+                    bookingId={String(claimBooking.id)}
+                    onSubmitted={() => {
+                      setClaimBooking(null);
+                    }}
+                  />
+                ) : (
+                  <RenterClaimForm
+                    bookingId={String(claimBooking.id)}
+                    onSubmitted={() => {
+                      setClaimBooking(null);
+                    }}
+                  />
+                )}
+              </div>
             </DialogContent>
           </Dialog>
         )}

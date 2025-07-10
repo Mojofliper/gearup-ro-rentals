@@ -155,10 +155,13 @@ export const PickupLocationModal: React.FC<Props> = ({ bookingId, isOpen, onClos
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" aria-describedby="pickup-location-desc">
         <DialogHeader>
           <DialogTitle>Setează locația de ridicare</DialogTitle>
         </DialogHeader>
+        <div id="pickup-location-desc" className="sr-only">
+          Selectează sau caută pe hartă locația de predare pentru această rezervare.
+        </div>
         <div className="space-y-4">
           <div className="flex gap-2">
             <input
@@ -174,18 +177,18 @@ export const PickupLocationModal: React.FC<Props> = ({ bookingId, isOpen, onClos
             </Button>
           </div>
           <div style={{ height: 300, width: '100%' }}>
-            {/* @ts-expect-error: React Leaflet v4 type issues */}
+            {/* @ts-ignore: React Leaflet v4 type compatibility */}
             <MapContainer
               center={[mapCenter.lat, mapCenter.lng]}
               zoom={14}
               style={{ height: '100%', width: '100%' }}
             >
-              {/* @ts-expect-error: React Leaflet v4 type issues */}
+              {/* @ts-ignore: React Leaflet v4 type compatibility */}
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
               />
-              {/* @ts-expect-error: React Leaflet v4 type issues */}
+              {/* @ts-ignore: React Leaflet v4 type compatibility */}
               {place && <Marker position={[place.lat, place.lng]} icon={markerIcon} />}
               <LocationPicker onPick={handleMapPick} />
             </MapContainer>

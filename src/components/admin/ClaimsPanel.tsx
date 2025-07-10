@@ -108,8 +108,8 @@ export const ClaimsPanel: React.FC = () => {
         return;
       }
 
-      // If claim is approved or rejected, trigger escrow release
-      if (status === 'approved' || status === 'rejected') {
+      // If claim is approved, trigger escrow release
+      if (status === 'approved') {
         try {
           // Get the claim details including who filed it
           const { data: claimData } = await supabase
@@ -131,22 +131,22 @@ export const ClaimsPanel: React.FC = () => {
               const isOwnerClaim = claimData.claimant_id === bookingData.owner_id;
               const isRenterClaim = claimData.claimant_id === bookingData.renter_id;
               
-              // Determine the correct release type based on who filed and admin decision
+              // Determine the correct release type based on who filed the claim
               let releaseType: string;
               
               if (isOwnerClaim) {
-                // Owner filed the claim
-                releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
+                // Owner filed the claim and it was approved
+                releaseType = 'claim_owner';
               } else if (isRenterClaim) {
-                // Renter filed the claim
-                releaseType = status === 'approved' ? 'claim_renter' : 'claim_owner';
+                // Renter filed the claim and it was approved
+                releaseType = 'claim_renter';
               } else {
                 // Fallback: use the old logic if claimant_id doesn't match either
                 console.warn('Claimant ID does not match owner or renter ID, using fallback logic');
-                releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
+                releaseType = 'claim_owner';
               }
 
-              console.log(`Claim resolution: ${isOwnerClaim ? 'Owner' : isRenterClaim ? 'Renter' : 'Unknown'} filed claim, Admin ${status}, Release type: ${releaseType}`);
+              console.log(`Claim approved: ${isOwnerClaim ? 'Owner' : isRenterClaim ? 'Renter' : 'Unknown'} filed claim, Release type: ${releaseType}`);
 
               // Call escrow release function with correct release type
               const response = await fetch('https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release', {
@@ -174,6 +174,7 @@ export const ClaimsPanel: React.FC = () => {
           toast.error('Eroare la eliberarea fondurilor din escrow');
         }
       }
+      // If claim is rejected, no escrow release - funds stay in escrow for normal rental flow
 
       toast.success(`Reclamația a fost ${status === 'approved' ? 'aprobată' : status === 'rejected' ? 'respinsă' : 'actualizată'} cu succes`);
       loadClaims();

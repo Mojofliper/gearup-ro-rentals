@@ -134,6 +134,7 @@ export const useUserBookings = () => {
 
 export const useCreateBooking = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { createBooking, loading, error } = useBookingApi();
   const { notifyBookingCreated } = useNotifications();
   return useMutation({
@@ -147,7 +148,7 @@ export const useCreateBooking = () => {
       return await createBooking(bookingData);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['gear'] });
       queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       // Send notification to owner and renter
@@ -161,6 +162,7 @@ export const useCreateBooking = () => {
 
 export const useAcceptBooking = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { acceptBooking, loading, error } = useBookingApi();
   const { notifyBookingConfirmed, notifyBookingConfirmedOwner } = useNotifications();
   return useMutation({
@@ -168,7 +170,7 @@ export const useAcceptBooking = () => {
       return await acceptBooking(bookingId, pickupLocation);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       // Send notification to renter and owner
       if (data && data.id && data.renter_id && data.owner_id) {
@@ -182,6 +184,7 @@ export const useAcceptBooking = () => {
 
 export const useRejectBooking = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { rejectBooking, loading, error } = useBookingApi();
   const { mutate: deleteConversation } = useDeleteConversation();
   return useMutation({
@@ -189,7 +192,7 @@ export const useRejectBooking = () => {
       return await rejectBooking(bookingId);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
       
       // Delete the conversation after successful rejection

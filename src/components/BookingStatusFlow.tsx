@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle, CreditCard, Package, Handshake, MapPin } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle, CreditCard, Package, Handshake, MapPin, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -12,6 +12,7 @@ interface BookingStatusFlowProps {
   booking: any;
   onStatusUpdate?: () => void;
   onPaymentClick?: (booking: any) => void;
+  onSetPickupLocation?: (booking: any) => void;
 }
 
 const statusConfig = {
@@ -69,7 +70,8 @@ const statusConfig = {
 export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
   booking,
   onStatusUpdate,
-  onPaymentClick
+  onPaymentClick,
+  onSetPickupLocation
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -259,6 +261,8 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+
+
         {/* Current Status */}
         <div className="flex items-center justify-between">
           <div>
@@ -312,7 +316,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
         {currentStatus === 'confirmed' && booking.payment_status === 'completed' && (
           <>
             {/* Location Setup Reminder */}
-            {isOwner && !booking.pickup_location && (
+            {isOwner && (!booking.pickup_location || booking.pickup_location === 'To be set') && (
               <div className="border rounded-lg p-4 space-y-3 bg-blue-50 border-blue-200">
                 <h4 className="font-medium text-blue-800 flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
@@ -321,6 +325,13 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
                 <p className="text-sm text-blue-700">
                   Plata a fost finalizată. Acum trebuie să setezi locația de predare înainte de confirmări.
                 </p>
+                <Button
+                  onClick={() => onSetPickupLocation?.(booking)}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Setează locația de predare
+                </Button>
               </div>
             )}
             
@@ -503,6 +514,16 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
             </p>
             <p className="text-xs text-green-700">
               Depozitul a fost returnat chiriașului.
+            </p>
+          </div>
+        )}
+
+        {/* Refund Timeline Disclaimer */}
+        {(booking.rental_amount_released || booking.deposit_returned) && (
+          <div className="text-center p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <Info className="h-4 w-4 text-yellow-600 mx-auto mb-1" />
+            <p className="text-xs text-yellow-800">
+              <strong>Rambursări:</strong> Pot dura 5-10 zile lucrătoare pentru a apărea pe extrasul bancar, în funcție de banca și tipul cardului.
             </p>
           </div>
         )}

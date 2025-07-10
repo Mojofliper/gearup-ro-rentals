@@ -12,7 +12,8 @@ import {
   Calendar,
   User,
   Package,
-  ArrowRight
+  ArrowRight,
+  Info
 } from 'lucide-react';
 import { EscrowStatusBadge } from './EscrowStatusBadge';
 import { formatAmountForDisplay } from '@/integrations/stripe/client';
@@ -192,6 +193,14 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
             </Button>
           )}
         </div>
+
+        {/* Refund Disclaimer */}
+        <Alert className="border-yellow-200 bg-yellow-50">
+          <Info className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800 text-xs">
+            <strong>Informații despre rambursări:</strong> Când fondurile sunt eliberate din escrow, rambursările pot dura 5-10 zile lucrătoare pentru a apărea pe extrasul bancar.
+          </AlertDescription>
+        </Alert>
 
         {/* Additional Info */}
         <div className="text-xs text-muted-foreground text-center pt-4 border-t">

@@ -308,6 +308,34 @@ export const PaymentSuccess: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Refund Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <CreditCard className="h-5 w-5 mr-2" />
+                Informații despre rambursări
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="space-y-2">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Timp de procesare rambursări:</strong>
+                  </p>
+                  <ul className="text-xs text-yellow-700 space-y-1 ml-4">
+                    <li>• <strong>Carduri bancare:</strong> 5-10 zile lucrătoare</li>
+                    <li>• <strong>Carduri internaționale:</strong> până la 14 zile lucrătoare</li>
+                    <li>• <strong>Apple Pay/Google Pay:</strong> 3-5 zile lucrătoare</li>
+                    <li>• <strong>Transfer bancar:</strong> 3-5 zile lucrătoare</li>
+                  </ul>
+                  <p className="text-xs text-yellow-700 mt-2">
+                    <em>Notă: Rambursarea este procesată imediat de platforma noastră. Timpul de afișare pe extrasul bancar depinde de banca și tipul cardului.</em>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Next Steps */}
           <Card>
             <CardHeader>

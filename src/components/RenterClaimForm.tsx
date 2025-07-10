@@ -22,7 +22,6 @@ export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onS
   const { notifyClaimSubmitted } = useNotifications();
   const [description, setDescription] = useState('');
   const [claimType, setClaimType] = useState<string>('');
-  const [amountRequested, setAmountRequested] = useState<string>('');
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [eligible, setEligible] = useState<boolean | null>(null);
@@ -134,7 +133,6 @@ export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onS
           claim_type: claimType,
           description: description.trim(),
           evidence_urls: evidenceUrls,
-          amount_requested: amountRequested ? parseFloat(amountRequested) : null,
           claim_status: 'pending'
         })
         .select()
@@ -257,22 +255,7 @@ export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onS
             />
           </div>
 
-          {/* Amount Requested */}
-          <div className="space-y-2">
-            <Label htmlFor="amountRequested">Suma solicitată (RON)</Label>
-            <Input
-              id="amountRequested"
-              type="number"
-              value={amountRequested}
-              onChange={(e) => setAmountRequested(e.target.value)}
-              placeholder="Suma pe care o revendici (opțional)"
-              min="0"
-              step="0.01"
-            />
-            <p className="text-xs text-gray-500">
-              Lasă gol dacă revendici doar returnarea banilor plătiți
-            </p>
-          </div>
+
 
           {/* File Upload */}
           <div className="space-y-2">

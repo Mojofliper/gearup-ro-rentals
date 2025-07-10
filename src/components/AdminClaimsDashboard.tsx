@@ -63,56 +63,59 @@ export const AdminClaimsDashboard: React.FC = () => {
       body: JSON.stringify({ booking_id: claims.find(c => c.id === claimId)?.booking_id, claim_status: approve ? 'approved' : 'rejected' }),
     });
 
-    // Get claim details to determine who filed it
-    try {
-      const claim = claims.find(c => c.id === claimId);
-      if (claim) {
-        const bookingId = claim.booking_id;
-        
-        // Get the booking to determine who filed the claim
-        const { data: bookingData } = await supabase
-          .from('bookings')
-          .select('owner_id, renter_id')
-          .eq('id', bookingId)
-          .single();
+    // Only trigger escrow release if claim is approved
+    if (approve) {
+      try {
+        const claim = claims.find(c => c.id === claimId);
+        if (claim) {
+          const bookingId = claim.booking_id;
+          
+          // Get the booking to determine who filed the claim
+          const { data: bookingData } = await supabase
+            .from('bookings')
+            .select('owner_id, renter_id')
+            .eq('id', bookingId)
+            .single();
 
-        if (bookingData) {
-          // Determine who filed the claim by checking claimant_id against owner_id and renter_id
-          const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
-          const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-          
-          // Determine the correct release type based on who filed and admin decision
-          let releaseType: string;
-          
-          if (isOwnerClaim) {
-            // Owner filed the claim
-            releaseType = approve ? 'claim_owner' : 'claim_denied';
-          } else if (isRenterClaim) {
-            // Renter filed the claim
-            releaseType = approve ? 'claim_renter' : 'claim_owner';
-          } else {
-            // Fallback: use the old logic if claimant_id doesn't match either
-            console.warn('Claimant ID does not match owner or renter ID, using fallback logic');
-            releaseType = approve ? 'claim_owner' : 'claim_denied';
+          if (bookingData) {
+            // Determine who filed the claim by checking claimant_id against owner_id and renter_id
+            const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
+            const isRenterClaim = claim.claimant_id === bookingData.renter_id;
+            
+            // Determine the correct release type based on who filed the claim
+            let releaseType: string;
+            
+            if (isOwnerClaim) {
+              // Owner filed the claim and it was approved
+              releaseType = 'claim_owner';
+            } else if (isRenterClaim) {
+              // Renter filed the claim and it was approved
+              releaseType = 'claim_renter';
+            } else {
+              // Fallback: use the old logic if claimant_id doesn't match either
+              console.warn('Claimant ID does not match owner or renter ID, using fallback logic');
+              releaseType = 'claim_owner';
+            }
+
+            console.log(`Claim approved: ${isOwnerClaim ? 'Owner' : isRenterClaim ? 'Renter' : 'Unknown'} filed claim, Release type: ${releaseType}`);
+
+            // Trigger escrow release accordingly
+            await fetch('/functions/v1/escrow-release', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                booking_id: bookingId,
+                release_type: releaseType,
+              }),
+            });
           }
-
-          console.log(`Claim resolution: ${isOwnerClaim ? 'Owner' : isRenterClaim ? 'Renter' : 'Unknown'} filed claim, Admin ${approve ? 'approved' : 'rejected'}, Release type: ${releaseType}`);
-
-          // Trigger escrow release accordingly
-          await fetch('/functions/v1/escrow-release', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              booking_id: bookingId,
-              release_type: releaseType,
-            }),
-          });
         }
+      } catch (escrowError) {
+        console.error('Error determining claim release type:', escrowError);
+        toast.error('Eroare la determinarea tipului de eliberare');
       }
-    } catch (escrowError) {
-      console.error('Error determining claim release type:', escrowError);
-      toast.error('Eroare la determinarea tipului de eliberare');
     }
+    // If claim is rejected, no escrow release - funds stay in escrow for normal rental flow
 
     toast.success('Status revendicare actualizat');
     fetchClaims();
