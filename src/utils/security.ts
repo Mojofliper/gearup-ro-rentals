@@ -1,31 +1,33 @@
 // Security monitoring and logging utilities
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
 export const logSecurityEvent = (event: string, details?: unknown) => {
   // In production, this would send to a monitoring service
   console.warn(`[SECURITY] ${event}`, details);
-  
+
   // For now, just log to console - in production you'd send to your monitoring service
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     try {
       // Store security events in sessionStorage for debugging
-      const events = JSON.parse(sessionStorage.getItem('security_events') || '[]');
+      const events = JSON.parse(
+        sessionStorage.getItem("security_events") || "[]",
+      );
       events.push({
         timestamp: new Date().toISOString(),
         event,
         details,
         userAgent: navigator.userAgent,
-        url: window.location.href
+        url: window.location.href,
       });
-      
+
       // Keep only last 50 events
       if (events.length > 50) {
         events.splice(0, events.length - 50);
       }
-      
-      sessionStorage.setItem('security_events', JSON.stringify(events));
+
+      sessionStorage.setItem("security_events", JSON.stringify(events));
     } catch (error) {
-      console.error('Failed to log security event:', error);
+      console.error("Failed to log security event:", error);
     }
   }
 };
@@ -39,39 +41,39 @@ export const detectSuspiciousActivity = (userInput: string): boolean => {
     /on\w+\s*=/i, // Event handlers like onclick, onload, etc.
     /eval\s*\(/i,
     /document\s*\.\s*write/i,
-    /window\s*\.\s*location/i
+    /window\s*\.\s*location/i,
   ];
 
   for (const pattern of suspiciousPatterns) {
     if (pattern.test(userInput)) {
-      logSecurityEvent('SUSPICIOUS_INPUT_DETECTED', {
+      logSecurityEvent("SUSPICIOUS_INPUT_DETECTED", {
         input: userInput.substring(0, 100), // Log first 100 chars only
-        pattern: pattern.toString()
+        pattern: pattern.toString(),
       });
       return true;
     }
   }
-  
+
   return false;
 };
 
 export const sanitizeForDisplay = (input: string): string => {
   return input
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;");
 };
 
 // Content Security Policy helpers
 export const reportCSPViolation = (violationReport: unknown) => {
-  logSecurityEvent('CSP_VIOLATION', violationReport);
+  logSecurityEvent("CSP_VIOLATION", violationReport);
 };
 
 // Add additional security utilities
 export const escapeHtml = (text: string): string => {
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 };
@@ -79,7 +81,7 @@ export const escapeHtml = (text: string): string => {
 export const isValidUrl = (url: string): boolean => {
   try {
     const urlObj = new URL(url);
-    return ['http:', 'https:'].includes(urlObj.protocol);
+    return ["http:", "https:"].includes(urlObj.protocol);
   } catch {
     return false;
   }
@@ -87,18 +89,23 @@ export const isValidUrl = (url: string): boolean => {
 
 export const sanitizeFileName = (fileName: string): string => {
   return fileName
-    .replace(/[^a-zA-Z0-9.-]/g, '_')
-    .replace(/_{2,}/g, '_')
+    .replace(/[^a-zA-Z0-9.-]/g, "_")
+    .replace(/_{2,}/g, "_")
     .substring(0, 255);
 };
 
 export const generateSecureToken = (): string => {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 };
 
-export const validateFileType = (file: File, allowedTypes: string[]): boolean => {
+export const validateFileType = (
+  file: File,
+  allowedTypes: string[],
+): boolean => {
   return allowedTypes.includes(file.type);
 };
 
@@ -136,12 +143,15 @@ class AuthRateLimiter {
     }
 
     // Check if still in lockout period
-    if (entry.count >= this.maxAttempts && (now - entry.lastAttempt) < this.lockoutMs) {
+    if (
+      entry.count >= this.maxAttempts &&
+      now - entry.lastAttempt < this.lockoutMs
+    ) {
       return true;
     }
 
     // Reset if window has passed
-    if ((now - entry.firstAttempt) > this.windowMs) {
+    if (now - entry.firstAttempt > this.windowMs) {
       this.attempts.delete(identifier);
       return false;
     }
@@ -157,7 +167,7 @@ class AuthRateLimiter {
       this.attempts.set(identifier, {
         count: 1,
         firstAttempt: now,
-        lastAttempt: now
+        lastAttempt: now,
       });
     } else {
       entry.count++;
@@ -175,7 +185,7 @@ class AuthRateLimiter {
   private cleanup(): void {
     const now = Date.now();
     for (const [identifier, entry] of this.attempts.entries()) {
-      if ((now - entry.firstAttempt) > this.windowMs) {
+      if (now - entry.firstAttempt > this.windowMs) {
         this.attempts.delete(identifier);
       }
     }
@@ -200,39 +210,41 @@ export const validateEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
-export const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
+export const validatePassword = (
+  password: string,
+): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
-  
+
   if (password.length < 6) {
-    errors.push('Parola trebuie să aibă cel puțin 6 caractere');
+    errors.push("Parola trebuie să aibă cel puțin 6 caractere");
   }
-  
+
   if (password.length > 128) {
-    errors.push('Parola nu poate avea mai mult de 128 de caractere');
+    errors.push("Parola nu poate avea mai mult de 128 de caractere");
   }
-  
+
   // Optional: Add more password strength requirements
   if (!/[A-Z]/.test(password)) {
-    errors.push('Parola trebuie să conțină cel puțin o literă mare');
+    errors.push("Parola trebuie să conțină cel puțin o literă mare");
   }
-  
+
   if (!/[a-z]/.test(password)) {
-    errors.push('Parola trebuie să conțină cel puțin o literă mică');
+    errors.push("Parola trebuie să conțină cel puțin o literă mică");
   }
-  
+
   if (!/\d/.test(password)) {
-    errors.push('Parola trebuie să conțină cel puțin o cifră');
+    errors.push("Parola trebuie să conțină cel puțin o cifră");
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 };
 
 export const validatePhoneNumber = (phone: string): boolean => {
   if (!phone) return true; // Optional field
-  const cleanPhone = phone.replace(/\s/g, '');
+  const cleanPhone = phone.replace(/\s/g, "");
   return /^(\+40|0)[0-9]{9}$/.test(cleanPhone);
 };
 
@@ -250,51 +262,65 @@ export const validateLocation = (location: string): boolean => {
 
 // CSRF protection
 export const generateCSRFToken = (): string => {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  );
 };
 
-export const validateCSRFToken = (token: string, storedToken: string): boolean => {
+export const validateCSRFToken = (
+  token: string,
+  storedToken: string,
+): boolean => {
   return token === storedToken;
 };
 
 // Session security
 export const validateSession = (session: unknown): boolean => {
-  if (!session || !(session as Record<string, unknown>).user || !(session as Record<string, unknown>).access_token) {
+  if (
+    !session ||
+    !(session as Record<string, unknown>).user ||
+    !(session as Record<string, unknown>).access_token
+  ) {
     return false;
   }
-  
+
   // Check if token is expired
   const now = Math.floor(Date.now() / 1000);
   const sessionObj = session as Record<string, unknown>;
   if (sessionObj.expires_at && (sessionObj.expires_at as number) < now) {
     return false;
   }
-  
+
   return true;
 };
 
 // Check if Supabase session is ready for API calls
 export const isSessionReady = async (): Promise<boolean> => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return validateSession(session);
   } catch (error) {
-    console.error('Error checking session readiness:', error);
+    console.error("Error checking session readiness:", error);
     return false;
   }
 };
 
 // Wait for session to be ready
-export const waitForSession = async (maxWaitMs: number = 5000): Promise<boolean> => {
+export const waitForSession = async (
+  maxWaitMs: number = 5000,
+): Promise<boolean> => {
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < maxWaitMs) {
     if (await isSessionReady()) {
       return true;
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  
+
   return false;
 };
 
@@ -302,14 +328,15 @@ export const waitForSession = async (maxWaitMs: number = 5000): Promise<boolean>
 export const sanitizeInput = (input: string): string => {
   return input
     .trim()
-    .replace(/[<>]/g, '') // Remove potential HTML tags
+    .replace(/[<>]/g, "") // Remove potential HTML tags
     .substring(0, 1000); // Limit length
 };
 
 // Generate secure random string
 export const generateSecureTokenWithLength = (length: number = 32): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }

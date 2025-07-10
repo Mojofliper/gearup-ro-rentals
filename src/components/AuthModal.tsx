@@ -1,28 +1,39 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import { LocationDetector } from './LocationDetector';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { LocationDetector } from "./LocationDetector";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'login' | 'signup';
-  onSwitchMode: (mode: 'login' | 'signup') => void;
+  mode: "login" | "signup";
+  onSwitchMode: (mode: "login" | "signup") => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onSwitchMode }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [location, setLocation] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+export const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onClose,
+  mode,
+  onSwitchMode,
+}) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [location, setLocation] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { login, signup } = useAuth();
@@ -34,101 +45,108 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
 
     try {
       let result;
-      
-      if (mode === 'login') {
+
+      if (mode === "login") {
         if (!email || !password) {
           toast({
-            title: 'Câmpuri obligatorii',
-            description: 'Te rugăm să completezi emailul și parola.',
-            variant: 'destructive',
+            title: "Câmpuri obligatorii",
+            description: "Te rugăm să completezi emailul și parola.",
+            variant: "destructive",
           });
           setLoading(false);
           return;
         }
-        
+
         result = await login(email, password);
       } else {
         if (!email || !password || !fullName || !location) {
           toast({
-            title: 'Câmpuri obligatorii',
-            description: 'Te rugăm să completezi toate câmpurile obligatorii (email, parolă, nume complet, județ).',
-            variant: 'destructive',
+            title: "Câmpuri obligatorii",
+            description:
+              "Te rugăm să completezi toate câmpurile obligatorii (email, parolă, nume complet, județ).",
+            variant: "destructive",
           });
           setLoading(false);
           return;
         }
-        
+
         if (password.length < 6) {
           toast({
-            title: 'Parolă prea scurtă',
-            description: 'Parola trebuie să aibă cel puțin 6 caractere.',
-            variant: 'destructive',
+            title: "Parolă prea scurtă",
+            description: "Parola trebuie să aibă cel puțin 6 caractere.",
+            variant: "destructive",
           });
           setLoading(false);
           return;
         }
-        
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
           toast({
-            title: 'Email invalid',
-            description: 'Te rugăm să introduci o adresă de email validă.',
-            variant: 'destructive',
+            title: "Email invalid",
+            description: "Te rugăm să introduci o adresă de email validă.",
+            variant: "destructive",
           });
           setLoading(false);
           return;
         }
-        
-        if (phoneNumber && !/^(\+40|0)[0-9]{9}$/.test(phoneNumber.replace(/\s/g, ''))) {
+
+        if (
+          phoneNumber &&
+          !/^(\+40|0)[0-9]{9}$/.test(phoneNumber.replace(/\s/g, ""))
+        ) {
           toast({
-            title: 'Număr de telefon invalid',
-            description: 'Te rugăm să introduci un număr de telefon românesc valid (ex: +40 7XX XXX XXX sau 07XX XXX XXX).',
-            variant: 'destructive',
+            title: "Număr de telefon invalid",
+            description:
+              "Te rugăm să introduci un număr de telefon românesc valid (ex: +40 7XX XXX XXX sau 07XX XXX XXX).",
+            variant: "destructive",
           });
           setLoading(false);
           return;
         }
-        
+
         result = await signup(email, password, fullName, location, phoneNumber);
       }
 
-      console.log('AuthModal: Result from auth function:', result);
-      
+      console.log("AuthModal: Result from auth function:", result);
+
       if (result && result.error) {
-        console.log('AuthModal: Showing error toast:', result.error);
+        console.log("AuthModal: Showing error toast:", result.error);
         toast({
-          title: 'Eroare',
+          title: "Eroare",
           description: result.error,
-          variant: 'destructive',
+          variant: "destructive",
         });
         setLoading(false);
         return;
       }
       if (result && !result.error) {
-        console.log('AuthModal: Showing success toast for mode:', mode);
-        if (mode === 'login') {
+        console.log("AuthModal: Showing success toast for mode:", mode);
+        if (mode === "login") {
           toast({
-            title: 'Conectare reușită',
-            description: 'Bun venit pe GearUp!',
+            title: "Conectare reușită",
+            description: "Bun venit pe GearUp!",
           });
           onClose();
           resetForm();
-          navigate('/browse');
+          navigate("/browse");
         } else {
           toast({
-            title: 'Cont creat cu succes!',
-            description: 'Contul tău a fost creat cu succes. Te poți conecta acum cu emailul și parola.',
+            title: "Cont creat cu succes!",
+            description:
+              "Contul tău a fost creat cu succes. Te poți conecta acum cu emailul și parola.",
           });
-          onSwitchMode('login');
+          onSwitchMode("login");
           resetForm();
         }
       }
     } catch (error) {
-      console.error('Auth modal error:', error);
+      console.error("Auth modal error:", error);
       toast({
-        title: 'Eroare neașteptată',
-        description: 'A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.',
-        variant: 'destructive',
+        title: "Eroare neașteptată",
+        description:
+          "A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -136,68 +154,75 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
   };
 
   const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setFullName('');
-    setLocation('');
-    setPhoneNumber('');
+    setEmail("");
+    setPassword("");
+    setFullName("");
+    setLocation("");
+    setPhoneNumber("");
   };
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${window.location.origin}/`,
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+            access_type: "offline",
+            prompt: "consent",
           },
         },
       });
-      
+
       if (error) {
-        console.error('Google sign-in error:', error);
-        
-        if (error.message.includes('popup_closed_by_user')) {
+        console.error("Google sign-in error:", error);
+
+        if (error.message.includes("popup_closed_by_user")) {
           toast({
-            title: 'Conectare anulată',
-            description: 'Fereastra de conectare Google a fost închisă. Te rugăm să încerci din nou.',
-            variant: 'destructive',
+            title: "Conectare anulată",
+            description:
+              "Fereastra de conectare Google a fost închisă. Te rugăm să încerci din nou.",
+            variant: "destructive",
           });
-        } else if (error.message.includes('access_denied')) {
+        } else if (error.message.includes("access_denied")) {
           toast({
-            title: 'Acces refuzat',
-            description: 'Ai refuzat accesul la contul Google. Te rugăm să accepți pentru a continua.',
-            variant: 'destructive',
+            title: "Acces refuzat",
+            description:
+              "Ai refuzat accesul la contul Google. Te rugăm să accepți pentru a continua.",
+            variant: "destructive",
           });
-        } else if (error.message.includes('network')) {
+        } else if (error.message.includes("network")) {
           toast({
-            title: 'Eroare de rețea',
-            description: 'Nu s-a putut conecta la Google. Verifică conexiunea la internet și încearcă din nou.',
-            variant: 'destructive',
+            title: "Eroare de rețea",
+            description:
+              "Nu s-a putut conecta la Google. Verifică conexiunea la internet și încearcă din nou.",
+            variant: "destructive",
           });
-        } else if (error.message.includes('timeout')) {
+        } else if (error.message.includes("timeout")) {
           toast({
-            title: 'Timeout',
-            description: 'Conectarea cu Google a durat prea mult. Te rugăm să încerci din nou.',
-            variant: 'destructive',
+            title: "Timeout",
+            description:
+              "Conectarea cu Google a durat prea mult. Te rugăm să încerci din nou.",
+            variant: "destructive",
           });
         } else {
           toast({
-            title: 'Eroare la conectarea cu Google',
-            description: error.message || 'Nu s-a putut conecta cu Google. Te rugăm să încerci din nou.',
-            variant: 'destructive',
+            title: "Eroare la conectarea cu Google",
+            description:
+              error.message ||
+              "Nu s-a putut conecta cu Google. Te rugăm să încerci din nou.",
+            variant: "destructive",
           });
         }
       }
     } catch (error) {
-      console.error('Google sign-in exception:', error);
+      console.error("Google sign-in exception:", error);
       toast({
-        title: 'Eroare neașteptată',
-        description: 'A apărut o eroare neașteptată la conectarea cu Google. Te rugăm să încerci din nou.',
-        variant: 'destructive',
+        title: "Eroare neașteptată",
+        description:
+          "A apărut o eroare neașteptată la conectarea cu Google. Te rugăm să încerci din nou.",
+        variant: "destructive",
       });
     } finally {
       setGoogleLoading(false);
@@ -209,21 +234,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
       <DialogContent className="w-[95vw] max-w-md mx-auto p-6 sm:p-8 overflow-y-auto max-h-[90vh] rounded-2xl sm:rounded-3xl border-0 shadow-2xl bg-white">
         <DialogHeader className="mb-6">
           <DialogTitle className="text-xl sm:text-2xl font-bold text-center text-gray-900">
-            {mode === 'login' ? 'Conectează-te' : 'Creează un cont'}
+            {mode === "login" ? "Conectează-te" : "Creează un cont"}
           </DialogTitle>
           <DialogDescription className="text-center text-gray-600 mt-2">
-            {mode === 'login' 
-              ? 'Introdu emailul și parola pentru a te conecta la contul tău'
-              : 'Completează informațiile pentru a crea un cont nou'
-            }
+            {mode === "login"
+              ? "Introdu emailul și parola pentru a te conecta la contul tău"
+              : "Completează informațiile pentru a crea un cont nou"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {mode === 'signup' && (
+          {mode === "signup" && (
             <>
               <div>
-                <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 mb-2 block">Nume complet *</Label>
+                <Label
+                  htmlFor="fullName"
+                  className="text-sm font-medium text-gray-700 mb-2 block"
+                >
+                  Nume complet *
+                </Label>
                 <Input
                   id="fullName"
                   type="text"
@@ -236,7 +265,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               </div>
 
               <div>
-                <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700 mb-2 block">Număr de telefon (opțional)</Label>
+                <Label
+                  htmlFor="phoneNumber"
+                  className="text-sm font-medium text-gray-700 mb-2 block"
+                >
+                  Număr de telefon (opțional)
+                </Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -248,7 +282,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
               </div>
 
               <div>
-                <Label htmlFor="location" className="text-sm font-medium text-gray-700 mb-2 block">Județul tău *</Label>
+                <Label
+                  htmlFor="location"
+                  className="text-sm font-medium text-gray-700 mb-2 block"
+                >
+                  Județul tău *
+                </Label>
                 <LocationDetector
                   onLocationChange={setLocation}
                   currentLocation={location}
@@ -259,7 +298,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           )}
 
           <div>
-            <Label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">Email *</Label>
+            <Label
+              htmlFor="email"
+              className="text-sm font-medium text-gray-700 mb-2 block"
+            >
+              Email *
+            </Label>
             <Input
               id="email"
               type="email"
@@ -272,7 +316,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           </div>
 
           <div>
-            <Label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">Parolă *</Label>
+            <Label
+              htmlFor="password"
+              className="text-sm font-medium text-gray-700 mb-2 block"
+            >
+              Parolă *
+            </Label>
             <Input
               id="password"
               type="password"
@@ -285,12 +334,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
             />
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-base" 
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-base"
             disabled={loading}
           >
-            {loading ? 'Se procesează...' : (mode === 'login' ? 'Conectează-te' : 'Creează contul')}
+            {loading
+              ? "Se procesează..."
+              : mode === "login"
+                ? "Conectează-te"
+                : "Creează contul"}
           </Button>
         </form>
 
@@ -305,7 +358,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
             disabled={googleLoading}
           >
             {googleLoading ? (
-              'Se conectează...'
+              "Se conectează..."
             ) : (
               <>
                 <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
@@ -335,10 +388,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
         <div className="text-center mt-6">
           <button
             type="button"
-            onClick={() => onSwitchMode(mode === 'login' ? 'signup' : 'login')}
+            onClick={() => onSwitchMode(mode === "login" ? "signup" : "login")}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
           >
-            {mode === 'login' ? 'Nu ai cont? Înregistrează-te' : 'Ai deja cont? Conectează-te'}
+            {mode === "login"
+              ? "Nu ai cont? Înregistrează-te"
+              : "Ai deja cont? Conectează-te"}
           </button>
         </div>
       </DialogContent>

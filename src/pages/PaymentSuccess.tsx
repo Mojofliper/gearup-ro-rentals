@@ -1,23 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  CheckCircle, 
-  Shield, 
-  Calendar, 
-  MapPin, 
+import React, { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  CheckCircle,
+  Shield,
+  Calendar,
+  MapPin,
   CreditCard,
   ArrowRight,
-  Home
-} from 'lucide-react';
-import { PaymentService } from '@/services/paymentService';
-import { formatAmountForDisplay } from '@/integrations/stripe/client';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useNotifications } from '@/hooks/useNotifications';
+  Home,
+} from "lucide-react";
+import { PaymentService } from "@/services/paymentService";
+import { formatAmountForDisplay } from "@/integrations/stripe/client";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface PaymentSuccessData {
   booking: Record<string, unknown> | null;
@@ -29,17 +29,19 @@ export const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(null);
-  const [error, setError] = useState<string>('');
+  const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(
+    null,
+  );
+  const [error, setError] = useState<string>("");
   const { notifyPaymentCompleted, notifyPaymentReceived } = useNotifications();
 
-  const sessionId = searchParams.get('session_id');
-  const bookingId = searchParams.get('booking_id');
+  const sessionId = searchParams.get("session_id");
+  const bookingId = searchParams.get("booking_id");
 
   useEffect(() => {
     const handlePaymentSuccess = async () => {
       if (!sessionId) {
-        setError('Nu s-a găsit sesiunea de plată');
+        setError("Nu s-a găsit sesiunea de plată");
         setLoading(false);
         return;
       }
@@ -54,38 +56,41 @@ export const PaymentSuccess: React.FC = () => {
         // Get transaction details
         let transaction = null;
         if (booking) {
-          transaction = await PaymentService.getOrCreateTransactionForBooking(booking);
+          transaction =
+            await PaymentService.getOrCreateTransactionForBooking(booking);
         }
 
         // Get escrow transaction if exists
         let escrowTransaction = null;
         if (booking) {
           try {
-            escrowTransaction = await PaymentService.getEscrowTransaction(booking.id);
+            escrowTransaction = await PaymentService.getEscrowTransaction(
+              booking.id,
+            );
           } catch (error) {
             // Escrow transaction might not exist yet
-            console.log('No escrow transaction found yet');
+            console.log("No escrow transaction found yet");
           }
         }
 
         // Update booking status to confirmed if payment was successful
-        if (booking && booking.payment_status !== 'completed') {
+        if (booking && booking.payment_status !== "completed") {
           try {
             const { error: updateError } = await supabase
-              .from('bookings')
+              .from("bookings")
               .update({
-                status: 'confirmed',
-                payment_status: 'completed'
+                status: "confirmed",
+                payment_status: "completed",
               })
-              .eq('id', booking.id);
+              .eq("id", booking.id);
 
             if (updateError) {
-              console.error('Error updating booking status:', updateError);
+              console.error("Error updating booking status:", updateError);
             } else {
-              console.log('Booking status updated to confirmed');
+              console.log("Booking status updated to confirmed");
               // Refresh booking data
               booking = await PaymentService.getBookingById(bookingId!);
-              
+
               // Send notifications
               try {
                 if (booking) {
@@ -93,37 +98,43 @@ export const PaymentSuccess: React.FC = () => {
                   await notifyPaymentCompleted(
                     booking.id,
                     booking.total_amount || 0,
-                    booking.renter_id
+                    booking.renter_id,
                   );
-                  
+
                   // Notify owner that payment was received
                   await notifyPaymentReceived(
                     booking.id,
                     booking.total_amount || 0,
-                    booking.owner_id
+                    booking.owner_id,
                   );
                 }
               } catch (notifError) {
-                console.error('Error sending payment notifications:', notifError);
+                console.error(
+                  "Error sending payment notifications:",
+                  notifError,
+                );
               }
             }
           } catch (error) {
-            console.error('Error updating booking status:', error);
+            console.error("Error updating booking status:", error);
           }
         }
 
         setPaymentData({
           booking,
           transaction,
-          escrowTransaction
+          escrowTransaction,
         });
 
-        toast.success('Plată procesată cu succes!');
+        toast.success("Plată procesată cu succes!");
       } catch (error: unknown) {
-        console.error('Error handling payment success:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Eroare la procesarea plății';
+        console.error("Error handling payment success:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Eroare la procesarea plății";
         setError(errorMessage);
-        toast.error('Eroare la procesarea plății');
+        toast.error("Eroare la procesarea plății");
       } finally {
         setLoading(false);
       }
@@ -136,12 +147,12 @@ export const PaymentSuccess: React.FC = () => {
     if (paymentData?.booking?.id) {
       navigate(`/dashboard?tab=bookings&booking=${paymentData.booking.id}`);
     } else {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   };
 
   const handleGoHome = () => {
-    navigate('/');
+    navigate("/");
   };
 
   if (loading) {
@@ -163,7 +174,9 @@ export const PaymentSuccess: React.FC = () => {
             <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="h-6 w-6 text-red-600" />
             </div>
-            <CardTitle className="text-xl text-red-600">Eroare la plată</CardTitle>
+            <CardTitle className="text-xl text-red-600">
+              Eroare la plată
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-gray-600 mb-6">{error}</p>
@@ -187,7 +200,9 @@ export const PaymentSuccess: React.FC = () => {
             <CardTitle className="text-xl">Plată procesată</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-gray-600 mb-6">Plata a fost procesată cu succes!</p>
+            <p className="text-gray-600 mb-6">
+              Plata a fost procesată cu succes!
+            </p>
             <Button onClick={handleGoHome} className="w-full">
               <Home className="h-4 w-4 mr-2" />
               Înapoi la pagina principală
@@ -208,7 +223,9 @@ export const PaymentSuccess: React.FC = () => {
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Plată confirmată!</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Plată confirmată!
+          </h1>
           <p className="text-gray-600">
             Plata a fost procesată cu succes și este în escrow.
           </p>
@@ -228,22 +245,42 @@ export const PaymentSuccess: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Echipament</p>
-                    <p className="font-medium">{(booking.gear as Record<string, unknown>)?.title as string || 'Echipament'}</p>
+                    <p className="font-medium">
+                      {((booking.gear as Record<string, unknown>)
+                        ?.title as string) || "Echipament"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Perioada</p>
                     <p className="font-medium">
-                      {new Date(booking.start_date as string).toLocaleDateString()} - {new Date(booking.end_date as string).toLocaleDateString()}
+                      {new Date(
+                        booking.start_date as string,
+                      ).toLocaleDateString()}{" "}
+                      -{" "}
+                      {new Date(
+                        booking.end_date as string,
+                      ).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Zile</p>
-                    <p className="font-medium">{booking.total_days as number} {(booking.total_days as number) === 1 ? 'zi' : 'zile'}</p>
+                    <p className="font-medium">
+                      {booking.total_days as number}{" "}
+                      {(booking.total_days as number) === 1 ? "zi" : "zile"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Status</p>
-                    <Badge variant={(booking.status as string) === 'pending' ? 'secondary' : 'default'}>
-                      {(booking.status as string) === 'pending' ? 'În așteptare' : booking.status as string}
+                    <Badge
+                      variant={
+                        (booking.status as string) === "pending"
+                          ? "secondary"
+                          : "default"
+                      }
+                    >
+                      {(booking.status as string) === "pending"
+                        ? "În așteptare"
+                        : (booking.status as string)}
                     </Badge>
                   </div>
                 </div>
@@ -264,22 +301,36 @@ export const PaymentSuccess: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Închiriere:</span>
-                    <span>{formatAmountForDisplay(transaction.rental_amount as number)}</span>
+                    <span>
+                      {formatAmountForDisplay(
+                        transaction.rental_amount as number,
+                      )}
+                    </span>
                   </div>
                   {(transaction.deposit_amount as number) > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>Garanție:</span>
-                      <span>{formatAmountForDisplay(transaction.deposit_amount as number)}</span>
+                      <span>
+                        {formatAmountForDisplay(
+                          transaction.deposit_amount as number,
+                        )}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span>Taxă platformă:</span>
-                    <span>{formatAmountForDisplay(transaction.platform_fee as number)}</span>
+                    <span>
+                      {formatAmountForDisplay(
+                        transaction.platform_fee as number,
+                      )}
+                    </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-semibold">
                     <span>Total plătit:</span>
-                    <span>{formatAmountForDisplay(transaction.amount as number)}</span>
+                    <span>
+                      {formatAmountForDisplay(transaction.amount as number)}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -298,11 +349,14 @@ export const PaymentSuccess: React.FC = () => {
               <div className="p-4 bg-blue-50 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Shield className="h-4 w-4 text-blue-600" />
-                  <span className="font-medium text-blue-800">Fondurile sunt în escrow</span>
+                  <span className="font-medium text-blue-800">
+                    Fondurile sunt în escrow
+                  </span>
                 </div>
                 <p className="text-sm text-blue-700">
-                  Fondurile sunt protejate și vor fi eliberate automat după finalizarea închirierii. 
-                  Garanția va fi returnată la finalizarea tranzacției.
+                  Fondurile sunt protejate și vor fi eliberate automat după
+                  finalizarea închirierii. Garanția va fi returnată la
+                  finalizarea tranzacției.
                 </p>
               </div>
             </CardContent>
@@ -323,13 +377,27 @@ export const PaymentSuccess: React.FC = () => {
                     <strong>Timp de procesare rambursări:</strong>
                   </p>
                   <ul className="text-xs text-yellow-700 space-y-1 ml-4">
-                    <li>• <strong>Carduri bancare:</strong> 5-10 zile lucrătoare</li>
-                    <li>• <strong>Carduri internaționale:</strong> până la 14 zile lucrătoare</li>
-                    <li>• <strong>Apple Pay/Google Pay:</strong> 3-5 zile lucrătoare</li>
-                    <li>• <strong>Transfer bancar:</strong> 3-5 zile lucrătoare</li>
+                    <li>
+                      • <strong>Carduri bancare:</strong> 5-10 zile lucrătoare
+                    </li>
+                    <li>
+                      • <strong>Carduri internaționale:</strong> până la 14 zile
+                      lucrătoare
+                    </li>
+                    <li>
+                      • <strong>Apple Pay/Google Pay:</strong> 3-5 zile
+                      lucrătoare
+                    </li>
+                    <li>
+                      • <strong>Transfer bancar:</strong> 3-5 zile lucrătoare
+                    </li>
                   </ul>
                   <p className="text-xs text-yellow-700 mt-2">
-                    <em>Notă: Rambursarea este procesată imediat de platforma noastră. Timpul de afișare pe extrasul bancar depinde de banca și tipul cardului.</em>
+                    <em>
+                      Notă: Rambursarea este procesată imediat de platforma
+                      noastră. Timpul de afișare pe extrasul bancar depinde de
+                      banca și tipul cardului.
+                    </em>
                   </p>
                 </div>
               </div>
@@ -350,7 +418,8 @@ export const PaymentSuccess: React.FC = () => {
                   <strong>2.</strong> Vei primi instrucțiuni pentru ridicare
                 </p>
                 <p className="text-sm text-gray-600">
-                  <strong>3.</strong> După returnare, fondurile vor fi eliberate automat
+                  <strong>3.</strong> După returnare, fondurile vor fi eliberate
+                  automat
                 </p>
               </div>
             </CardContent>

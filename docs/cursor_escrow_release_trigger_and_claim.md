@@ -1,11 +1,12 @@
 # Escrow release trigger and claims system
+
 _Exported on 7/10/2025 at 19:26:48 GMT+3 from Cursor (1.2.2)_
 
 ---
 
 **User**
 
-can you give me the full escrow release trigger the full i mean with the claims system with the dual confirmation that we fixed in this conversation@cursor_fix_claim_system_for_fund_distri.md 
+can you give me the full escrow release trigger the full i mean with the claims system with the dual confirmation that we fixed in this conversation@cursor_fix_claim_system_for_fund_distri.md
 
 ---
 
@@ -13,257 +14,265 @@ can you give me the full escrow release trigger the full i mean with the claims 
 
 I'll examine the attached file to understand the claim system fixes and then provide you with the complete escrow release trigger that includes the dual confirmation system.
 
-
 Let me continue reading the file to see the complete implementation:
-
 
 Let me continue reading to see the claim handling logic:
 
-
 Let me continue reading to see the complete implementation:
 
-
 Let me continue reading to see the complete implementation:
-
 
 I need to add a new release type to handle the case where a renter's claim is approved. Let me create the complete fixed escrow release function:
 
-
 ```typescript
 // @ts-ignore: Deno Deploy/Supabase Edge Functions remote import
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-ignore: Deno Deploy/Supabase Edge Functions remote import
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // @ts-ignore: Deno Deploy/Supabase Edge Functions remote import
-import Stripe from 'https://esm.sh/stripe@15.0.0'
+import Stripe from "https://esm.sh/stripe@15.0.0";
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2024-12-18.acacia',
-})
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+  apiVersion: "2024-12-18.acacia",
+});
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     // Validate content type
-    const contentType = req.headers.get('content-type')
-    if (!contentType || !contentType.includes('application/json')) {
+    const contentType = req.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
       return new Response(
-        JSON.stringify({ error: 'Content-Type must be application/json' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({ error: "Content-Type must be application/json" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Parse request body with proper error handling
-    let requestBody
+    let requestBody;
     try {
-      const bodyText = await req.text()
-      if (!bodyText || bodyText.trim() === '') {
+      const bodyText = await req.text();
+      if (!bodyText || bodyText.trim() === "") {
         return new Response(
-          JSON.stringify({ error: 'Request body is empty' }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
+          JSON.stringify({ error: "Request body is empty" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
-      requestBody = JSON.parse(bodyText)
+      requestBody = JSON.parse(bodyText);
     } catch (parseError) {
-      console.error('JSON parsing error:', parseError)
+      console.error("JSON parsing error:", parseError);
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const { booking_id, release_type, deposit_to_owner = false } = requestBody
+    const { booking_id, release_type, deposit_to_owner = false } = requestBody;
 
     if (!booking_id || !release_type) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: booking_id, release_type' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({
+          error: "Missing required fields: booking_id, release_type",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    console.log(`Starting escrow release for booking ${booking_id} with type ${release_type}`)
+    console.log(
+      `Starting escrow release for booking ${booking_id} with type ${release_type}`,
+    );
 
     // Create Supabase client
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
     // Get booking and escrow transaction details
     const { data: booking, error: bookingError } = await supabaseClient
-      .from('bookings')
-      .select(`
+      .from("bookings")
+      .select(
+        `
         *,
         gear:gear(*),
         owner:users!bookings_owner_id_fkey(*)
-      `)
-      .eq('id', booking_id)
-      .single()
+      `,
+      )
+      .eq("id", booking_id)
+      .single();
 
     if (bookingError || !booking) {
-      console.error('Booking not found:', bookingError)
-      return new Response(
-        JSON.stringify({ error: 'Booking not found' }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+      console.error("Booking not found:", bookingError);
+      return new Response(JSON.stringify({ error: "Booking not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { data: escrowTransaction, error: escrowError } = await supabaseClient
-      .from('escrow_transactions')
-      .select('*')
-      .eq('booking_id', booking_id)
-      .single()
+      .from("escrow_transactions")
+      .select("*")
+      .eq("booking_id", booking_id)
+      .single();
 
     if (escrowError || !escrowTransaction) {
-      console.error('Escrow transaction not found:', escrowError)
+      console.error("Escrow transaction not found:", escrowError);
       return new Response(
-        JSON.stringify({ error: 'Escrow transaction not found' }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({ error: "Escrow transaction not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Validate escrow status
-    if (escrowTransaction.escrow_status !== 'held') {
-      console.error('Escrow is not in held status:', escrowTransaction.escrow_status)
+    if (escrowTransaction.escrow_status !== "held") {
+      console.error(
+        "Escrow is not in held status:",
+        escrowTransaction.escrow_status,
+      );
       return new Response(
-        JSON.stringify({ error: 'Escrow is not in held status' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({ error: "Escrow is not in held status" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Validate amounts
-    if (!escrowTransaction.rental_amount || escrowTransaction.rental_amount <= 0) {
-      console.error('Invalid rental amount:', escrowTransaction.rental_amount)
-      return new Response(
-        JSON.stringify({ error: 'Invalid rental amount' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+    if (
+      !escrowTransaction.rental_amount ||
+      escrowTransaction.rental_amount <= 0
+    ) {
+      console.error("Invalid rental amount:", escrowTransaction.rental_amount);
+      return new Response(JSON.stringify({ error: "Invalid rental amount" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    if (!escrowTransaction.deposit_amount || escrowTransaction.deposit_amount < 0) {
-      console.error('Invalid deposit amount:', escrowTransaction.deposit_amount)
-      return new Response(
-        JSON.stringify({ error: 'Invalid deposit amount' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+    if (
+      !escrowTransaction.deposit_amount ||
+      escrowTransaction.deposit_amount < 0
+    ) {
+      console.error(
+        "Invalid deposit amount:",
+        escrowTransaction.deposit_amount,
+      );
+      return new Response(JSON.stringify({ error: "Invalid deposit amount" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log('Escrow transaction details:', {
+    console.log("Escrow transaction details:", {
       rental_amount: escrowTransaction.rental_amount,
       deposit_amount: escrowTransaction.deposit_amount,
       platform_fee: escrowTransaction.platform_fee,
       stripe_payment_intent_id: escrowTransaction.stripe_payment_intent_id,
-      escrow_status: escrowTransaction.escrow_status
-    })
+      escrow_status: escrowTransaction.escrow_status,
+    });
 
     // Get owner's connected account
     const { data: connectedAccount } = await supabaseClient
-      .from('connected_accounts')
-      .select('*')
-      .eq('owner_id', booking.owner_id)
-      .single()
+      .from("connected_accounts")
+      .select("*")
+      .eq("owner_id", booking.owner_id)
+      .single();
 
     if (!connectedAccount) {
-      console.error('Owner connected account not found for owner_id:', booking.owner_id)
+      console.error(
+        "Owner connected account not found for owner_id:",
+        booking.owner_id,
+      );
       return new Response(
-        JSON.stringify({ error: 'Owner connected account not found' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({ error: "Owner connected account not found" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Check actual Stripe account status instead of relying on database
     try {
-      const stripeAccount = await stripe.accounts.retrieve(connectedAccount.stripe_account_id)
-      console.log('Retrieved Stripe account status:', {
+      const stripeAccount = await stripe.accounts.retrieve(
+        connectedAccount.stripe_account_id,
+      );
+      console.log("Retrieved Stripe account status:", {
         id: stripeAccount.id,
         charges_enabled: stripeAccount.charges_enabled,
         payouts_enabled: stripeAccount.payouts_enabled,
-        details_submitted: stripeAccount.details_submitted
-      })
+        details_submitted: stripeAccount.details_submitted,
+      });
 
       if (!stripeAccount.charges_enabled) {
-        console.error('Stripe account not ready for transfers:', stripeAccount)
+        console.error("Stripe account not ready for transfers:", stripeAccount);
         return new Response(
-          JSON.stringify({ error: 'Owner account not ready for transfers' }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
+          JSON.stringify({ error: "Owner account not ready for transfers" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       // Update our database with the current Stripe account status
       await supabaseClient
-        .from('connected_accounts')
+        .from("connected_accounts")
         .update({
           charges_enabled: stripeAccount.charges_enabled,
           payouts_enabled: stripeAccount.payouts_enabled,
           details_submitted: stripeAccount.details_submitted,
-          account_status: stripeAccount.charges_enabled ? 'active' : 'pending',
+          account_status: stripeAccount.charges_enabled ? "active" : "pending",
           requirements: stripeAccount.requirements || {},
           capabilities: stripeAccount.capabilities || {},
           business_profile: stripeAccount.business_profile || {},
           company: stripeAccount.company || {},
-          individual: stripeAccount.individual || {}
+          individual: stripeAccount.individual || {},
         })
-        .eq('stripe_account_id', connectedAccount.stripe_account_id)
-
+        .eq("stripe_account_id", connectedAccount.stripe_account_id);
     } catch (stripeError) {
-      console.error('Error retrieving Stripe account:', stripeError)
+      console.error("Error retrieving Stripe account:", stripeError);
       return new Response(
-        JSON.stringify({ error: 'Failed to verify Stripe account status' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({ error: "Failed to verify Stripe account status" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    console.log('Connected account found:', {
+    console.log("Connected account found:", {
       owner_id: booking.owner_id,
       stripe_account_id: connectedAccount.stripe_account_id,
       charges_enabled: connectedAccount.charges_enabled,
-      payouts_enabled: connectedAccount.payouts_enabled
-    })
+      payouts_enabled: connectedAccount.payouts_enabled,
+    });
 
     // Before the switch statement, declare variables used in case blocks
     let transfer;
@@ -276,145 +285,167 @@ serve(async (req) => {
     try {
       // Handle different release types
       switch (release_type) {
-        case 'return_confirmed':
-          console.log('Processing return_confirmed release - releasing both rental and deposit')
-          
+        case "return_confirmed":
+          console.log(
+            "Processing return_confirmed release - releasing both rental and deposit",
+          );
+
           // Release rental amount to owner (if not already released)
           if (!booking.rental_amount_released) {
-            console.log('Releasing rental amount to owner:', escrowTransaction.rental_amount)
-            
+            console.log(
+              "Releasing rental amount to owner:",
+              escrowTransaction.rental_amount,
+            );
+
             try {
               // Get the payment intent to find the charge ID
-              const paymentIntent = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
-              const chargeId = paymentIntent.latest_charge
-              
+              const paymentIntent = await stripe.paymentIntents.retrieve(
+                escrowTransaction.stripe_payment_intent_id,
+              );
+              const chargeId = paymentIntent.latest_charge;
+
               if (!chargeId) {
-                throw new Error('No charge found in payment intent')
+                throw new Error("No charge found in payment intent");
               }
-              
+
               // Create a transfer to the connected account using the charge as source
               transfer = await stripe.transfers.create({
                 amount: Math.round(escrowTransaction.rental_amount * 100), // Convert RON to cents for Stripe
-                currency: 'ron',
+                currency: "ron",
                 destination: connectedAccount.stripe_account_id,
                 source_transaction: chargeId,
                 description: `Rental payment for booking ${booking_id}`,
                 metadata: {
                   booking_id: booking_id,
-                  transfer_type: 'rental_payment',
-                  release_type: release_type
-                }
-              })
-              transferId = transfer.id
-              console.log('Rental transfer created:', JSON.stringify(transfer, null, 2))
+                  transfer_type: "rental_payment",
+                  release_type: release_type,
+                },
+              });
+              transferId = transfer.id;
+              console.log(
+                "Rental transfer created:",
+                JSON.stringify(transfer, null, 2),
+              );
 
               // Update escrow transaction
               await supabaseClient
-                .from('escrow_transactions')
+                .from("escrow_transactions")
                 .update({
                   rental_released_at: new Date().toISOString(),
                   rental_transfer_id: transfer.id,
-                  transfer_id: transfer.id // Always set transfer_id for webhook compatibility
+                  transfer_id: transfer.id, // Always set transfer_id for webhook compatibility
                 })
-                .eq('id', escrowTransaction.id)
+                .eq("id", escrowTransaction.id);
 
               // Update booking
               await supabaseClient
-                .from('bookings')
+                .from("bookings")
                 .update({
-                  rental_amount_released: true
+                  rental_amount_released: true,
                 })
-                .eq('id', booking_id)
-              
+                .eq("id", booking_id);
+
               // Send notification to owner about rental payment
-              await supabaseClient
-                .from('notifications')
-                .insert({
-                  user_id: booking.owner_id,
-                  title: 'Plată închiriere primită',
-                  message: `Ai primit plata pentru închirierea "${booking.gear.title}"`,
-                  type: 'payment_received',
-                  data: { 
-                    bookingId: booking_id, 
-                    amount: escrowTransaction.rental_amount,
-                    gearTitle: booking.gear.title
-                  },
-                  is_read: false
-                })
+              await supabaseClient.from("notifications").insert({
+                user_id: booking.owner_id,
+                title: "Plată închiriere primită",
+                message: `Ai primit plata pentru închirierea "${booking.gear.title}"`,
+                type: "payment_received",
+                data: {
+                  bookingId: booking_id,
+                  amount: escrowTransaction.rental_amount,
+                  gearTitle: booking.gear.title,
+                },
+                is_read: false,
+              });
             } catch (transferError) {
-              console.error('Error creating rental transfer:', JSON.stringify(transferError, null, 2))
-              throw new Error(`Failed to create rental transfer: ${transferError.message}`)
+              console.error(
+                "Error creating rental transfer:",
+                JSON.stringify(transferError, null, 2),
+              );
+              throw new Error(
+                `Failed to create rental transfer: ${transferError.message}`,
+              );
             }
           }
 
           // Release deposit back to renter (if not already returned)
           if (!booking.deposit_returned) {
-            console.log('Returning deposit to renter:', escrowTransaction.deposit_amount)
-            
+            console.log(
+              "Returning deposit to renter:",
+              escrowTransaction.deposit_amount,
+            );
+
             try {
               depositRefund = await stripe.refunds.create({
                 payment_intent: escrowTransaction.stripe_payment_intent_id,
                 amount: Math.round(escrowTransaction.deposit_amount * 100), // Convert RON to cents for Stripe
                 metadata: {
                   booking_id: booking_id,
-                  refund_type: 'deposit_return',
-                  release_type: release_type
-                }
-              })
-              refundId = depositRefund.id
-              console.log('Deposit refund created:', JSON.stringify(depositRefund, null, 2))
+                  refund_type: "deposit_return",
+                  release_type: release_type,
+                },
+              });
+              refundId = depositRefund.id;
+              console.log(
+                "Deposit refund created:",
+                JSON.stringify(depositRefund, null, 2),
+              );
 
               // Update escrow transaction
               await supabaseClient
-                .from('escrow_transactions')
+                .from("escrow_transactions")
                 .update({
                   deposit_returned_at: new Date().toISOString(),
                   deposit_refund_id: refundId,
-                  escrow_status: 'released'
+                  escrow_status: "released",
                 })
-                .eq('id', escrowTransaction.id)
+                .eq("id", escrowTransaction.id);
 
               // Update booking
               await supabaseClient
-                .from('bookings')
+                .from("bookings")
                 .update({
                   deposit_returned: true,
-                  escrow_release_date: new Date().toISOString()
+                  escrow_release_date: new Date().toISOString(),
                 })
-                .eq('id', booking_id)
-              
+                .eq("id", booking_id);
+
               // Send notification to renter about deposit return
-              await supabaseClient
-                .from('notifications')
-                .insert({
-                  user_id: booking.renter_id,
-                  title: 'Depozit returnat',
-                  message: `Depozitul pentru "${booking.gear.title}" a fost returnat`,
-                  type: 'payment_received',
-                  data: { 
-                    bookingId: booking_id, 
-                    amount: escrowTransaction.deposit_amount,
-                    gearTitle: booking.gear.title
-                  },
-                  is_read: false
-                })
+              await supabaseClient.from("notifications").insert({
+                user_id: booking.renter_id,
+                title: "Depozit returnat",
+                message: `Depozitul pentru "${booking.gear.title}" a fost returnat`,
+                type: "payment_received",
+                data: {
+                  bookingId: booking_id,
+                  amount: escrowTransaction.deposit_amount,
+                  gearTitle: booking.gear.title,
+                },
+                is_read: false,
+              });
             } catch (refundError) {
-              console.error('Error creating deposit refund:', JSON.stringify(refundError, null, 2))
-              throw new Error(`Failed to create deposit refund: ${refundError.message}`)
+              console.error(
+                "Error creating deposit refund:",
+                JSON.stringify(refundError, null, 2),
+              );
+              throw new Error(
+                `Failed to create deposit refund: ${refundError.message}`,
+              );
             }
           }
-          
+
           // Final update: Set booking status to completed after both rental and deposit are processed
           await supabaseClient
-            .from('bookings')
+            .from("bookings")
             .update({
-              status: 'completed'
+              status: "completed",
             })
-            .eq('id', booking_id)
-          break
+            .eq("id", booking_id);
+          break;
 
-        case 'completed':
-          console.log('Processing completed release (deposit only)')
+        case "completed":
+          console.log("Processing completed release (deposit only)");
           // Release deposit back to renter
           if (!booking.deposit_returned) {
             try {
@@ -423,341 +454,380 @@ serve(async (req) => {
                 amount: Math.round(escrowTransaction.deposit_amount * 100), // Convert RON to cents for Stripe
                 metadata: {
                   booking_id: booking_id,
-                  refund_type: 'deposit_return',
-                  release_type: release_type
-                }
-              })
-              refundId = depositRefund.id
-              console.log('Deposit refund created:', JSON.stringify(depositRefund, null, 2))
+                  refund_type: "deposit_return",
+                  release_type: release_type,
+                },
+              });
+              refundId = depositRefund.id;
+              console.log(
+                "Deposit refund created:",
+                JSON.stringify(depositRefund, null, 2),
+              );
 
               // Update escrow transaction
               await supabaseClient
-                .from('escrow_transactions')
+                .from("escrow_transactions")
                 .update({
                   deposit_returned_at: new Date().toISOString(),
                   deposit_refund_id: refundId,
-                  escrow_status: 'released'
+                  escrow_status: "released",
                 })
-                .eq('id', escrowTransaction.id)
+                .eq("id", escrowTransaction.id);
 
               // Update booking
               await supabaseClient
-                .from('bookings')
+                .from("bookings")
                 .update({
                   deposit_returned: true,
-                  escrow_release_date: new Date().toISOString()
+                  escrow_release_date: new Date().toISOString(),
                 })
-                .eq('id', booking_id)
-              
+                .eq("id", booking_id);
+
               // Send notification to renter about deposit return
-              await supabaseClient
-                .from('notifications')
-                .insert({
-                  user_id: booking.renter_id,
-                  title: 'Depozit returnat',
-                  message: `Depozitul pentru "${booking.gear.title}" a fost returnat`,
-                  type: 'payment_received',
-                  data: { 
-                    bookingId: booking_id, 
-                    amount: escrowTransaction.deposit_amount,
-                    gearTitle: booking.gear.title
-                  },
-                  is_read: false
-                })
+              await supabaseClient.from("notifications").insert({
+                user_id: booking.renter_id,
+                title: "Depozit returnat",
+                message: `Depozitul pentru "${booking.gear.title}" a fost returnat`,
+                type: "payment_received",
+                data: {
+                  bookingId: booking_id,
+                  amount: escrowTransaction.deposit_amount,
+                  gearTitle: booking.gear.title,
+                },
+                is_read: false,
+              });
             } catch (refundError) {
-              console.error('Error creating deposit refund:', JSON.stringify(refundError, null, 2))
-              throw new Error(`Failed to create deposit refund: ${refundError.message}`)
+              console.error(
+                "Error creating deposit refund:",
+                JSON.stringify(refundError, null, 2),
+              );
+              throw new Error(
+                `Failed to create deposit refund: ${refundError.message}`,
+              );
             }
           }
-          break
+          break;
 
-        case 'claim_owner':
-          console.log('Processing claim_owner release (owner wins claim)')
+        case "claim_owner":
+          console.log("Processing claim_owner release (owner wins claim)");
           // Owner wins claim - transfer both rental and deposit to owner (minus platform fee)
-          
+
           try {
             // Get the payment intent to find the charge ID
-            const paymentIntent = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
-            const chargeId = paymentIntent.latest_charge
-            
+            const paymentIntent = await stripe.paymentIntents.retrieve(
+              escrowTransaction.stripe_payment_intent_id,
+            );
+            const chargeId = paymentIntent.latest_charge;
+
             if (!chargeId) {
-              throw new Error('No charge found in payment intent')
+              throw new Error("No charge found in payment intent");
             }
-            
+
             // Calculate total amount to owner (rental + deposit - platform fee)
-            const totalAmountToOwner = escrowTransaction.rental_amount + escrowTransaction.deposit_amount - (escrowTransaction.platform_fee || 0)
-            
+            const totalAmountToOwner =
+              escrowTransaction.rental_amount +
+              escrowTransaction.deposit_amount -
+              (escrowTransaction.platform_fee || 0);
+
             transfer = await stripe.transfers.create({
               amount: Math.round(totalAmountToOwner * 100), // Convert RON to cents for Stripe
-              currency: 'ron',
+              currency: "ron",
               destination: connectedAccount.stripe_account_id,
               source_transaction: chargeId,
               description: `Claim settlement for booking ${booking_id} (owner wins)`,
               metadata: {
                 booking_id: booking_id,
-                transfer_type: 'claim_settlement',
+                transfer_type: "claim_settlement",
                 release_type: release_type,
-                platform_fee: escrowTransaction.platform_fee || 0
-              }
-            })
-            transferId = transfer.id
-            console.log('Owner claim win transfer created:', JSON.stringify(transfer, null, 2))
+                platform_fee: escrowTransaction.platform_fee || 0,
+              },
+            });
+            transferId = transfer.id;
+            console.log(
+              "Owner claim win transfer created:",
+              JSON.stringify(transfer, null, 2),
+            );
 
             // Update escrow transaction
             await supabaseClient
-              .from('escrow_transactions')
+              .from("escrow_transactions")
               .update({
-                escrow_status: 'released',
+                escrow_status: "released",
                 released_at: new Date().toISOString(),
                 transfer_id: transfer.id,
-                release_reason: 'Owner claim approved - rental and deposit to owner'
+                release_reason:
+                  "Owner claim approved - rental and deposit to owner",
               })
-              .eq('id', escrowTransaction.id)
+              .eq("id", escrowTransaction.id);
 
             // Update booking
             await supabaseClient
-              .from('bookings')
+              .from("bookings")
               .update({
-                status: 'completed',
+                status: "completed",
                 rental_amount_released: true,
                 deposit_returned: false, // Deposit goes to owner, not returned to renter
-                escrow_release_date: new Date().toISOString()
+                escrow_release_date: new Date().toISOString(),
               })
-              .eq('id', booking_id)
-              
-            // Send notification to owner about claim win
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.owner_id,
-                title: 'Cerere aprobată',
-                message: `Cererea ta pentru "${booking.gear.title}" a fost aprobată. Ai primit plata și depozitul.`,
-                type: 'claim_approved',
-                data: { 
-                  bookingId: booking_id, 
-                  amount: totalAmountToOwner,
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
-              
-            // Send notification to renter about claim loss
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.renter_id,
-                title: 'Cerere respinsă',
-                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Depozitul a fost transferat proprietarului.`,
-                type: 'claim_denied',
-                data: { 
-                  bookingId: booking_id, 
-                  amount: 0,
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
-          } catch (error) {
-            console.error('Error creating owner claim win transfer:', JSON.stringify(error, null, 2))
-            throw new Error(`Failed to create owner claim win transfer: ${error.message}`)
-          }
-          break
+              .eq("id", booking_id);
 
-        case 'claim_denied':
-          console.log('Processing claim_denied release (owner loses claim)')
+            // Send notification to owner about claim win
+            await supabaseClient.from("notifications").insert({
+              user_id: booking.owner_id,
+              title: "Cerere aprobată",
+              message: `Cererea ta pentru "${booking.gear.title}" a fost aprobată. Ai primit plata și depozitul.`,
+              type: "claim_approved",
+              data: {
+                bookingId: booking_id,
+                amount: totalAmountToOwner,
+                gearTitle: booking.gear.title,
+              },
+              is_read: false,
+            });
+
+            // Send notification to renter about claim loss
+            await supabaseClient.from("notifications").insert({
+              user_id: booking.renter_id,
+              title: "Cerere respinsă",
+              message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Depozitul a fost transferat proprietarului.`,
+              type: "claim_denied",
+              data: {
+                bookingId: booking_id,
+                amount: 0,
+                gearTitle: booking.gear.title,
+              },
+              is_read: false,
+            });
+          } catch (error) {
+            console.error(
+              "Error creating owner claim win transfer:",
+              JSON.stringify(error, null, 2),
+            );
+            throw new Error(
+              `Failed to create owner claim win transfer: ${error.message}`,
+            );
+          }
+          break;
+
+        case "claim_denied":
+          console.log("Processing claim_denied release (owner loses claim)");
           // Owner loses claim - return deposit to renter, rental amount to owner (minus platform fee)
-          
+
           try {
             // Get the payment intent to find the charge ID
-            const paymentIntent2 = await stripe.paymentIntents.retrieve(escrowTransaction.stripe_payment_intent_id)
-            const chargeId2 = paymentIntent2.latest_charge
-            
+            const paymentIntent2 = await stripe.paymentIntents.retrieve(
+              escrowTransaction.stripe_payment_intent_id,
+            );
+            const chargeId2 = paymentIntent2.latest_charge;
+
             if (!chargeId2) {
-              throw new Error('No charge found in payment intent')
+              throw new Error("No charge found in payment intent");
             }
-            
+
             // Calculate rental amount to owner (rental - platform fee)
-            const rentalAmountToOwner = escrowTransaction.rental_amount - (escrowTransaction.platform_fee || 0)
-            
+            const rentalAmountToOwner =
+              escrowTransaction.rental_amount -
+              (escrowTransaction.platform_fee || 0);
+
             rentalTransfer = await stripe.transfers.create({
               amount: Math.round(rentalAmountToOwner * 100), // Convert RON to cents for Stripe
-              currency: 'ron',
+              currency: "ron",
               destination: connectedAccount.stripe_account_id,
               source_transaction: chargeId2,
               description: `Rental payment for booking ${booking_id} (claim denied)`,
               metadata: {
                 booking_id: booking_id,
-                transfer_type: 'rental_payment',
+                transfer_type: "rental_payment",
                 release_type: release_type,
-                platform_fee: escrowTransaction.platform_fee || 0
-              }
-            })
+                platform_fee: escrowTransaction.platform_fee || 0,
+              },
+            });
 
             depositRefund = await stripe.refunds.create({
               payment_intent: escrowTransaction.stripe_payment_intent_id,
               amount: Math.round(escrowTransaction.deposit_amount * 100), // Convert RON to cents for Stripe
               metadata: {
                 booking_id: booking_id,
-                refund_type: 'deposit_return',
-                release_type: release_type
-              }
-            })
+                refund_type: "deposit_return",
+                release_type: release_type,
+              },
+            });
 
             transferId = rentalTransfer.id;
             refundId = depositRefund.id;
-            console.log('Claim denied transfers created - rental:', JSON.stringify(rentalTransfer, null, 2), 'deposit refund:', JSON.stringify(depositRefund, null, 2))
+            console.log(
+              "Claim denied transfers created - rental:",
+              JSON.stringify(rentalTransfer, null, 2),
+              "deposit refund:",
+              JSON.stringify(depositRefund, null, 2),
+            );
 
             // Update escrow transaction
             await supabaseClient
-              .from('escrow_transactions')
+              .from("escrow_transactions")
               .update({
-                escrow_status: 'released',
+                escrow_status: "released",
                 released_at: new Date().toISOString(),
                 transfer_id: rentalTransfer.id,
                 refund_id: depositRefund.id,
-                release_reason: 'Owner claim denied - rental to owner, deposit returned to renter'
+                release_reason:
+                  "Owner claim denied - rental to owner, deposit returned to renter",
               })
-              .eq('id', escrowTransaction.id)
+              .eq("id", escrowTransaction.id);
 
             // Update booking
             await supabaseClient
-              .from('bookings')
+              .from("bookings")
               .update({
-                status: 'completed',
+                status: "completed",
                 rental_amount_released: true,
                 deposit_returned: true,
-                escrow_release_date: new Date().toISOString()
+                escrow_release_date: new Date().toISOString(),
               })
-              .eq('id', booking_id)
-              
-            // Send notification to owner about claim loss
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.owner_id,
-                title: 'Cerere respinsă',
-                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Ai primit doar plata pentru închiriere.`,
-                type: 'claim_denied',
-                data: { 
-                  bookingId: booking_id, 
-                  amount: rentalAmountToOwner,
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
-              
-            // Send notification to renter about claim win
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.renter_id,
-                title: 'Cerere aprobată',
-                message: `Cererea ta pentru "${booking.gear.title}" a fost aprobată. Depozitul a fost returnat.`,
-                type: 'claim_approved',
-                data: { 
-                  bookingId: booking_id, 
-                  amount: escrowTransaction.deposit_amount,
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
-          } catch (error) {
-            console.error('Error creating claim denied transfers:', JSON.stringify(error, null, 2))
-            throw new Error(`Failed to create claim denied transfers: ${error.message}`)
-          }
-          break
+              .eq("id", booking_id);
 
-        case 'claim_renter_approved':
-          console.log('Processing claim_renter_approved release (renter wins claim)')
+            // Send notification to owner about claim loss
+            await supabaseClient.from("notifications").insert({
+              user_id: booking.owner_id,
+              title: "Cerere respinsă",
+              message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Ai primit doar plata pentru închiriere.`,
+              type: "claim_denied",
+              data: {
+                bookingId: booking_id,
+                amount: rentalAmountToOwner,
+                gearTitle: booking.gear.title,
+              },
+              is_read: false,
+            });
+
+            // Send notification to renter about claim win
+            await supabaseClient.from("notifications").insert({
+              user_id: booking.renter_id,
+              title: "Cerere aprobată",
+              message: `Cererea ta pentru "${booking.gear.title}" a fost aprobată. Depozitul a fost returnat.`,
+              type: "claim_approved",
+              data: {
+                bookingId: booking_id,
+                amount: escrowTransaction.deposit_amount,
+                gearTitle: booking.gear.title,
+              },
+              is_read: false,
+            });
+          } catch (error) {
+            console.error(
+              "Error creating claim denied transfers:",
+              JSON.stringify(error, null, 2),
+            );
+            throw new Error(
+              `Failed to create claim denied transfers: ${error.message}`,
+            );
+          }
+          break;
+
+        case "claim_renter_approved":
+          console.log(
+            "Processing claim_renter_approved release (renter wins claim)",
+          );
           // Renter wins claim - return both rental and deposit to renter (minus platform fee)
-          
+
           try {
             // Calculate total amount to refund to renter (rental + deposit - platform fee)
-            const totalRefundAmount = escrowTransaction.rental_amount + escrowTransaction.deposit_amount - (escrowTransaction.platform_fee || 0)
-            
+            const totalRefundAmount =
+              escrowTransaction.rental_amount +
+              escrowTransaction.deposit_amount -
+              (escrowTransaction.platform_fee || 0);
+
             rentalRefund = await stripe.refunds.create({
               payment_intent: escrowTransaction.stripe_payment_intent_id,
               amount: Math.round(totalRefundAmount * 100), // Convert RON to cents for Stripe
               metadata: {
                 booking_id: booking_id,
-                refund_type: 'full_refund',
+                refund_type: "full_refund",
                 release_type: release_type,
-                platform_fee: escrowTransaction.platform_fee || 0
-              }
-            })
-            refundId = rentalRefund.id
-            console.log('Renter claim win refund created:', JSON.stringify(rentalRefund, null, 2))
+                platform_fee: escrowTransaction.platform_fee || 0,
+              },
+            });
+            refundId = rentalRefund.id;
+            console.log(
+              "Renter claim win refund created:",
+              JSON.stringify(rentalRefund, null, 2),
+            );
 
             // Update escrow transaction
             await supabaseClient
-              .from('escrow_transactions')
+              .from("escrow_transactions")
               .update({
-                escrow_status: 'released',
+                escrow_status: "released",
                 released_at: new Date().toISOString(),
                 refund_id: rentalRefund.id,
-                release_reason: 'Renter claim approved - full refund to renter (minus platform fee)'
+                release_reason:
+                  "Renter claim approved - full refund to renter (minus platform fee)",
               })
-              .eq('id', escrowTransaction.id)
+              .eq("id", escrowTransaction.id);
 
             // Update booking
             await supabaseClient
-              .from('bookings')
+              .from("bookings")
               .update({
-                status: 'completed',
+                status: "completed",
                 rental_amount_released: false, // Rental is refunded, not released to owner
                 deposit_returned: true,
-                escrow_release_date: new Date().toISOString()
+                escrow_release_date: new Date().toISOString(),
               })
-              .eq('id', booking_id)
-              
+              .eq("id", booking_id);
+
             // Send notification to renter about claim win
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.renter_id,
-                title: 'Cerere aprobată',
-                message: `Cererea ta pentru "${booking.gear.title}" a fost aprobată. Ai primit înapoi plata și depozitul.`,
-                type: 'claim_approved',
-                data: { 
-                  bookingId: booking_id, 
-                  amount: totalRefundAmount,
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
-              
+            await supabaseClient.from("notifications").insert({
+              user_id: booking.renter_id,
+              title: "Cerere aprobată",
+              message: `Cererea ta pentru "${booking.gear.title}" a fost aprobată. Ai primit înapoi plata și depozitul.`,
+              type: "claim_approved",
+              data: {
+                bookingId: booking_id,
+                amount: totalRefundAmount,
+                gearTitle: booking.gear.title,
+              },
+              is_read: false,
+            });
+
             // Send notification to owner about claim loss
-            await supabaseClient
-              .from('notifications')
-              .insert({
-                user_id: booking.owner_id,
-                title: 'Cerere respinsă',
-                message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Renterul a primit înapoi plata și depozitul.`,
-                type: 'claim_denied',
-                data: { 
-                  bookingId: booking_id, 
-                  amount: 0,
-                  gearTitle: booking.gear.title
-                },
-                is_read: false
-              })
+            await supabaseClient.from("notifications").insert({
+              user_id: booking.owner_id,
+              title: "Cerere respinsă",
+              message: `Cererea pentru "${booking.gear.title}" a fost respinsă. Renterul a primit înapoi plata și depozitul.`,
+              type: "claim_denied",
+              data: {
+                bookingId: booking_id,
+                amount: 0,
+                gearTitle: booking.gear.title,
+              },
+              is_read: false,
+            });
           } catch (error) {
-            console.error('Error creating renter claim win refund:', JSON.stringify(error, null, 2))
-            throw new Error(`Failed to create renter claim win refund: ${error.message}`)
+            console.error(
+              "Error creating renter claim win refund:",
+              JSON.stringify(error, null, 2),
+            );
+            throw new Error(
+              `Failed to create renter claim win refund: ${error.message}`,
+            );
           }
-          break
+          break;
 
         default:
-          console.error('Invalid release type:', release_type)
+          console.error("Invalid release type:", release_type);
           return new Response(
-            JSON.stringify({ error: 'Invalid release type' }),
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          )
+            JSON.stringify({ error: "Invalid release type" }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
       }
 
-      console.log(`Escrow release completed successfully for booking ${booking_id}`)
+      console.log(
+        `Escrow release completed successfully for booking ${booking_id}`,
+      );
       return new Response(
         JSON.stringify({
           success: true,
@@ -765,55 +835,58 @@ serve(async (req) => {
           release_type: release_type,
           transfer_id: transferId,
           refund_id: refundId,
-          message: 'Escrow funds released successfully'
+          message: "Escrow funds released successfully",
         }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     } catch (stripeError) {
-      console.error('Stripe error during escrow release:', stripeError)
-      
+      console.error("Stripe error during escrow release:", stripeError);
+
       // Update escrow transaction with failure
       await supabaseClient
-        .from('escrow_transactions')
+        .from("escrow_transactions")
         .update({
-          transfer_failure_reason: stripeError instanceof Error ? stripeError.message : 'Unknown error'
+          transfer_failure_reason:
+            stripeError instanceof Error
+              ? stripeError.message
+              : "Unknown error",
         })
-        .eq('id', escrowTransaction.id)
+        .eq("id", escrowTransaction.id);
 
       return new Response(
-        JSON.stringify({ 
-          error: 'Failed to process escrow release',
-          details: stripeError instanceof Error ? stripeError.message : 'Unknown error'
+        JSON.stringify({
+          error: "Failed to process escrow release",
+          details:
+            stripeError instanceof Error
+              ? stripeError.message
+              : "Unknown error",
         }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
-
   } catch (error) {
-    console.error('Escrow release error:', error)
+    console.error("Escrow release error:", error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      JSON.stringify({
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    )
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
-})
+});
 ```
 
 Now I need to update the admin dashboard to use the correct release type when a renter's claim is approved:
-
 
 ```typescriptreact
 // ... existing code ...
@@ -849,9 +922,9 @@ Now I need to update the admin dashboard to use the correct release type when a 
       await fetch('/functions/v1/claim-status-broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          booking_id: claims.find(c => c.id === claimId)?.booking_id, 
-          claim_status: status 
+        body: JSON.stringify({
+          booking_id: claims.find(c => c.id === claimId)?.booking_id,
+          claim_status: status
         }),
       });
 
@@ -860,7 +933,7 @@ Now I need to update the admin dashboard to use the correct release type when a 
         const claim = claims.find(c => c.id === claimId);
         if (claim) {
           const bookingId = claim.booking_id;
-          
+
           // Get the booking to determine who filed the claim
           const { data: bookingData } = await supabase
             .from('bookings')
@@ -872,10 +945,10 @@ Now I need to update the admin dashboard to use the correct release type when a 
             // Determine who filed the claim by checking claimant_id against owner_id and renter_id
             const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
             const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-            
+
             // Determine the correct release type based on who filed and admin decision
             let releaseType: string;
-            
+
             if (isOwnerClaim) {
               // Owner filed the claim
               releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
@@ -929,9 +1002,7 @@ Now I need to update the admin dashboard to use the correct release type when a 
 
 I need to fix the linter errors. Let me check the current ClaimsPanel file to understand the structure better:
 
-
 I can see the issue. The `notifyClaimResolved` function is not imported and the function signature needs to be updated. Let me fix these issues:
-
 
 ```typescriptreact
   const updateClaimStatus = async (claimId: string, status: 'approved' | 'rejected') => {
@@ -982,9 +1053,9 @@ I can see the issue. The `notifyClaimResolved` function is not imported and the 
         await fetch('/functions/v1/claim-status-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            booking_id: claims.find(c => c.id === claimId)?.booking_id, 
-            claim_status: status 
+          body: JSON.stringify({
+            booking_id: claims.find(c => c.id === claimId)?.booking_id,
+            claim_status: status
           }),
         });
 
@@ -993,7 +1064,7 @@ I can see the issue. The `notifyClaimResolved` function is not imported and the 
           const claim = claims.find(c => c.id === claimId);
           if (claim) {
             const bookingId = claim.booking_id;
-            
+
             // Get the booking to determine who filed the claim
             const { data: bookingData } = await supabase
               .from('bookings')
@@ -1005,10 +1076,10 @@ I can see the issue. The `notifyClaimResolved` function is not imported and the 
               // Determine who filed the claim by checking claimant_id against owner_id and renter_id
               const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
               const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-              
+
               // Determine the correct release type based on who filed and admin decision
               let releaseType: string;
-              
+
               if (isOwnerClaim) {
                 // Owner filed the claim
                 releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
@@ -1053,7 +1124,6 @@ I can see the issue. The `notifyClaimResolved` function is not imported and the 
 
 Now I need to also update the AdminClaimsDashboard component to use the same logic:
 
-
 ```typescriptreact
 // ... existing code ...
 
@@ -1094,7 +1164,7 @@ Now I need to also update the AdminClaimsDashboard component to use the same log
       const claim = claims.find(c => c.id === claimId);
       if (claim) {
         const bookingId = (claim as Record<string, unknown>).booking_id as string;
-        
+
         // Get the booking to determine who filed the claim
         const { data: bookingData } = await supabase
           .from('bookings')
@@ -1106,10 +1176,10 @@ Now I need to also update the AdminClaimsDashboard component to use the same log
           // Determine who filed the claim by checking claimant_id against owner_id and renter_id
           const isOwnerClaim = (claim as Record<string, unknown>).claimant_id === bookingData.owner_id;
           const isRenterClaim = (claim as Record<string, unknown>).claimant_id === bookingData.renter_id;
-          
+
           // Determine the correct release type based on who filed and admin decision
           let releaseType: string;
-          
+
           if (isOwnerClaim) {
             // Owner filed the claim
             releaseType = approve ? 'claim_owner' : 'claim_denied';
@@ -1149,9 +1219,7 @@ Now I need to also update the AdminClaimsDashboard component to use the same log
 
 I need to fix the type casting issues. Let me check the Claim interface in AdminClaimsDashboard:
 
-
 I can see the issue. The Claim interface already has the correct properties, so I don't need to cast to Record<string, unknown>. Let me fix this:
-
 
 ```typescriptreact
     // Broadcast status change
@@ -1166,7 +1234,7 @@ I can see the issue. The Claim interface already has the correct properties, so 
       const claim = claims.find(c => c.id === claimId);
       if (claim) {
         const bookingId = (claim as Record<string, unknown>).booking_id as string;
-        
+
         // Get the booking to determine who filed the claim
         const { data: bookingData } = await supabase
           .from('bookings')
@@ -1193,7 +1261,7 @@ I can see the issue. The Claim interface already has the correct properties, so 
       const claim = claims.find(c => c.id === claimId);
       if (claim) {
         const bookingId = claim.booking_id;
-        
+
         // Get the booking to determine who filed the claim
         const { data: bookingData } = await supabase
           .from('bookings')
@@ -1224,22 +1292,24 @@ The function now handles **5 different release types**:
 ### **🎯 Key Fix: Renter Claim Approval**
 
 When a **renter's claim is approved**, the system now:
+
 - ✅ **Refunds BOTH rental + deposit to renter** (minus platform fee)
 - ✅ **Owner gets NOTHING** (no rental payment)
 - ✅ **Platform keeps the fee**
 
 ### **📋 Complete Claim Logic Matrix**
 
-| Scenario | Who Files | Admin Decision | Release Type | Result |
-|----------|-----------|----------------|--------------|---------|
-| **Owner files claim** | Owner | Approve | `claim_owner` | Owner gets rental + deposit ✅ |
-| **Owner files claim** | Owner | Reject | `claim_denied` | Owner gets rental, Renter gets deposit ✅ |
-| **Renter files claim** | Renter | Approve | `claim_renter_approved` | **Renter gets rental + deposit** ✅ |
-| **Renter files claim** | Renter | Reject | `claim_owner` | Owner gets rental + deposit ✅ |
+| Scenario               | Who Files | Admin Decision | Release Type            | Result                                    |
+| ---------------------- | --------- | -------------- | ----------------------- | ----------------------------------------- |
+| **Owner files claim**  | Owner     | Approve        | `claim_owner`           | Owner gets rental + deposit ✅            |
+| **Owner files claim**  | Owner     | Reject         | `claim_denied`          | Owner gets rental, Renter gets deposit ✅ |
+| **Renter files claim** | Renter    | Approve        | `claim_renter_approved` | **Renter gets rental + deposit** ✅       |
+| **Renter files claim** | Renter    | Reject         | `claim_owner`           | Owner gets rental + deposit ✅            |
 
 ### **🔧 Updated Admin Components**
 
 Both `ClaimsPanel.tsx` and `AdminClaimsDashboard.tsx` now:
+
 - ✅ Check `claimant_id` to determine who filed the claim
 - ✅ Use correct release type based on claimant and admin decision
 - ✅ Handle both approval and rejection scenarios
@@ -1247,12 +1317,12 @@ Both `ClaimsPanel.tsx` and `AdminClaimsDashboard.tsx` now:
 
 ### **💰 Fund Distribution Summary**
 
-| Release Type | Rental Amount | Deposit | Platform Fee | Owner Gets | Renter Gets |
-|--------------|---------------|---------|--------------|------------|-------------|
-| `return_confirmed` | ✅ | ✅ | ✅ | Rental | Deposit |
-| `claim_owner` | ✅ | ✅ | ✅ | Rental + Deposit - Fee | Nothing |
-| `claim_denied` | ✅ | ✅ | ✅ | Rental - Fee | Deposit |
-| `claim_renter_approved` | ✅ | ✅ | ✅ | Nothing | **Rental + Deposit - Fee** |
+| Release Type            | Rental Amount | Deposit | Platform Fee | Owner Gets             | Renter Gets                |
+| ----------------------- | ------------- | ------- | ------------ | ---------------------- | -------------------------- |
+| `return_confirmed`      | ✅            | ✅      | ✅           | Rental                 | Deposit                    |
+| `claim_owner`           | ✅            | ✅      | ✅           | Rental + Deposit - Fee | Nothing                    |
+| `claim_denied`          | ✅            | ✅      | ✅           | Rental - Fee           | Deposit                    |
+| `claim_renter_approved` | ✅            | ✅      | ✅           | Nothing                | **Rental + Deposit - Fee** |
 
 ### **�� Key Features**
 
@@ -1287,7 +1357,6 @@ When a claim is **rejected**, the funds should **NOT be released** - they should
 
 Let me fix the admin components to only trigger escrow release for **approved** claims:
 
-
 ```typescriptreact
       // Only trigger escrow release for approved/rejected claims
       if (status === 'approved' || status === 'rejected') {
@@ -1295,9 +1364,9 @@ Let me fix the admin components to only trigger escrow release for **approved** 
         await fetch('/functions/v1/claim-status-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            booking_id: claims.find(c => c.id === claimId)?.booking_id, 
-            claim_status: status 
+          body: JSON.stringify({
+            booking_id: claims.find(c => c.id === claimId)?.booking_id,
+            claim_status: status
           }),
         });
 
@@ -1306,7 +1375,7 @@ Let me fix the admin components to only trigger escrow release for **approved** 
           const claim = claims.find(c => c.id === claimId);
           if (claim) {
             const bookingId = claim.booking_id;
-            
+
             // Get the booking to determine who filed the claim
             const { data: bookingData } = await supabase
               .from('bookings')
@@ -1318,10 +1387,10 @@ Let me fix the admin components to only trigger escrow release for **approved** 
               // Determine who filed the claim by checking claimant_id against owner_id and renter_id
               const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
               const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-              
+
               // Determine the correct release type based on who filed and admin decision
               let releaseType: string;
-              
+
               if (isOwnerClaim) {
                 // Owner filed the claim
                 releaseType = status === 'approved' ? 'claim_owner' : 'claim_denied';
@@ -1369,9 +1438,9 @@ Let me fix the admin components to only trigger escrow release for **approved** 
       await fetch('/functions/v1/claim-status-broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          booking_id: claims.find(c => c.id === claimId)?.booking_id, 
-          claim_status: status 
+        body: JSON.stringify({
+          booking_id: claims.find(c => c.id === claimId)?.booking_id,
+          claim_status: status
         }),
       });
 
@@ -1381,7 +1450,7 @@ Let me fix the admin components to only trigger escrow release for **approved** 
           const claim = claims.find(c => c.id === claimId);
           if (claim) {
             const bookingId = claim.booking_id;
-            
+
             // Get the booking to determine who filed the claim
             const { data: bookingData } = await supabase
               .from('bookings')
@@ -1393,10 +1462,10 @@ Let me fix the admin components to only trigger escrow release for **approved** 
               // Determine who filed the claim by checking claimant_id against owner_id and renter_id
               const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
               const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-              
+
               // Determine the correct release type based on who filed the claim
               let releaseType: string;
-              
+
               if (isOwnerClaim) {
                 // Owner filed the claim and it was approved
                 releaseType = 'claim_owner';
@@ -1442,7 +1511,6 @@ Let me fix the admin components to only trigger escrow release for **approved** 
 
 Now let me fix the AdminClaimsDashboard component as well:
 
-
 ```typescriptreact
     // Broadcast status change
     await fetch('/functions/v1/claim-status-broadcast', {
@@ -1456,7 +1524,7 @@ Now let me fix the AdminClaimsDashboard component as well:
       const claim = claims.find(c => c.id === claimId);
       if (claim) {
         const bookingId = claim.booking_id;
-        
+
         // Get the booking to determine who filed the claim
         const { data: bookingData } = await supabase
           .from('bookings')
@@ -1468,10 +1536,10 @@ Now let me fix the AdminClaimsDashboard component as well:
           // Determine who filed the claim by checking claimant_id against owner_id and renter_id
           const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
           const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-          
+
           // Determine the correct release type based on who filed and admin decision
           let releaseType: string;
-          
+
           if (isOwnerClaim) {
             // Owner filed the claim
             releaseType = approve ? 'claim_owner' : 'claim_denied';
@@ -1517,7 +1585,7 @@ Now let me fix the AdminClaimsDashboard component as well:
         const claim = claims.find(c => c.id === claimId);
         if (claim) {
           const bookingId = claim.booking_id;
-          
+
           // Get the booking to determine who filed the claim
           const { data: bookingData } = await supabase
             .from('bookings')
@@ -1529,10 +1597,10 @@ Now let me fix the AdminClaimsDashboard component as well:
             // Determine who filed the claim by checking claimant_id against owner_id and renter_id
             const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
             const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-            
+
             // Determine the correct release type based on who filed the claim
             let releaseType: string;
-            
+
             if (isOwnerClaim) {
               // Owner filed the claim and it was approved
               releaseType = 'claim_owner';
@@ -1571,17 +1639,18 @@ Perfect! Now let me provide you with the corrected logic:
 ## **✅ CORRECTED CLAIM SYSTEM LOGIC**
 
 ### **�� Key Principle:**
+
 - **Claim APPROVED** → Escrow is released based on who filed the claim
 - **Claim REJECTED** → **NO escrow release** - funds stay in escrow for normal rental flow
 
 ### **📋 Corrected Claim Logic Matrix**
 
-| Scenario | Who Files | Admin Decision | Escrow Release | Result |
-|----------|-----------|----------------|----------------|---------|
-| **Owner files claim** | Owner | **Approve** | `claim_owner` | Owner gets rental + deposit ✅ |
-| **Owner files claim** | Owner | **Reject** | **NO RELEASE** | Funds stay in escrow for normal flow ✅ |
-| **Renter files claim** | Renter | **Approve** | `claim_renter_approved` | **Renter gets rental + deposit** ✅ |
-| **Renter files claim** | Renter | **Reject** | **NO RELEASE** | Funds stay in escrow for normal flow ✅ |
+| Scenario               | Who Files | Admin Decision | Escrow Release          | Result                                  |
+| ---------------------- | --------- | -------------- | ----------------------- | --------------------------------------- |
+| **Owner files claim**  | Owner     | **Approve**    | `claim_owner`           | Owner gets rental + deposit ✅          |
+| **Owner files claim**  | Owner     | **Reject**     | **NO RELEASE**          | Funds stay in escrow for normal flow ✅ |
+| **Renter files claim** | Renter    | **Approve**    | `claim_renter_approved` | **Renter gets rental + deposit** ✅     |
+| **Renter files claim** | Renter    | **Reject**     | **NO RELEASE**          | Funds stay in escrow for normal flow ✅ |
 
 ### **💰 What Happens When Claim is Rejected:**
 
@@ -1594,6 +1663,7 @@ Perfect! Now let me provide you with the corrected logic:
 ### **�� Normal Rental Flow After Rejected Claim:**
 
 When a claim is rejected, the booking continues with the normal flow:
+
 - Owner can mark gear as returned
 - Renter can confirm return
 - Escrow is released via `return_confirmed` (rental → owner, deposit → renter)
@@ -1609,6 +1679,7 @@ When a claim is rejected, the booking continues with the normal flow:
 ### **🚀 Updated Admin Components:**
 
 Both `ClaimsPanel.tsx` and `AdminClaimsDashboard.tsx` now:
+
 - ✅ **Only trigger escrow release for APPROVED claims**
 - ✅ **Rejected claims leave funds in escrow**
 - ✅ **Broadcast status changes for all decisions**
@@ -1620,7 +1691,7 @@ This is the correct behavior - rejected claims should not release escrow funds, 
 
 **User**
 
-wait i dont really understand something do we have triggers in ts and in sql 
+wait i dont really understand something do we have triggers in ts and in sql
 
 ---
 
@@ -1631,25 +1702,26 @@ Great question! Let me clarify the architecture. We have **both TypeScript funct
 ## **🏗️ Architecture Overview**
 
 ### **1. TypeScript Functions (Edge Functions)**
+
 **Location:** `supabase/functions/`
+
 - **`escrow-release`** - Handles fund distribution via Stripe API
 - **`stripe-webhook`** - Processes Stripe events and updates database
 - **`claim-status-broadcast`** - Broadcasts claim status changes
 
 ### **2. SQL Triggers (Database Level)**
+
 **Location:** `supabase/migrations/`
+
 - **Database triggers** that run automatically when data changes
 - **RLS policies** for security
 - **Notification triggers** for real-time updates
 
 Let me show you what we have:
 
-
 Now let me check the current migration files to see what triggers are active:
 
-
 Now let me check what other triggers we have:
-
 
 Perfect! Now I can explain the complete architecture:
 
@@ -1658,11 +1730,13 @@ Perfect! Now I can explain the complete architecture:
 ### **📋 What We Have:**
 
 #### **1. TypeScript Edge Functions (`supabase/functions/`)**
+
 - **`escrow-release`** - Handles fund distribution via Stripe API
-- **`stripe-webhook`** - Processes Stripe events and updates database  
+- **`stripe-webhook`** - Processes Stripe events and updates database
 - **`claim-status-broadcast`** - Broadcasts claim status changes
 
 #### **2. SQL Triggers (Database Level)**
+
 - **`trigger_dual_confirmation`** - Automatically releases escrow when both parties confirm return
 - **`trigger_notify_booking_created`** - Sends notifications when booking is created
 - **`handle_updated_at`** - Updates timestamps automatically
@@ -1670,6 +1744,7 @@ Perfect! Now I can explain the complete architecture:
 ### **🔄 How They Work Together:**
 
 #### **Scenario 1: Normal Rental Completion**
+
 1. **Owner confirms return** → Database trigger `trigger_dual_confirmation` fires
 2. **Renter confirms return** → Same trigger fires again
 3. **Both confirmed** → Trigger automatically calls `escrow-release` function
@@ -1677,18 +1752,19 @@ Perfect! Now I can explain the complete architecture:
 5. **Webhook** → Updates database with Stripe results
 
 #### **Scenario 2: Claim Resolution**
+
 1. **Admin approves/rejects claim** → TypeScript admin component calls `escrow-release`
 2. **TypeScript function** → Handles fund distribution based on claim outcome
 3. **Webhook** → Updates database with Stripe results
 
 ### **🎯 Key Differences:**
 
-| **SQL Triggers** | **TypeScript Functions** |
-|------------------|--------------------------|
-| **Automatic** - fire on database changes | **Manual** - called by admin/user actions |
-| **Database level** - fast, reliable | **Application level** - complex logic, API calls |
+| **SQL Triggers**                                  | **TypeScript Functions**                               |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| **Automatic** - fire on database changes          | **Manual** - called by admin/user actions              |
+| **Database level** - fast, reliable               | **Application level** - complex logic, API calls       |
 | **Simple operations** - notifications, timestamps | **Complex operations** - Stripe API, external services |
-| **Always run** - no network dependencies | **Can fail** - network, API limits, etc. |
+| **Always run** - no network dependencies          | **Can fail** - network, API limits, etc.               |
 
 ### **🔧 Current Active Triggers:**
 
@@ -1717,7 +1793,6 @@ ok lets fix the trigger_dual_confirmation i think thats the one that doesnt work
 
 You're right! Let me check the current `trigger_dual_confirmation` and see what's wrong with it.
 
-
 I can see several potential issues with this trigger. Let me check if there are any recent logs or errors, and then create a better version. The main issues I can spot:
 
 1. **HTTP extension might not be enabled** in Supabase
@@ -1726,7 +1801,6 @@ I can see several potential issues with this trigger. Let me check if there are 
 4. **Timing issues** - the trigger might be firing at the wrong time
 
 Let me create a better version:
-
 
 ```sql
 -- Fix the dual confirmation trigger with better error handling and logging
@@ -1750,55 +1824,55 @@ DECLARE
 BEGIN
   -- Convert UUID to text for logging
   booking_id_text := NEW.id::text;
-  
+
   -- Log the trigger execution
-  RAISE LOG 'Dual confirmation trigger fired for booking %: pickup_owner=%, pickup_renter=%, return_owner=%, return_renter=%', 
-    booking_id_text, 
-    NEW.pickup_confirmed_by_owner, 
-    NEW.pickup_confirmed_by_renter, 
-    NEW.return_confirmed_by_owner, 
+  RAISE LOG 'Dual confirmation trigger fired for booking %: pickup_owner=%, pickup_renter=%, return_owner=%, return_renter=%',
+    booking_id_text,
+    NEW.pickup_confirmed_by_owner,
+    NEW.pickup_confirmed_by_renter,
+    NEW.return_confirmed_by_owner,
     NEW.return_confirmed_by_renter;
 
   -- Handle pickup dual confirmation (no escrow release, just status update)
-  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR 
+  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR
       NEW.pickup_confirmed_by_renter IS DISTINCT FROM OLD.pickup_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed pickup, update status to active
-    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND 
+    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND
        (NOT OLD.pickup_confirmed_by_owner OR NOT OLD.pickup_confirmed_by_renter) THEN
-      
+
       -- Update status to active (equipment is now with renter)
       NEW.status = 'active';
-      
+
       -- Log the pickup confirmation
       RAISE LOG 'Dual confirmation: Both parties confirmed pickup for booking %', booking_id_text;
     END IF;
   END IF;
 
   -- Handle return dual confirmation (this is where escrow gets released)
-  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR 
+  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR
       NEW.return_confirmed_by_renter IS DISTINCT FROM OLD.return_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed return, update status and trigger escrow release
-    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND 
+    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND
        (NOT OLD.return_confirmed_by_owner OR NOT OLD.return_confirmed_by_renter) THEN
-      
+
       -- Update status to completed
       NEW.status = 'completed';
       NEW.completed_at = now();
-      
+
       -- Log the return confirmation
       RAISE LOG 'Dual confirmation: Both parties confirmed return for booking %. Triggering escrow release...', booking_id_text;
-      
+
       -- Prepare the request body
       request_body := json_build_object(
         'booking_id', booking_id_text,
         'release_type', 'return_confirmed'
       )::text;
-      
+
       -- Log the request being sent
       RAISE LOG 'Sending escrow release request: %', request_body;
-      
+
       -- Call the escrow release edge function directly
       BEGIN
         SELECT status, content INTO response_status, response_content
@@ -1812,14 +1886,14 @@ BEGIN
           'application/json',
           request_body
         ));
-        
+
         -- Log the response
         RAISE LOG 'Escrow release response: status=%, content=%', response_status, response_content;
-        
+
         -- If the call failed, log the error but don't fail the transaction
         IF response_status != 200 THEN
           RAISE LOG 'Warning: Escrow release failed with status % for booking %. Response: %', response_status, booking_id_text, response_content;
-          
+
           -- Insert a notification about the failure
           INSERT INTO notifications (
             user_id,
@@ -1847,11 +1921,11 @@ BEGIN
           -- Log success
           RAISE LOG 'Escrow release successful for booking %', booking_id_text;
         END IF;
-        
+
       EXCEPTION WHEN OTHERS THEN
         -- Log any exceptions that occur during the HTTP call
         RAISE LOG 'Exception during escrow release for booking %: %', booking_id_text, SQLERRM;
-        
+
         -- Insert a notification about the exception
         INSERT INTO notifications (
           user_id,
@@ -1894,8 +1968,8 @@ COMMENT ON FUNCTION public.handle_dual_confirmation() IS 'Handles dual confirmat
 DO $$
 BEGIN
   IF EXISTS (
-    SELECT 1 FROM pg_trigger 
-    WHERE tgname = 'trigger_dual_confirmation' 
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'trigger_dual_confirmation'
     AND tgrelid = 'public.bookings'::regclass
   ) THEN
     RAISE LOG 'Dual confirmation trigger created successfully';
@@ -1906,7 +1980,6 @@ END $$;
 ```
 
 Now let me also create a simpler alternative approach that doesn't rely on HTTP calls from the database, which can be unreliable. Instead, we can use a different strategy:
-
 
 ```sql
 -- Alternative approach: Use a queue table instead of direct HTTP calls
@@ -1941,46 +2014,46 @@ DECLARE
 BEGIN
   -- Convert UUID to text for logging
   booking_id_text := NEW.id::text;
-  
+
   -- Log the trigger execution
-  RAISE LOG 'Dual confirmation trigger fired for booking %: pickup_owner=%, pickup_renter=%, return_owner=%, return_renter=%', 
-    booking_id_text, 
-    NEW.pickup_confirmed_by_owner, 
-    NEW.pickup_confirmed_by_renter, 
-    NEW.return_confirmed_by_owner, 
+  RAISE LOG 'Dual confirmation trigger fired for booking %: pickup_owner=%, pickup_renter=%, return_owner=%, return_renter=%',
+    booking_id_text,
+    NEW.pickup_confirmed_by_owner,
+    NEW.pickup_confirmed_by_renter,
+    NEW.return_confirmed_by_owner,
     NEW.return_confirmed_by_renter;
 
   -- Handle pickup dual confirmation (no escrow release, just status update)
-  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR 
+  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR
       NEW.pickup_confirmed_by_renter IS DISTINCT FROM OLD.pickup_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed pickup, update status to active
-    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND 
+    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND
        (NOT OLD.pickup_confirmed_by_owner OR NOT OLD.pickup_confirmed_by_renter) THEN
-      
+
       -- Update status to active (equipment is now with renter)
       NEW.status = 'active';
-      
+
       -- Log the pickup confirmation
       RAISE LOG 'Dual confirmation: Both parties confirmed pickup for booking %', booking_id_text;
     END IF;
   END IF;
 
   -- Handle return dual confirmation (this is where escrow gets released)
-  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR 
+  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR
       NEW.return_confirmed_by_renter IS DISTINCT FROM OLD.return_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed return, update status and queue escrow release
-    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND 
+    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND
        (NOT OLD.return_confirmed_by_owner OR NOT OLD.return_confirmed_by_renter) THEN
-      
+
       -- Update status to completed
       NEW.status = 'completed';
       NEW.completed_at = now();
-      
+
       -- Log the return confirmation
       RAISE LOG 'Dual confirmation: Both parties confirmed return for booking %. Queuing escrow release...', booking_id_text;
-      
+
       -- Queue the escrow release request instead of calling HTTP directly
       INSERT INTO public.escrow_release_queue (
         booking_id,
@@ -1993,7 +2066,7 @@ BEGIN
         'pending',
         NOW()
       );
-      
+
       -- Log the queue insertion
       RAISE LOG 'Escrow release queued for booking %', booking_id_text;
     END IF;
@@ -2018,19 +2091,19 @@ DECLARE
   response_content TEXT;
 BEGIN
   -- Process pending items in the queue
-  FOR queue_item IN 
-    SELECT * FROM public.escrow_release_queue 
-    WHERE status = 'pending' 
+  FOR queue_item IN
+    SELECT * FROM public.escrow_release_queue
+    WHERE status = 'pending'
     AND retry_count < max_retries
     ORDER BY created_at ASC
     LIMIT 10
   LOOP
     BEGIN
       -- Mark as processing
-      UPDATE public.escrow_release_queue 
+      UPDATE public.escrow_release_queue
       SET status = 'processing', processed_at = NOW()
       WHERE id = queue_item.id;
-      
+
       -- Call the escrow release function
       SELECT status, content INTO response_status, response_content
       FROM http((
@@ -2046,41 +2119,41 @@ BEGIN
           'release_type', queue_item.release_type
         )::text
       ));
-      
+
       -- Update queue item based on response
       IF response_status = 200 THEN
-        UPDATE public.escrow_release_queue 
+        UPDATE public.escrow_release_queue
         SET status = 'completed', processed_at = NOW()
         WHERE id = queue_item.id;
-        
+
         RAISE LOG 'Escrow release completed for booking %', queue_item.booking_id;
       ELSE
         -- Increment retry count
-        UPDATE public.escrow_release_queue 
-        SET status = 'pending', 
+        UPDATE public.escrow_release_queue
+        SET status = 'pending',
             retry_count = retry_count + 1,
             error_message = 'HTTP ' || response_status || ': ' || response_content
         WHERE id = queue_item.id;
-        
-        RAISE LOG 'Escrow release failed for booking %: status=%, retry_count=%', 
+
+        RAISE LOG 'Escrow release failed for booking %: status=%, retry_count=%',
           queue_item.booking_id, response_status, queue_item.retry_count + 1;
       END IF;
-      
+
       processed_count := processed_count + 1;
-      
+
     EXCEPTION WHEN OTHERS THEN
       -- Handle exceptions
-      UPDATE public.escrow_release_queue 
-      SET status = 'pending', 
+      UPDATE public.escrow_release_queue
+      SET status = 'pending',
           retry_count = retry_count + 1,
           error_message = 'Exception: ' || SQLERRM
       WHERE id = queue_item.id;
-      
+
       RAISE LOG 'Exception processing escrow release for booking %: %', queue_item.booking_id, SQLERRM;
       processed_count := processed_count + 1;
     END;
   END LOOP;
-  
+
   RETURN processed_count;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -2101,8 +2174,8 @@ CREATE POLICY "Service role can manage escrow release queue" ON public.escrow_re
 DO $$
 BEGIN
   IF EXISTS (
-    SELECT 1 FROM pg_trigger 
-    WHERE tgname = 'trigger_dual_confirmation' 
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'trigger_dual_confirmation'
     AND tgrelid = 'public.bookings'::regclass
   ) THEN
     RAISE LOG 'Dual confirmation trigger created successfully with queue approach';
@@ -2113,7 +2186,6 @@ END $$;
 ```
 
 Now let me create a simple TypeScript function to process the queue:
-
 
 ```typescript
 // @ts-ignore: Deno Deploy/Supabase Edge Functions remote import
@@ -2147,13 +2219,13 @@ serve(async (req) => {
     if (error) {
       console.error('Error processing escrow queue:', error)
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'Failed to process escrow queue',
-          details: error.message 
+          details: error.message
         }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
@@ -2173,9 +2245,9 @@ serve(async (req) => {
         queue_status: queueStatus,
         message: `Processed ${data} items from escrow queue`
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
 
@@ -2189,7 +2261,7 @@ serve(async (req) => {
 
 **User**
 
-so basically it works but it sets all to cancelled or Anulat and i think its because of the trigger@20250709000027_fix_dual_confirmation_trigger_final.sql 
+so basically it works but it sets all to cancelled or Anulat and i think its because of the trigger@20250709000027_fix_dual_confirmation_trigger_final.sql
 
 ---
 
@@ -2199,15 +2271,13 @@ You're absolutely right! The issue is that the trigger is setting the status to 
 
 Let me check what status values are being used in the system and fix the trigger:
 
-
 I can see the issue! The system expects the status to be `'returned'` when the gear is returned, not `'completed'`. The `'completed'` status should only be set after the escrow is released. Let me fix the trigger:
-
 
 ```sql
     -- If both parties have confirmed return, update status and trigger escrow release
-    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND 
+    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND
        (NOT OLD.return_confirmed_by_owner OR NOT OLD.return_confirmed_by_renter) THEN
-      
+
       -- Update status to completed
       NEW.status = 'completed';
       NEW.completed_at = now();
@@ -2215,16 +2285,15 @@ I can see the issue! The system expects the status to be `'returned'` when the g
 ->
 
     -- If both parties have confirmed return, update status and trigger escrow release
-    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND 
+    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND
        (NOT OLD.return_confirmed_by_owner OR NOT OLD.return_confirmed_by_renter) THEN
-      
+
       -- Update status to returned (gear is back with owner, but escrow not yet released)
       NEW.status = 'returned';
       NEW.returned_at = now();
 ```
 
 Now I need to update the escrow release function to set the status to `'completed'` after the funds are successfully released:
-
 
 ```typescript
           // Final update: Set booking status to completed after both rental and deposit are processed
@@ -2248,7 +2317,6 @@ Now I need to update the escrow release function to set the status to `'complete
 ```
 
 The linter errors are expected in Supabase Edge Functions since they use Deno. Let me also update the other release types to set the correct status:
-
 
 ```typescript
             // Update booking
@@ -2333,7 +2401,6 @@ The linter errors are expected in Supabase Edge Functions since they use Deno. L
 
 Perfect! Now let me also update the trigger to add the `returned_at` field to the bookings table if it doesn't exist:
 
-
 ```sql
 -- Add returned_at field to bookings table to track when gear is returned
 -- This is different from completed_at which is set when escrow is released
@@ -2342,8 +2409,8 @@ Perfect! Now let me also update the trigger to add the `returned_at` field to th
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'bookings' 
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bookings'
     AND column_name = 'returned_at'
   ) THEN
     ALTER TABLE public.bookings ADD COLUMN returned_at TIMESTAMPTZ;
@@ -2359,23 +2426,28 @@ Now let me provide you with a summary of the fix:
 ## **✅ FIXED: Dual Confirmation Trigger Status Issue**
 
 ### **�� Problem Identified:**
+
 The trigger was setting status to `'completed'` immediately when both parties confirmed return, but the frontend expects:
+
 - `'returned'` = Gear is back with owner (both parties confirmed return)
 - `'completed'` = Escrow is released and funds distributed
 
 ### **🔧 Fix Applied:**
 
 #### **1. Updated Trigger (`20250709000027_fix_dual_confirmation_trigger_final.sql`)**
+
 - ✅ **Sets status to `'returned'`** when both parties confirm return
 - ✅ **Sets `returned_at` timestamp** when gear is returned
 - ✅ **Triggers escrow release** but doesn't set `completed` status yet
 
 #### **2. Updated Escrow Release Function**
+
 - ✅ **Sets status to `'completed'`** only after funds are successfully released
 - ✅ **Sets `completed_at` timestamp** when escrow is released
 - ✅ **Proper status flow**: `returned` → escrow release → `completed`
 
 #### **3. Added `returned_at` Field (`20250709000029_add_returned_at_field.sql`)**
+
 - ✅ **Tracks when gear is returned** (both parties confirmed)
 - ✅ **Separate from `completed_at`** (when escrow is released)
 
@@ -2413,6 +2485,7 @@ The error message:
 means that the value `"error"` is not a valid value for the `notification_type` enum in your database.
 
 ### Why is this happening?
+
 In the trigger, when an escrow release fails, it tries to insert a notification with `type: 'error'`. But your `notification_type` enum in the `notifications` table does not include `"error"` as a valid value.
 
 ---
@@ -2508,7 +2581,7 @@ If you need to add more notification types in the future, just update the enum i
 
 **User**
 
-one problem is that the all was susccesful and the db still was updated as anulat even if the escro release worked see the db fields for the bookings and escrow and maybe the trigger doesnt update them correctly 
+one problem is that the all was susccesful and the db still was updated as anulat even if the escro release worked see the db fields for the bookings and escrow and maybe the trigger doesnt update them correctly
 id,gear_id,renter_id,owner_id,start_date,end_date,total_days,daily_rate,total_amount,platform_fee,owner_amount,deposit_amount,status,payment_status,pickup_location,pickup_instructions,return_location,return_instructions,pickup_lat,pickup_lng,pickup_date,return_date,notes,cancellation_reason,created_at,updated_at,payment_intent_id,pickup_confirmed_at,return_confirmed_at,escrow_release_date,rental_amount_released,deposit_returned,pickup_confirmed_by_owner,pickup_confirmed_by_owner_at,pickup_confirmed_by_renter,pickup_confirmed_by_renter_at,return_confirmed_by_renter,return_confirmed_by_renter_at,return_confirmed_by_owner,return_confirmed_by_owner_at,rental_amount,cancelled_at,completed_at
 0d263551-0703-4abc-8c77-4b6eef09f54d,3d71f8de-429e-44a6-9bf4-7ebadd8a7a73,aa474104-9c39-4cae-aa31-ee8d69bbc57d,74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d,2025-07-10,2025-07-10,1,100,313,13,100,200,cancelled,refunded,"DJ105A, Șoarș, Brașov, 507114, Romania",,,,45.942591541767115,24.94981135978754,,,,Payment cancelled by user,2025-07-10 13:18:39.549257+00,2025-07-10 13:33:46.503671+00,pi_3RjKNbQhcKO8ZDWa0LfSdii4,,,2025-07-10 13:33:45.304+00,true,true,true,2025-07-10 13:29:18.911+00,true,2025-07-10 13:29:23.06+00,true,2025-07-10 13:29:53.872+00,false,,100,,
 id,booking_id,stripe_payment_intent_id,rental_amount,deposit_amount,escrow_status,held_until,released_at,released_to,release_reason,created_at,updated_at,owner_stripe_account_id,platform_fee,refund_amount,refund_reason,refund_id,stripe_charge_id,transfer_id,transfer_failure_reason,rental_released_at,deposit_returned_at,rental_transfer_id,deposit_refund_id
@@ -2532,10 +2605,12 @@ Thank you for the detailed data! Here’s what’s happening and how to fix it:
 ## **Root Cause Analysis**
 
 ### 1. **Booking Status Logic**
+
 - The booking status is being set to `cancelled` somewhere in your codebase or triggers, possibly when a refund is detected or when a cancellation reason is present.
 - The trigger or the escrow release function might not be updating the booking status to `completed` after a successful escrow release/refund.
 
 ### 2. **Escrow Release Function**
+
 - The escrow release function is supposed to set the booking status to `completed` after a successful release/refund.
 - If the booking was previously set to `cancelled`, and the function does not explicitly overwrite it, the status remains `cancelled`.
 
@@ -2555,16 +2630,18 @@ Thank you for the detailed data! Here’s what’s happening and how to fix it:
 Ensure that after a successful escrow release (refund or transfer), the booking status is always set to `completed`, regardless of its previous value.
 
 **Check for this in your escrow release function:**
+
 ```typescript
 await supabaseClient
-  .from('bookings')
+  .from("bookings")
   .update({
-    status: 'completed',
+    status: "completed",
     completed_at: new Date().toISOString(),
     // ...other fields
   })
-  .eq('id', booking_id)
+  .eq("id", booking_id);
 ```
+
 - This should overwrite any previous status, including `cancelled`.
 
 ### 2. **Check for Other Triggers or Code Setting `cancelled`**
@@ -2578,8 +2655,8 @@ await supabaseClient
 
 1. **Double-check the escrow release function** to ensure it always sets `status = 'completed'` after a successful release/refund.
 2. **Search for any triggers or backend code** that might set `status = 'cancelled'` on refund or cancellation reason, and make sure it only applies to real cancellations.
-3. **Test a full flow:**  
-   - Book → Pay → Confirm pickup → Confirm return → Escrow release/refund  
+3. **Test a full flow:**
+   - Book → Pay → Confirm pickup → Confirm return → Escrow release/refund
    - The final status should be `completed`, not `cancelled`.
 
 ---
@@ -2594,20 +2671,20 @@ Let me know if you want this full search and fix!
 
 ```typescript
 await supabaseClient
-  .from('bookings')
+  .from("bookings")
   .update({
-    status: 'completed',
+    status: "completed",
     completed_at: new Date().toISOString(),
     // ...other fields
   })
-  .eq('id', booking_id)
+  .eq("id", booking_id);
 ```
 
 ---
 
 **User**
 
-@20250709000027_fix_dual_confirmation_trigger_final.sql 
+@20250709000027_fix_dual_confirmation_trigger_final.sql
 
 ---
 
@@ -2648,13 +2725,16 @@ Based on your last message and the attached file, here’s a focused analysis an
 ## **What to Do Next**
 
 ### 1. **Check for Other Triggers or Code Setting `cancelled`**
+
 - Search your codebase and SQL for any logic that sets `status = 'cancelled'` on the `bookings` table.
 - Pay special attention to refund/cancellation flows.
 
 ### 2. **Check Escrow Release Function**
+
 - Make sure it always sets `status = 'completed'` after a successful release, even if the previous status was `cancelled` or anything else.
 
 ### 3. **Check for Race Conditions**
+
 - If a refund is processed (e.g., payment cancelled by user) and then both parties confirm return, you might have a race where the status is set to `cancelled` by the refund logic, and then the trigger/escrow release logic runs after.
 
 ---
@@ -2675,12 +2755,12 @@ Based on your last message and the attached file, here’s a focused analysis an
 
 ## **Summary Table**
 
-| Event                        | Should Set Status To |
-|------------------------------|---------------------|
-| Both confirm return          | `returned`          |
-| Escrow released (success)    | `completed`         |
-| User cancels before return   | `cancelled`         |
-| Refund due to cancellation   | `cancelled`         |
+| Event                      | Should Set Status To |
+| -------------------------- | -------------------- |
+| Both confirm return        | `returned`           |
+| Escrow released (success)  | `completed`          |
+| User cancels before return | `cancelled`          |
+| Refund due to cancellation | `cancelled`          |
 
 ---
 
@@ -2701,15 +2781,17 @@ Here is the root cause of your issue:
 ### The Problem
 
 In your `stripe-webhook/index.ts`, the `handleChargeRefunded` function does this when a refund is detected:
+
 ```typescript
 await supabaseClient
-  .from('bookings')
-  .update({ 
-    payment_status: 'refunded',
-    status: 'cancelled'
+  .from("bookings")
+  .update({
+    payment_status: "refunded",
+    status: "cancelled",
   })
-  .eq('id', transaction.booking_id)
+  .eq("id", transaction.booking_id);
 ```
+
 This means **any time a Stripe refund is processed, the booking is set to `cancelled`**, even if the refund was part of a normal, successful escrow release (e.g., after a completed rental).
 
 ---
@@ -2721,31 +2803,34 @@ This means **any time a Stripe refund is processed, the booking is set to `cance
 You should only set `status: 'cancelled'` if the refund is due to a user-initiated cancellation, not for normal returns.
 
 **Update the logic in `handleChargeRefunded` to:**
+
 - Check if the booking is in a state where cancellation is appropriate (e.g., not already `returned` or `completed`).
 - Otherwise, just set `payment_status: 'refunded'` and leave the booking status as is.
 
 #### Example Fix:
+
 ```typescript
 // Fetch the booking to check its current status
 const { data: booking } = await supabaseClient
-  .from('bookings')
-  .select('status')
-  .eq('id', transaction.booking_id)
+  .from("bookings")
+  .select("status")
+  .eq("id", transaction.booking_id)
   .single();
 
 let newStatus = booking?.status;
-if (booking && !['returned', 'completed'].includes(booking.status)) {
-  newStatus = 'cancelled';
+if (booking && !["returned", "completed"].includes(booking.status)) {
+  newStatus = "cancelled";
 }
 
 await supabaseClient
-  .from('bookings')
-  .update({ 
-    payment_status: 'refunded',
-    status: newStatus
+  .from("bookings")
+  .update({
+    payment_status: "refunded",
+    status: newStatus,
   })
-  .eq('id', transaction.booking_id)
+  .eq("id", transaction.booking_id);
 ```
+
 - This way, if the booking is already `returned` or `completed`, it will **not** be set to `cancelled`.
 
 ---
@@ -2761,34 +2846,34 @@ Would you like me to implement this fix directly in your `stripe-webhook/index.t
 
 ```typescript
 await supabaseClient
-  .from('bookings')
-  .update({ 
-    payment_status: 'refunded',
-    status: 'cancelled'
+  .from("bookings")
+  .update({
+    payment_status: "refunded",
+    status: "cancelled",
   })
-  .eq('id', transaction.booking_id)
+  .eq("id", transaction.booking_id);
 ```
 
 ```typescript
 // Fetch the booking to check its current status
 const { data: booking } = await supabaseClient
-  .from('bookings')
-  .select('status')
-  .eq('id', transaction.booking_id)
+  .from("bookings")
+  .select("status")
+  .eq("id", transaction.booking_id)
   .single();
 
 let newStatus = booking?.status;
-if (booking && !['returned', 'completed'].includes(booking.status)) {
-  newStatus = 'cancelled';
+if (booking && !["returned", "completed"].includes(booking.status)) {
+  newStatus = "cancelled";
 }
 
 await supabaseClient
-  .from('bookings')
-  .update({ 
-    payment_status: 'refunded',
-    status: newStatus
+  .from("bookings")
+  .update({
+    payment_status: "refunded",
+    status: newStatus,
   })
-  .eq('id', transaction.booking_id)
+  .eq("id", transaction.booking_id);
 ```
 
 ---
@@ -2804,61 +2889,60 @@ yes
 ```typescript
 // ... existing code ...
 async function handleChargeRefunded(charge: unknown, supabaseClient: any) {
-  console.log('Charge refunded:', charge.id)
+  console.log("Charge refunded:", charge.id);
 
   try {
     // Find transaction by charge ID
     const { data: transaction } = await supabaseClient
-      .from('transactions')
-      .select('*')
-      .eq('stripe_charge_id', charge.id)
-      .single()
+      .from("transactions")
+      .select("*")
+      .eq("stripe_charge_id", charge.id)
+      .single();
 
     if (transaction) {
       // Update transaction with refund details
       await supabaseClient
-        .from('transactions')
+        .from("transactions")
         .update({
-          status: 'refunded',
+          status: "refunded",
           refund_amount: charge.amount_refunded,
-          refund_reason: 'Stripe refund',
+          refund_reason: "Stripe refund",
         })
-        .eq('id', transaction.id)
+        .eq("id", transaction.id);
 
       // Fetch the booking to check its current status
       const { data: booking } = await supabaseClient
-        .from('bookings')
-        .select('status')
-        .eq('id', transaction.booking_id)
+        .from("bookings")
+        .select("status")
+        .eq("id", transaction.booking_id)
         .single();
 
       let newStatus = booking?.status;
-      if (booking && !['returned', 'completed'].includes(booking.status)) {
-        newStatus = 'cancelled';
+      if (booking && !["returned", "completed"].includes(booking.status)) {
+        newStatus = "cancelled";
       }
 
       // Update booking payment status and status (only set cancelled if not already returned/completed)
       await supabaseClient
-        .from('bookings')
-        .update({ 
-          payment_status: 'refunded',
-          status: newStatus
+        .from("bookings")
+        .update({
+          payment_status: "refunded",
+          status: newStatus,
         })
-        .eq('id', transaction.booking_id)
+        .eq("id", transaction.booking_id);
 
       // Update escrow transaction if exists
       await supabaseClient
-        .from('escrow_transactions')
+        .from("escrow_transactions")
         .update({
-          escrow_status: 'refunded',
+          escrow_status: "refunded",
           refund_amount: charge.amount_refunded,
-          refund_reason: 'Stripe refund',
+          refund_reason: "Stripe refund",
         })
-        .eq('stripe_payment_intent_id', transaction.stripe_payment_intent_id)
+        .eq("stripe_payment_intent_id", transaction.stripe_payment_intent_id);
     }
-
   } catch (error) {
-    console.error('Error handling charge refund:', error)
+    console.error("Error handling charge refund:", error);
   }
 }
 // ... existing code ...
@@ -2868,6 +2952,7 @@ The fix is now in place!
 Now, when a refund is processed, the booking will only be set to `cancelled` if it is not already `returned` or `completed`. This will prevent successful bookings from being incorrectly marked as "Anulat" (cancelled) after a normal return and escrow release.
 
 **Next steps:**
+
 - Test a full booking flow (including refund/return) to confirm the status is correct.
 - If you see any more unexpected status changes, let me know and I’ll help you trace them!
 
@@ -2884,6 +2969,7 @@ one problem is that when i pay as the renter i press the checkout and in the tim
 Great observation! This is a classic booking race condition and UX problem in rental/payment flows.
 
 ## **What’s Happening?**
+
 - When a renter starts checkout, the booking is created and marked as "pending" or "confirmed".
 - If the renter does NOT complete payment quickly, a background job or trigger (or frontend timeout) **auto-cancels** the booking.
 - If the renter completes payment, the booking is marked as "confirmed" or "active".
@@ -2892,6 +2978,7 @@ Great observation! This is a classic booking race condition and UX problem in re
 ---
 
 ## **Why Is This Wrong?**
+
 - The booking should only be cancelled if the payment window truly expires (e.g., after 15 minutes, or if the Stripe session expires), **not just because the user is slow**.
 - If the user completes payment, the booking should always be valid, even if it took a while.
 
@@ -2900,14 +2987,17 @@ Great observation! This is a classic booking race condition and UX problem in re
 ## **How to Fix**
 
 ### 1. **Only Cancel on True Expiry**
+
 - Use Stripe’s `checkout.session.expired` webhook or a real timeout (e.g., 15-30 minutes after creation) to cancel bookings.
 - Do **not** auto-cancel just because the user is on the checkout page for a while.
 
 ### 2. **On Payment Success, Always "Resurrect" the Booking**
+
 - If payment is successful, always set the booking to "confirmed" or "active", even if it was previously marked as "cancelled" by a timeout.
 - This ensures that a late payment always "wins" over a timeout cancellation.
 
 ### 3. **Frontend: Show a "Booking Expired" Message**
+
 - If the user takes too long and the booking is cancelled, show a clear message on return from Stripe.
 
 ---
@@ -2920,6 +3010,7 @@ Great observation! This is a classic booking race condition and UX problem in re
 ---
 
 ## **Would You Like Me To:**
+
 1. Search for and show you the auto-cancel logic in your codebase?
 2. Update the Stripe webhook to always "resurrect" bookings on payment success?
 
@@ -2967,17 +3058,21 @@ Here’s what I found and how to improve it:
 ## **Best Practice Proposal**
 
 ### 1. **Do NOT Delete Bookings Immediately**
+
 - Instead of deleting, set `status: 'cancelled'` and keep the record for audit/history.
 - Only delete bookings that are truly abandoned and not paid after a much longer period (e.g., 7 days).
 
 ### 2. **Grace Period for Payment**
+
 - When a booking is created, give the user a reasonable window (e.g., 15-30 minutes) to complete payment.
 - Only auto-cancel if payment is not completed after this window.
 
 ### 3. **Stripe Webhook: Always "Resurrect" on Payment**
+
 - If payment is successful, always set `status: 'confirmed'` or `status: 'active'` even if the booking was previously marked as `cancelled` by a timeout.
 
 ### 4. **Frontend: Show Expiry Message**
+
 - If the user returns from checkout and the booking is `cancelled`, show a clear "Booking expired" message.
 
 ---
@@ -2985,27 +3080,30 @@ Here’s what I found and how to improve it:
 ## **How to Implement**
 
 ### **A. Update Cleanup Function**
+
 - Instead of deleting, set `status: 'cancelled'`, `cancelled_at`, and a `cancellation_reason` (e.g., "auto_cancelled_no_payment").
 - Only delete bookings that are `cancelled` and older than 7 days.
 
 ### **B. Add a Shorter Payment Timeout**
+
 - Add a job (or logic) that sets `status: 'cancelled'` for bookings in `pending` for more than 30 minutes with no payment.
 
 ### **C. Stripe Webhook: Always Restore Booking**
+
 - In the payment success webhook, always set `status: 'confirmed'` or `status: 'active'` if payment is successful, even if the booking was previously `cancelled`.
 
 ---
 
 ## **Summary Table**
 
-| Event                        | Action                                 |
-|------------------------------|----------------------------------------|
-| Booking created              | status: 'pending'                      |
-| Payment not completed in 30m | status: 'cancelled', keep record       |
-| Payment completed            | status: 'confirmed' or 'active'        |
-| Booking cancelled by user    | status: 'cancelled', keep record       |
-| Booking cancelled by system  | status: 'cancelled', keep record       |
-| Booking cancelled >7d ago    | delete record (optional)               |
+| Event                        | Action                           |
+| ---------------------------- | -------------------------------- |
+| Booking created              | status: 'pending'                |
+| Payment not completed in 30m | status: 'cancelled', keep record |
+| Payment completed            | status: 'confirmed' or 'active'  |
+| Booking cancelled by user    | status: 'cancelled', keep record |
+| Booking cancelled by system  | status: 'cancelled', keep record |
+| Booking cancelled >7d ago    | delete record (optional)         |
 
 ---
 
@@ -3027,15 +3125,15 @@ Perfect, that’s the best-practice flow for bookings with payment! Here’s the
 
 ## **Proposed Booking Status Flow**
 
-1. **Booking Created:**  
+1. **Booking Created:**
    - `status: 'pending'`
    - User is sent to payment (Stripe checkout).
 
-2. **If Payment Not Completed in 30 Minutes:**  
+2. **If Payment Not Completed in 30 Minutes:**
    - Set `status: 'cancelled'`
    - Set `cancelled_at` and `cancellation_reason: 'auto_cancelled_no_payment'`
 
-3. **If Payment Succeeds:**  
+3. **If Payment Succeeds:**
    - Set `status: 'confirmed'` (or `'active'` if you want to skip a manual confirmation step)
    - Set `payment_status: 'completed'`
    - Set `confirmed_at` (optional)
@@ -3045,14 +3143,17 @@ Perfect, that’s the best-practice flow for bookings with payment! Here’s the
 ## **How to Implement**
 
 ### 1. **On Booking Creation**
+
 - Set `status: 'pending'`.
 
 ### 2. **Add a 30-Minute Payment Timeout Job**
+
 - Create a scheduled job (Supabase Edge Function or cron) that:
   - Finds all bookings with `status: 'pending'` and `created_at` older than 30 minutes.
   - Sets `status: 'cancelled'`, `cancelled_at`, and `cancellation_reason: 'auto_cancelled_no_payment'`.
 
 ### 3. **On Payment Success (Stripe Webhook)**
+
 - Always set:
   - `status: 'confirmed'`
   - `payment_status: 'completed'`
@@ -3063,18 +3164,19 @@ Perfect, that’s the best-practice flow for bookings with payment! Here’s the
 
 ## **Status Table**
 
-| Event                        | status         | payment_status | Notes                        |
-|------------------------------|---------------|---------------|------------------------------|
-| Booking created              | pending       | pending       | Awaiting payment             |
-| Payment completed            | confirmed     | completed     | Booking is valid             |
-| Payment not completed (30m)  | cancelled     | (unchanged)   | Auto-cancelled, not paid     |
-| User cancels                 | cancelled     | (unchanged)   | Cancelled by user            |
+| Event                       | status    | payment_status | Notes                    |
+| --------------------------- | --------- | -------------- | ------------------------ |
+| Booking created             | pending   | pending        | Awaiting payment         |
+| Payment completed           | confirmed | completed      | Booking is valid         |
+| Payment not completed (30m) | cancelled | (unchanged)    | Auto-cancelled, not paid |
+| User cancels                | cancelled | (unchanged)    | Cancelled by user        |
 
 ---
 
 ## **Next Steps**
 
 Would you like me to:
+
 1. Create the 30-minute timeout cleanup function?
 2. Update the Stripe webhook to always set `status: 'confirmed'` on payment success, even if previously cancelled?
 3. (Optional) Update your frontend to show a clear message if the booking is cancelled due to timeout?
@@ -3121,6 +3223,7 @@ Understood! You want the following behavior:
 ---
 
 ## **Would you like me to:**
+
 1. **Check your booking creation flow** to ensure it only creates the booking on "Plătește"?
 2. **Show you how to implement the 30-minute timeout job?**
 3. **Update the Stripe webhook logic if needed?**
@@ -3131,7 +3234,7 @@ Let me know which step you want to start with, or if you want all of them!
 
 **User**
 
-scan and plan exactly all before @BookingStatusFlow.tsx  @BookingsPage.tsx  @BookingFlowGuard.tsx  now if i hit plateste plata its on cancelled but changed that to pending instead of cancel and after 30 minutes if its still pending turn it to cancel only the payment_status
+scan and plan exactly all before @BookingStatusFlow.tsx @BookingsPage.tsx @BookingFlowGuard.tsx now if i hit plateste plata its on cancelled but changed that to pending instead of cancel and after 30 minutes if its still pending turn it to cancel only the payment_status
 
 ---
 
@@ -3145,7 +3248,7 @@ Here’s a precise scan and plan for your requirements, based on your code and d
 
 - **Booking is created** when the user hits "Plătește" (Pay).
 - **Status is set to `'cancelled'`** if payment is not completed (possibly by frontend or a job).
-- **You want:**  
+- **You want:**
   - When "Plătește" is hit, set `status: 'pending'`, `payment_status: 'pending'`.
   - If not paid in 30 minutes, set only `payment_status: 'cancelled'` (not the main booking status).
   - If payment succeeds, set `status: 'confirmed'`, `payment_status: 'completed'`.
@@ -3155,15 +3258,18 @@ Here’s a precise scan and plan for your requirements, based on your code and d
 ## **Scan of Relevant Files**
 
 ### 1. **BookingStatusFlow.tsx**
+
 - Handles UI and logic for booking status.
 - Expects `status: 'pending'` for bookings awaiting payment.
 - Shows payment button if `status: 'confirmed'` and `payment_status !== 'completed'`.
 
 ### 2. **BookingsPage.tsx**
+
 - Handles booking creation and payment modal.
 - Badges and UI expect `status: 'pending'` for bookings awaiting payment.
 
 ### 3. **BookingFlowGuard.tsx**
+
 - Handles step-by-step flow for booking.
 - Expects `status: 'pending'` for bookings not yet paid.
 
@@ -3172,24 +3278,28 @@ Here’s a precise scan and plan for your requirements, based on your code and d
 ## **Plan for Correct Payment Flow**
 
 ### **A. On "Plătește" (Pay) Click**
+
 - **Create booking** with:
   - `status: 'pending'`
   - `payment_status: 'pending'`
   - `created_at: now()`
 
 ### **B. If Payment Not Completed in 30 Minutes**
+
 - **Scheduled job** (cron or Supabase Edge Function):
   - Find bookings where `status: 'pending'` and `payment_status: 'pending'` and `created_at` is older than 30 minutes.
   - Set **only** `payment_status: 'cancelled'` (do NOT change main `status`).
   - Optionally, set `cancelled_at` and `cancellation_reason: 'auto_cancelled_no_payment'`.
 
 ### **C. If Payment Succeeds (Stripe Webhook)**
+
 - Set:
   - `status: 'confirmed'`
   - `payment_status: 'completed'`
   - `confirmed_at: now()`
 
 ### **D. UI/UX**
+
 - If `payment_status: 'cancelled'`, show "Plata a expirat" or "Booking expired" message.
 - If `status: 'pending'` and `payment_status: 'pending'`, show payment button.
 
@@ -3197,12 +3307,12 @@ Here’s a precise scan and plan for your requirements, based on your code and d
 
 ## **Summary Table**
 
-| Event                        | status   | payment_status | Notes                        |
-|------------------------------|----------|---------------|------------------------------|
-| Booking created (Pay)        | pending  | pending       | Awaiting payment             |
-| Payment completed            | confirmed| completed     | Booking is valid             |
-| Payment not completed (30m)  | pending  | cancelled     | Payment expired, not booking |
-| User cancels                 | cancelled| (unchanged)   | Cancelled by user            |
+| Event                       | status    | payment_status | Notes                        |
+| --------------------------- | --------- | -------------- | ---------------------------- |
+| Booking created (Pay)       | pending   | pending        | Awaiting payment             |
+| Payment completed           | confirmed | completed      | Booking is valid             |
+| Payment not completed (30m) | pending   | cancelled      | Payment expired, not booking |
+| User cancels                | cancelled | (unchanged)    | Cancelled by user            |
 
 ---
 
@@ -3216,6 +3326,7 @@ Here’s a precise scan and plan for your requirements, based on your code and d
 ---
 
 Would you like me to:
+
 - Write the scheduled job for step 2?
 - Show you the booking creation code to update for step 1?
 - Update the Stripe webhook for step 3?
@@ -3264,6 +3375,7 @@ const handlePaymentCancellation = async () => {
 
 Done!  
 Now, when the user cancels payment or leaves the payment flow, the booking will be updated to:
+
 - `status: 'pending'`
 - `payment_status: 'failed'`
 - `cancellation_reason: 'Payment cancelled by user'`
@@ -3297,32 +3409,40 @@ This means you need to remove the check for `pickup_location` in the section tha
 ### **What to Change**
 
 In `BookingStatusFlow.tsx`, find this section:
+
 ```tsx
-{isOwner && (!booking.pickup_location || booking.pickup_location === 'To be set') && (
-  <div className="border rounded-lg p-4 space-y-3 bg-blue-50 border-blue-200">
-    ...
+{
+  isOwner &&
+    (!booking.pickup_location || booking.pickup_location === "To be set") && (
+      <div className="border rounded-lg p-4 space-y-3 bg-blue-50 border-blue-200">
+        ...
+        <Button
+          onClick={() => onSetPickupLocation?.(booking)}
+          className="w-full bg-blue-600 hover:bg-blue-700"
+        >
+          <MapPin className="h-4 w-4 mr-2" />
+          Setează locația de predare
+        </Button>
+      </div>
+    );
+}
+```
+
+And the section for confirming pickup:
+
+```tsx
+{
+  canOwnerConfirmPickup && (
     <Button
-      onClick={() => onSetPickupLocation?.(booking)}
+      onClick={() => handlePickupConfirm("owner")}
+      disabled={loading}
       className="w-full bg-blue-600 hover:bg-blue-700"
     >
-      <MapPin className="h-4 w-4 mr-2" />
-      Setează locația de predare
+      <Handshake className="h-4 w-4 mr-2" />
+      Confirmă predarea echipamentului
     </Button>
-  </div>
-)}
-```
-And the section for confirming pickup:
-```tsx
-{canOwnerConfirmPickup && (
-  <Button
-    onClick={() => handlePickupConfirm('owner')}
-    disabled={loading}
-    className="w-full bg-blue-600 hover:bg-blue-700"
-  >
-    <Handshake className="h-4 w-4 mr-2" />
-    Confirmă predarea echipamentului
-  </Button>
-)}
+  );
+}
 ```
 
 **Currently, the confirm button is only shown if `pickup_location` is set.**
@@ -3339,6 +3459,7 @@ And the section for confirming pickup:
 #### **Example Fix:**
 
 Change the logic so that:
+
 - The "Setează locația de predare" prompt is still shown if not set (for best practice).
 - But the "Confirmă predarea echipamentului" button is always available if payment is completed and status is correct.
 
@@ -3428,11 +3549,11 @@ Thank you for the clear description. Here’s a root-cause analysis and a plan t
 
 ## **Correct Claim Flow**
 
-| Claim Status | Expected Escrow Action         | Booking Flow         |
-|--------------|-------------------------------|----------------------|
-| Approved     | Escrow released (per claim)   | Funds distributed    |
-| Rejected     | **No escrow release**         | Normal flow resumes  |
-| Cancelled    | **No escrow release**         | Normal flow resumes  |
+| Claim Status | Expected Escrow Action      | Booking Flow        |
+| ------------ | --------------------------- | ------------------- |
+| Approved     | Escrow released (per claim) | Funds distributed   |
+| Rejected     | **No escrow release**       | Normal flow resumes |
+| Cancelled    | **No escrow release**       | Normal flow resumes |
 
 ---
 
@@ -3450,15 +3571,18 @@ Thank you for the clear description. Here’s a root-cause analysis and a plan t
 ## **How to Fix**
 
 ### 1. **Check Where Escrow Release is Triggered**
+
 - In your admin claim dashboard and claim panel, ensure that the call to `/functions/v1/escrow-release` is only made when the claim is approved.
 
 ### 2. **Update the Logic**
+
 - For **rejected** or **cancelled** claims, do **not** call the escrow release function.
 - Only for **approved** claims, call the escrow release function with the correct release type.
 
 ---
 
 ## **Would you like me to:**
+
 - Scan and update your admin claim dashboard and claim panel to ensure escrow release is only triggered on approval?
 - Patch any backend logic that might be triggering escrow release incorrectly?
 
@@ -3493,9 +3617,9 @@ yes search the w
       await fetch('/functions/v1/claim-status-broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          booking_id: claims.find(c => c.id === claimId)?.booking_id, 
-          claim_status: status 
+        body: JSON.stringify({
+          booking_id: claims.find(c => c.id === claimId)?.booking_id,
+          claim_status: status
         }),
       });
 
@@ -3505,7 +3629,7 @@ yes search the w
           const claim = claims.find(c => c.id === claimId);
           if (claim) {
             const bookingId = claim.booking_id;
-            
+
             // Get the booking to determine who filed the claim
             const { data: bookingData } = await supabase
               .from('bookings')
@@ -3517,10 +3641,10 @@ yes search the w
               // Determine who filed the claim by checking claimant_id against owner_id and renter_id
               const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
               const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-              
+
               // Determine the correct release type based on who filed the claim
               let releaseType: string;
-              
+
               if (isOwnerClaim) {
                 // Owner filed the claim and it was approved
                 releaseType = 'claim_owner';
@@ -3609,39 +3733,46 @@ one more problem is that the renter and the owner can make at any step the Claim
 The current logic for the "Revendică daune" (Claim Damages) button for the renter is:
 
 ```tsx
-{(!['pending', 'cancelled'].includes(booking.status) && user?.id === booking.renter_id) && (
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => setClaimBooking(booking)}
-    className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
-  >
-    <AlertCircle className="h-4 w-4 mr-1" />
-    Revendică daune
-  </Button>
-)}
+{
+  !["pending", "cancelled"].includes(booking.status) &&
+    user?.id === booking.renter_id && (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setClaimBooking(booking)}
+        className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+      >
+        <AlertCircle className="h-4 w-4 mr-1" />
+        Revendică daune
+      </Button>
+    );
+}
 ```
 
 This means the renter can only make a claim if the booking status is **not** "pending" or "cancelled".  
 However, you want the renter to be able to make a claim at **any step** (except "cancelled"), including the very first step.
 
-**Solution:**  
+**Solution:**
+
 - Change the condition to only exclude "cancelled" (not "pending").
 - This will allow the renter to claim at any step except when the booking is cancelled.
 
 **Proposed fix:**
+
 ```tsx
-{(booking.status !== 'cancelled' && user?.id === booking.renter_id) && (
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => setClaimBooking(booking)}
-    className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
-  >
-    <AlertCircle className="h-4 w-4 mr-1" />
-    Revendică daune
-  </Button>
-)}
+{
+  booking.status !== "cancelled" && user?.id === booking.renter_id && (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setClaimBooking(booking)}
+      className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+    >
+      <AlertCircle className="h-4 w-4 mr-1" />
+      Revendică daune
+    </Button>
+  );
+}
 ```
 
 I will update the code accordingly.
@@ -3699,7 +3830,7 @@ If you need the same logic for the owner or want to further adjust claim permiss
 
 **User**
 
-i still got that problem when i hit finalizeaza plata for the owner he sees that it gets cancelled for a while till the renter hits the payment succes and then it got updated to confirmed its poor logic 
+i still got that problem when i hit finalizeaza plata for the owner he sees that it gets cancelled for a while till the renter hits the payment succes and then it got updated to confirmed its poor logic
 
 so to make you understand the renter pays but the logic as it is now when you press to pay as the renter it updates the db to cancelled i thogght of it because in case of anything its better the cancellment and after the processing the checkout on the stripe it hits payment succesful and updates the db to confirmed but in that window that the renter is making his payment the owner can see that it got cancelled
 
@@ -3711,7 +3842,6 @@ I understand the issue! The current logic sets the booking to "cancelled" when t
 
 Let me examine the current payment flow and fix this logic:
 
-
 Now I can see the issue! The problem is in the webhook logic. There are **two conflicting handlers** that are both trying to update the booking status:
 
 1. **`handleCheckoutSessionCompleted`** - This should handle successful payments
@@ -3720,7 +3850,6 @@ Now I can see the issue! The problem is in the webhook logic. There are **two co
 The issue is that when a payment is successful, **both handlers might be called**, and there's a race condition. Also, the `handlePaymentIntentSucceeded` has a condition `.neq('status', 'confirmed')` which means it won't update if the status is already 'confirmed'.
 
 But the bigger issue is that **the payment is being cancelled before the webhook can process it**. Let me check the payment flow:
-
 
 I found the issue! The problem is in the `handleClose` function in `PaymentModal.tsx`. When the user clicks "Finalizează plata" and then navigates away or closes the modal, it calls `handlePaymentCancellation()` which sets the booking status to "cancelled".
 
@@ -3733,17 +3862,16 @@ The issue is that **the payment is being cancelled immediately when the modal is
 
 Let me fix this by improving the payment flow:
 
-
 ```typescriptreact
   const handleClose = () => {
     if (paymentStatus === 'processing') return;
-    
+
     // Only cancel if payment was actually initiated but failed
     // Don't cancel if user just closes the modal without attempting payment
     if (paymentStatus === 'error') {
       handlePaymentCancellation();
     }
-    
+
     setPaymentStatus('idle');
     setErrorMessage('');
     setShowOwnerSetup(false);
@@ -3777,7 +3905,6 @@ Let me fix this by improving the payment flow:
 ```
 
 Now I need to also fix the webhook to ensure it properly handles the payment status updates. The issue is that the webhook might not be updating the booking status correctly. Let me also add a better payment flow that sets the booking to "pending" when payment is initiated:
-
 
 ```typescriptreact
   const handleEscrowPayment = async () => {
@@ -3840,7 +3967,7 @@ Now I need to also fix the webhook to ensure it properly handles the payment sta
       console.error('Escrow payment error:', error);
       setPaymentStatus('error');
       setErrorMessage((error as Error).message || 'Failed to process payment');
-      
+
       if ((error as Error).message?.includes('Owner account not ready')) {
         setShowOwnerSetup(true);
       }
@@ -3850,56 +3977,59 @@ Now I need to also fix the webhook to ensure it properly handles the payment sta
 
 Now I need to fix the webhook to ensure it properly updates the booking status when payment is successful. The issue is that the webhook might not be updating the status correctly. Let me fix the webhook:
 
-
 ```typescript
-    // Update booking payment status - always update payment_status when payment is successful
-    const { error: bookingError } = await supabaseClient
-      .from('bookings')
-      .update({ 
-        payment_status: 'completed',
-        payment_intent_id: session.payment_intent // Update with actual payment intent ID
-      })
-      .eq('id', bookingId)
+// Update booking payment status - always update payment_status when payment is successful
+const { error: bookingError } = await supabaseClient
+  .from("bookings")
+  .update({
+    payment_status: "completed",
+    payment_intent_id: session.payment_intent, // Update with actual payment intent ID
+  })
+  .eq("id", bookingId);
 
-    if (bookingError) {
-      console.error('Error updating booking payment status:', bookingError)
-    } else {
-      console.log('Successfully updated payment_status to completed for booking:', bookingId)
-    }
+if (bookingError) {
+  console.error("Error updating booking payment status:", bookingError);
+} else {
+  console.log(
+    "Successfully updated payment_status to completed for booking:",
+    bookingId,
+  );
+}
 
-    // Update booking status to confirmed - always update to prevent race conditions
-    const { error: statusError } = await supabaseClient
-      .from('bookings')
-      .update({ 
-        status: 'confirmed' // Auto-confirm booking after payment
-      })
-      .eq('id', bookingId)
+// Update booking status to confirmed - always update to prevent race conditions
+const { error: statusError } = await supabaseClient
+  .from("bookings")
+  .update({
+    status: "confirmed", // Auto-confirm booking after payment
+  })
+  .eq("id", bookingId);
 
-    if (statusError) {
-      console.error('Error updating booking status:', statusError)
-    } else {
-      console.log('Successfully updated status to confirmed for booking:', bookingId)
-    }
+if (statusError) {
+  console.error("Error updating booking status:", statusError);
+} else {
+  console.log(
+    "Successfully updated status to confirmed for booking:",
+    bookingId,
+  );
+}
 ```
 
 The linter errors are expected for Deno Edge Functions - they're not actual errors, just TypeScript not recognizing Deno types. Let me also fix the payment intent succeeded handler to ensure it always updates the status:
 
-
 ```typescript
-    if (escrowTransaction) {
-      // Always update booking status and payment status when payment succeeds
-      await supabaseClient
-        .from('bookings')
-        .update({ 
-          payment_status: 'completed',
-          status: 'confirmed' // Auto-confirm booking after payment
-        })
-        .eq('id', escrowTransaction.booking_id)
-    }
+if (escrowTransaction) {
+  // Always update booking status and payment status when payment succeeds
+  await supabaseClient
+    .from("bookings")
+    .update({
+      payment_status: "completed",
+      status: "confirmed", // Auto-confirm booking after payment
+    })
+    .eq("id", escrowTransaction.booking_id);
+}
 ```
 
 The linter errors are expected for Deno Edge Functions. Now let me also update the PaymentCancel page to use the correct payment status:
-
 
 ```typescriptreact
         // Update booking status to cancelled
@@ -3915,7 +4045,6 @@ The linter errors are expected for Deno Edge Functions. Now let me also update t
 
 Let me check the current PaymentCancel file:
 
-
 Good! The PaymentCancel page is already using the correct `payment_status: 'failed'`. Now let me create a summary of the fixes I've implemented:
 
 ## Summary of Payment Flow Fixes
@@ -3923,28 +4052,34 @@ Good! The PaymentCancel page is already using the correct `payment_status: 'fail
 I've fixed the payment cancellation issue by implementing the following changes:
 
 ### 1. **Fixed PaymentModal.tsx**
+
 - **Removed premature cancellation**: The modal no longer cancels the booking when the user simply closes it during payment processing
 - **Added pending status**: When payment is initiated, the booking status is set to `'pending'` and `payment_status` to `'pending'`
 - **Only cancel on actual errors**: The booking is only cancelled if the payment actually fails (error status)
 
 ### 2. **Fixed Stripe Webhook**
+
 - **Removed race condition**: The webhook now always updates the booking status to `'confirmed'` and `payment_status` to `'completed'` when payment succeeds
 - **Removed conditional updates**: Removed the `.neq('status', 'confirmed')` condition that was preventing updates
 
 ### 3. **Improved Payment Flow**
+
 The new flow is:
+
 1. **User clicks "Finalizează plata"** → Booking status: `'pending'`, Payment status: `'pending'`
-2. **User redirected to Stripe** → Owner sees "În așteptare plată" 
+2. **User redirected to Stripe** → Owner sees "În așteptare plată"
 3. **Payment succeeds** → Webhook updates to: `'confirmed'` / `'completed'`
 4. **Payment fails/cancelled** → Status: `'cancelled'` / `'failed'`
 
 ### 4. **Benefits**
+
 - **No more "cancelled → confirmed" confusion**: Owner sees consistent status updates
 - **Better UX**: Owner sees "În așteptare plată" during payment processing
 - **No race conditions**: Webhook always updates the status correctly
 - **Proper error handling**: Only cancels when payment actually fails
 
 The payment flow should now work correctly:
+
 - When you click "Finalizează plata", the owner will see "În așteptare plată"
 - When payment succeeds, it will update to "Confirmată" / "Plătit"
 - No more temporary "cancelled" status during payment processing
@@ -3955,7 +4090,7 @@ Try the payment flow again and let me know if you still see the "cancelled" stat
 
 **User**
 
-i think we need to add a supabase functions that checks every 30 minutes for 30 minutes pending bookings and deletes them 
+i think we need to add a supabase functions that checks every 30 minutes for 30 minutes pending bookings and deletes them
 
 ---
 
@@ -3965,44 +4100,47 @@ You're absolutely right! We need a cleanup function that automatically deletes p
 
 Let me create a Supabase Edge Function for this:
 
-
 ```typescript
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     // Create Supabase client with service role key
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration')
-    }
-    
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    console.log('Starting cleanup of pending bookings...')
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Missing Supabase configuration");
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log("Starting cleanup of pending bookings...");
 
     // Calculate the cutoff time (30 minutes ago)
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-    
-    console.log('Cutoff time for cleanup:', thirtyMinutesAgo)
+    const thirtyMinutesAgo = new Date(
+      Date.now() - 30 * 60 * 1000,
+    ).toISOString();
+
+    console.log("Cutoff time for cleanup:", thirtyMinutesAgo);
 
     // Find pending bookings older than 30 minutes
     const { data: pendingBookings, error: fetchError } = await supabaseClient
-      .from('bookings')
-      .select(`
+      .from("bookings")
+      .select(
+        `
         id,
         status,
         payment_status,
@@ -4010,120 +4148,120 @@ serve(async (req) => {
         owner_id,
         renter_id,
         gear:gear_id(title)
-      `)
-      .eq('status', 'pending')
-      .lt('created_at', thirtyMinutesAgo)
+      `,
+      )
+      .eq("status", "pending")
+      .lt("created_at", thirtyMinutesAgo);
 
     if (fetchError) {
-      console.error('Error fetching pending bookings:', fetchError)
-      throw fetchError
+      console.error("Error fetching pending bookings:", fetchError);
+      throw fetchError;
     }
 
-    console.log(`Found ${pendingBookings?.length || 0} pending bookings older than 30 minutes`)
+    console.log(
+      `Found ${pendingBookings?.length || 0} pending bookings older than 30 minutes`,
+    );
 
     if (!pendingBookings || pendingBookings.length === 0) {
-      console.log('No pending bookings to clean up')
+      console.log("No pending bookings to clean up");
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'No pending bookings to clean up',
-          cleanedCount: 0 
+        JSON.stringify({
+          success: true,
+          message: "No pending bookings to clean up",
+          cleanedCount: 0,
         }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      )
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
     }
 
     // Delete the pending bookings
-    const bookingIds = pendingBookings.map(booking => booking.id)
-    
+    const bookingIds = pendingBookings.map((booking) => booking.id);
+
     const { error: deleteError } = await supabaseClient
-      .from('bookings')
+      .from("bookings")
       .delete()
-      .in('id', bookingIds)
+      .in("id", bookingIds);
 
     if (deleteError) {
-      console.error('Error deleting pending bookings:', deleteError)
-      throw deleteError
+      console.error("Error deleting pending bookings:", deleteError);
+      throw deleteError;
     }
 
-    console.log(`Successfully deleted ${pendingBookings.length} pending bookings`)
+    console.log(
+      `Successfully deleted ${pendingBookings.length} pending bookings`,
+    );
 
     // Log cleanup details for monitoring
     const cleanupLog = {
       timestamp: new Date().toISOString(),
-      action: 'cleanup_pending_bookings',
+      action: "cleanup_pending_bookings",
       cleaned_count: pendingBookings.length,
       cutoff_time: thirtyMinutesAgo,
-      booking_details: pendingBookings.map(booking => ({
+      booking_details: pendingBookings.map((booking) => ({
         id: booking.id,
         created_at: booking.created_at,
         owner_id: booking.owner_id,
         renter_id: booking.renter_id,
-        gear_title: booking.gear?.title
-      }))
-    }
+        gear_title: booking.gear?.title,
+      })),
+    };
 
-    console.log('Cleanup log:', JSON.stringify(cleanupLog, null, 2))
+    console.log("Cleanup log:", JSON.stringify(cleanupLog, null, 2));
 
     // Optionally store cleanup log in database for monitoring
     try {
-      await supabaseClient
-        .from('cleanup_logs')
-        .insert({
-          action: 'cleanup_pending_bookings',
-          details: cleanupLog,
-          cleaned_count: pendingBookings.length,
-          cutoff_time: thirtyMinutesAgo
-        })
+      await supabaseClient.from("cleanup_logs").insert({
+        action: "cleanup_pending_bookings",
+        details: cleanupLog,
+        cleaned_count: pendingBookings.length,
+        cutoff_time: thirtyMinutesAgo,
+      });
     } catch (logError) {
-      console.error('Error logging cleanup (non-critical):', logError)
+      console.error("Error logging cleanup (non-critical):", logError);
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: `Successfully cleaned up ${pendingBookings.length} pending bookings`,
         cleanedCount: pendingBookings.length,
-        cutoffTime: thirtyMinutesAgo
+        cutoffTime: thirtyMinutesAgo,
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    )
-
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (error) {
-    console.error('Cleanup function error:', error)
+    console.error("Cleanup function error:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    )
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
-})
+});
 ```
 
 The linter errors are expected for Deno Edge Functions. Now I need to create the configuration file for this function:
 
-
 ```typescript
 export const config = {
-  schedule: '*/30 * * * *', // Run every 30 minutes
+  schedule: "*/30 * * * *", // Run every 30 minutes
   timeout: 60, // 60 seconds timeout
   memory: 128, // 128MB memory limit
-}
+};
 ```
 
 Now I need to create a migration to add the cleanup_logs table for monitoring:
-
 
 ```sql
 -- Create cleanup_logs table for monitoring cleanup operations
@@ -4148,16 +4286,15 @@ CREATE POLICY "Service role can read cleanup logs" ON public.cleanup_logs
   FOR SELECT USING (auth.role() = 'service_role');
 
 -- Add index for better query performance
-CREATE INDEX IF NOT EXISTS idx_cleanup_logs_action_created_at 
+CREATE INDEX IF NOT EXISTS idx_cleanup_logs_action_created_at
   ON public.cleanup_logs(action, created_at);
 
 -- Add index for cleanup logs by date
-CREATE INDEX IF NOT EXISTS idx_cleanup_logs_created_at 
+CREATE INDEX IF NOT EXISTS idx_cleanup_logs_created_at
   ON public.cleanup_logs(created_at DESC);
 ```
 
 Now let me also create a manual trigger function that can be called from the admin dashboard to manually run the cleanup:
-
 
 ```typescript
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
@@ -4178,9 +4315,9 @@ serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 405 
+        status: 405
       }
     )
   }
@@ -4191,9 +4328,9 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Authorization required' }),
-        { 
+        {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
+          status: 401
         }
       )
     }
@@ -4201,18 +4338,18 @@ serve(async (req) => {
     // Create Supabase client with service role key
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration')
     }
-    
+
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
     console.log('Manual cleanup trigger started...')
 
     // Calculate the cutoff time (30 minutes ago)
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-    
+
     console.log('Cutoff time for cleanup:', thirtyMinutesAgo)
 
     // Find pending bookings older than 30 minutes
@@ -4240,21 +4377,21 @@ serve(async (req) => {
     if (!pendingBookings || pendingBookings.length === 0) {
       console.log('No pending bookings to clean up')
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: 'No pending bookings to clean up',
-          cleanedCount: 0 
+          cleanedCount: 0
         }),
-        { 
+        {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
+          status: 200
         }
       )
     }
 
     // Delete the pending bookings
     const bookingIds = pendingBookings.map(booking => booking.id)
-    
+
     const { error: deleteError } = await supabaseClient
       .from('bookings')
       .delete()
@@ -4284,9 +4421,7 @@ there is already a manual trigger in the admin dashbaord
 
 Perfect! You're right - there's already a manual trigger in the admin dashboard. Let me check the existing admin cleanup functionality to make sure it's compatible with our new cleanup function:
 
-
 I can see the issue! Looking at the Dashboard component, there are indeed two sections showing recent bookings that are duplicating information. Let me examine the current structure and fix the layout:
-
 
 Now I can see the issue! There are indeed two sections showing booking information:
 
@@ -4294,7 +4429,6 @@ Now I can see the issue! There are indeed two sections showing booking informati
 2. **"Pending owner bookings"** (lines 602-650) - Shows pending bookings that need owner confirmation
 
 The problem is that these are showing overlapping information. Let me fix this by consolidating them into a single, cleaner section:
-
 
 ```typescriptreact
               <CardContent>
@@ -4309,12 +4443,12 @@ The problem is that these are showing overlapping information. Let me fix this b
                       const allBookings = [...userBookings, ...ownerBookings]
                         .sort((a, b) => new Date((b as any).created_at).getTime() - new Date((a as any).created_at).getTime())
                         .slice(0, 5); // Show up to 5 most recent bookings
-                      
+
                       if (allBookings.length > 0) {
                         return allBookings.map((booking) => {
                           const isOwner = booking.owner_id === user?.id;
                           const isPending = booking.status === 'pending';
-                          
+
                           return (
                             <div key={booking.id as string} className={`p-3 border rounded-lg ${isPending ? 'bg-orange-50 border-orange-200' : 'hover:bg-gray-50'}`}>
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -4336,7 +4470,7 @@ The problem is that these are showing overlapping information. Let me fix this b
                                   <div className="flex items-center gap-1">
                                     {getBookingBadges(booking, user?.id)}
                                     {(booking.activeClaim as any) && (
-                                      <ClaimStatusBadge 
+                                      <ClaimStatusBadge
                                         status={(booking.activeClaim as any).claim_status}
                                         claim={booking.activeClaim}
                                         booking={booking}
@@ -4344,7 +4478,7 @@ The problem is that these are showing overlapping information. Let me fix this b
                                       />
                                     )}
                                     {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
-                                      <ClaimStatusBadge 
+                                      <ClaimStatusBadge
                                         status={(booking.resolvedClaim as any).claim_status}
                                         claim={booking.resolvedClaim}
                                         booking={booking}
@@ -4353,20 +4487,20 @@ The problem is that these are showing overlapping information. Let me fix this b
                                     )}
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
                                       onClick={() => navigate('/bookings')}
                                       className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs px-2 py-1 h-7"
                                     >
                                       Vezi
                                     </Button>
-                                    
+
                                     {/* Confirm button for pending owner bookings */}
                                     {isPending && isOwner && (
-                                      <Button 
-                                        variant="default" 
-                                        size="sm" 
+                                      <Button
+                                        variant="default"
+                                        size="sm"
                                         onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
                                         disabled={acceptingBooking}
                                         className="bg-green-600 hover:bg-green-700 text-xs px-3 py-1 h-7"
@@ -4375,7 +4509,7 @@ The problem is that these are showing overlapping information. Let me fix this b
                                         Confirmă
                                       </Button>
                                     )}
-                                    
+
                                     {/* Claim buttons */}
                                     {(!['pending', 'cancelled'].includes(booking.status as string) && user?.id === booking.renter_id) && (
                                       <Button
@@ -4406,15 +4540,15 @@ The problem is that these are showing overlapping information. Let me fix this b
                           );
                         });
                       }
-                      
+
                       // Show empty state if no bookings
                       return (
                         <div className="text-center py-8">
                           <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                           <p className="text-sm text-gray-600">Nu ai rezervări</p>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => navigate('/browse')}
                             className="mt-2"
                           >
@@ -4436,11 +4570,11 @@ Perfect! Now I've consolidated the two booking sections into one cleaner section
 
 1. **Removed duplicate sections**: Eliminated the separate "Pending owner bookings" section that was duplicating information
 2. **Consolidated into one section**: All bookings (both renter and owner) are now shown in a single, organized list
-3. **Improved visual hierarchy**: 
+3. **Improved visual hierarchy**:
    - Pending bookings now have an orange background to highlight them
    - All bookings show proper status badges
    - Claim status badges are included for all bookings
-4. **Better organization**: 
+4. **Better organization**:
    - Shows up to 5 most recent bookings instead of 3
    - Sorted by creation date (most recent first)
    - Clear role indicators ("Ca proprietar" / "Ca chiriaș")
@@ -4454,8 +4588,9 @@ Perfect! Now I've consolidated the two booking sections into one cleaner section
 - **Better empty state**: Clean empty state when no bookings exist
 
 ### Status badges now properly show:
+
 - **În așteptare** (pending)
-- **Confirmată** (confirmed) 
+- **Confirmată** (confirmed)
 - **Activă** (active)
 - **Returnată** (returned)
 - **Finalizată** (completed)
@@ -4470,9 +4605,9 @@ The dashboard now has a much cleaner layout with no duplicate information, and a
 supabase db push --include-all
 Connecting to remote database...
 Do you want to push these migrations to the remote database?
- • 20250709000027_fix_dual_confirmation_trigger_final.sql
+• 20250709000027_fix_dual_confirmation_trigger_final.sql
 
- [Y/n] Y
+[Y/n] Y
 NOTICE (42P06): schema "supabase_migrations" already exists, skipping
 NOTICE (42P07): relation "schema_migrations" already exists, skipping
 NOTICE (42701): column "statements" of relation "schema_migrations" already exists, skipping
@@ -4480,8 +4615,8 @@ NOTICE (42701): column "name" of relation "schema_migrations" already exists, sk
 Applying migration 20250709000027_fix_dual_confirmation_trigger_final.sql...
 NOTICE (42710): extension "http" already exists, skipping
 ERROR: duplicate key value violates unique constraint "schema_migrations_pkey" (SQLSTATE 23505)
-Key (version)=(20250709000027) already exists.                                                 
-At statement: 7                                                                                
+Key (version)=(20250709000027) already exists.  
+At statement: 7  
 INSERT INTO supabase_migrations.schema_migrations(version, name, statements) VALUES($1, $2, $3)
 Try rerunning the command with --debug to troubleshoot the error. maybe you created one with the same name
 
@@ -4491,20 +4626,16 @@ Try rerunning the command with --debug to troubleshoot the error. maybe you crea
 
 The error shows that migration `20250709000027` already exists in the database. This happens when you try to push a migration that has already been applied. Let me check what migrations exist and fix this:
 
-
 I can see the issue! There are **two migrations with the same version number** `20250709000027`:
 
-1. `20250709000027_add_cleanup_logs_table.sql` 
+1. `20250709000027_add_cleanup_logs_table.sql`
 2. `20250709000027_fix_dual_confirmation_trigger_final.sql`
 
 This is causing the conflict. Let me rename one of them to fix this:
 
-
 Now let me also check if there are any other duplicate version numbers:
 
-
 Let me use PowerShell commands instead:
-
 
 I can see there are still some issues:
 
@@ -4514,9 +4645,7 @@ I can see there are still some issues:
 
 Let me fix these issues:
 
-
 Let me check the current state and then try the database push again:
-
 
 ---
 
@@ -4532,7 +4661,6 @@ supabase migration repair --status reverted 20250709000027 20250709000030
 And update local migrations to match remote database:
 supabase db pull
 
-
 ---
 
 **Cursor**
@@ -4542,6 +4670,7 @@ You are seeing this error because the remote database has migration versions (`2
 **How to fix:**
 
 ### 1. **Repair the migration history table**
+
 This will mark the remote migrations as "reverted" so Supabase will ignore them.
 
 ```sh
@@ -4549,6 +4678,7 @@ supabase migration repair --status reverted 20250709000027 20250709000030
 ```
 
 ### 2. **Pull the current remote schema to your local**
+
 This will update your local migrations to match the remote database.
 
 ```sh
@@ -4556,6 +4686,7 @@ supabase db pull
 ```
 
 ### 3. **Push your current migrations**
+
 After the above, you can safely run:
 
 ```sh
@@ -4564,7 +4695,8 @@ supabase db push --include-all
 
 ---
 
-**Summary:**  
+**Summary:**
+
 - The error is because the remote DB has migrations that are missing locally.
 - The above steps will repair the migration history and sync your local state.
 
@@ -4586,17 +4718,19 @@ supabase db push --include-all
 
 **User**
 
-there are duplicates for the claims status badge search and see maybe @Dashboard.tsx  and @ClaimStatusBadge.tsx 
+there are duplicates for the claims status badge search and see maybe @Dashboard.tsx and @ClaimStatusBadge.tsx
 
 ---
 
 **Cursor**
 
-You are correct:  
+You are correct:
+
 - The `getBookingBadges` function in `Dashboard.tsx` **duplicates claim status badge logic** (e.g., "Revendicare aprobată", "Revendicare respinsă", etc.).
 - At the same time, the `ClaimStatusBadge` component is also being rendered for the same booking, resulting in **duplicate claim status badges** in the UI (as seen in your screenshot).
 
-**Solution:**  
+**Solution:**
+
 - **Remove all claim status logic from `getBookingBadges`** in `Dashboard.tsx`.
 - Only use the `ClaimStatusBadge` component for displaying claim status.
 
@@ -4661,15 +4795,18 @@ i cant to a claim as the renter at every step how i should
 **Cursor**
 
 The current logic in `RenterClaimForm.tsx` **only allows claims for bookings that are:**
+
 - `payment_status === 'completed'`
 - `status` is one of `['active', 'returned', 'completed']`
 
 **This is why you see the message:**
+
 > Nu poți trimite o revendicare pentru această închiriere. Revendicările pot fi trimise doar pentru închirieri active sau finalizate cu plata completată.
 
 ---
 
 ### **What you want:**
+
 - The renter should be able to submit a claim at **any step except when the booking is cancelled**.
 
 ---
@@ -4677,12 +4814,12 @@ The current logic in `RenterClaimForm.tsx` **only allows claims for bookings tha
 ## **How to fix:**
 
 **Change the eligibility logic to:**
+
 - Allow claims for any booking where `status !== 'cancelled'` and the user is the renter.
 
 ---
 
 ### **I will update the eligibility check in `RenterClaimForm.tsx` accordingly.**
-
 
 ```typescriptreact
         // Allow claims for any booking except cancelled
@@ -4702,7 +4839,7 @@ If you need the same logic for the owner or want to further adjust claim permiss
 
 **User**
 
-i still got that problem when i hit finalizeaza plata for the owner he sees that it gets cancelled for a while till the renter hits the payment succes and then it got updated to confirmed its poor logic 
+i still got that problem when i hit finalizeaza plata for the owner he sees that it gets cancelled for a while till the renter hits the payment succes and then it got updated to confirmed its poor logic
 
 so to make you understand the renter pays but the logic as it is now when you press to pay as the renter it updates the db to cancelled i thogght of it because in case of anything its better the cancellment and after the processing the checkout on the stripe it hits payment succesful and updates the db to confirmed but in that window that the renter is making his payment the owner can see that it got cancelled
 
@@ -4713,6 +4850,7 @@ so to make you understand the renter pays but the logic as it is now when you pr
 You are absolutely right—this is a poor user experience and a common payment flow anti-pattern.
 
 ### **Current Problem**
+
 - When the renter clicks "Finalizează plata", the booking is set to **cancelled** immediately.
 - If the renter completes payment, the status is updated to **confirmed**.
 - In the meantime, the owner sees the booking as **cancelled**, which is confusing and looks like a bug.
@@ -4722,6 +4860,7 @@ You are absolutely right—this is a poor user experience and a common payment f
 ## **Best Practice Solution**
 
 **Do NOT set the booking to "cancelled" when the renter initiates payment.**
+
 - Instead, set the booking to a "pending payment" state (e.g., `status: 'pending'`, `payment_status: 'pending'`).
 - Only set to "cancelled" if the renter explicitly cancels or if payment fails/timeout.
 - When payment is successful, update to `status: 'confirmed'`, `payment_status: 'completed'`.
@@ -4745,6 +4884,7 @@ You are absolutely right—this is a poor user experience and a common payment f
 ---
 
 ### **What NOT to do**
+
 - Do **not** set `status: 'cancelled'` just because the payment modal is closed or the user navigates away.
 - Only set to cancelled if the user explicitly cancels or Stripe reports a failure.
 
@@ -4783,6 +4923,7 @@ Great questions! Here’s a clear explanation and the best-practice approach for
 - It is also the state for bookings that are waiting for owner confirmation (if you have a two-step process).
 
 **In your flow:**
+
 - When a renter initiates a booking and goes to pay, the booking is in `pending` until payment is completed.
 - If payment is successful, it moves to `confirmed`.
 - If payment is not completed within a certain time (e.g., 30 minutes), it should be auto-deleted.
@@ -4807,11 +4948,11 @@ Great questions! Here’s a clear explanation and the best-practice approach for
 
 ## 4. **Summary Table**
 
-| Status      | Meaning                                 | When Set?                        |
-|-------------|-----------------------------------------|----------------------------------|
-| pending     | Awaiting payment                        | After booking created, before payment success |
-| confirmed   | Payment completed, booking is active    | After Stripe payment success     |
-| cancelled   | Booking cancelled by user or timeout
+| Status    | Meaning                              | When Set?                                     |
+| --------- | ------------------------------------ | --------------------------------------------- |
+| pending   | Awaiting payment                     | After booking created, before payment success |
+| confirmed | Payment completed, booking is active | After Stripe payment success                  |
+| cancelled | Booking cancelled by user or timeout |
 
 ---
 
@@ -4827,6 +4968,7 @@ Yes, it’s definitely better to do it this way!
 **Keeping bookings in `pending` while payment is in progress, and only deleting them after 30 minutes if not paid, is the industry best practice.**
 
 ### **Why this is the right approach:**
+
 - **No more “cancelled” confusion:** Owners see “În așteptare plată” (pending payment) while the renter is paying.
 - **Cleaner UX:** No booking is shown as cancelled unless it’s truly cancelled or expired.
 - **Automatic cleanup:** Your scheduled job will remove unpaid, abandoned bookings after 30 minutes.
@@ -4835,6 +4977,7 @@ Yes, it’s definitely better to do it this way!
 ---
 
 ## **What I’ll do:**
+
 1. **Ensure the payment modal does NOT set status to “cancelled” on close or payment start.**
 2. **Keep status as “pending” until payment is successful or the cleanup job deletes it.**
 3. **Owner always sees the correct status.**
@@ -4846,13 +4989,13 @@ Yes, it’s definitely better to do it this way!
 ```typescriptreact
   const handleClose = () => {
     if (paymentStatus === 'processing') return;
-    
+
     // Only cancel if payment was actually initiated but failed (error)
     // Do NOT cancel on modal close or payment start
     if (paymentStatus === 'error') {
       handlePaymentCancellation();
     }
-    
+
     setPaymentStatus('idle');
     setErrorMessage('');
     setShowOwnerSetup(false);
@@ -4927,7 +5070,7 @@ Yes, it’s definitely better to do it this way!
       console.error('Escrow payment error:', error);
       setPaymentStatus('error');
       setErrorMessage((error as Error).message || 'Failed to process payment');
-      
+
       if ((error as Error).message?.includes('Owner account not ready')) {
         setShowOwnerSetup(true);
       }
@@ -4936,6 +5079,7 @@ Yes, it’s definitely better to do it this way!
 ```
 
 The payment modal logic is now correct:
+
 - **No more setting status to "cancelled"** when the renter starts payment or closes the modal.
 - **Status remains "pending"** while payment is in progress.
 - **If payment fails or is cancelled**, only then is the status set to "cancelled".
@@ -4956,15 +5100,18 @@ so one problem is that i cant make claims as the owner now so basically i want t
 **Cursor**
 
 Currently, the owner can only submit a claim if:
+
 - `payment_status === 'completed'`
 - `status` is one of `['active', 'returned', 'completed']`
 
 **You want:**
+
 - Owner (and renter) can submit a claim at any step **except** when the booking is `cancelled` or `completed`.
 
 ---
 
 ## **Solution**
+
 - Update the eligibility logic in `OwnerClaimForm.tsx` to:
   - Allow claims if the user is the owner
   - AND booking status is **not** `'cancelled'` and **not** `'completed'`
@@ -4988,4 +5135,3 @@ You can now submit a claim as the **owner** at any step except when the booking 
 This matches your requirement for both renter and owner: claims are allowed at any step except "cancelled" or "finished".
 
 If you want to further adjust claim permissions or messages, let me know!
-

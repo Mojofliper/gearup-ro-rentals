@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, MapPin, Tag, SortAsc, ChevronDown, ChevronUp } from 'lucide-react';
-import { useCategories } from '@/hooks/useCategories';
-import { LocationDetector } from '../LocationDetector';
+import React, { useState } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  Filter,
+  MapPin,
+  Tag,
+  SortAsc,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import { useCategories } from "@/hooks/useCategories";
+import { LocationDetector } from "../LocationDetector";
 
 interface SearchFiltersProps {
   searchQuery: string;
@@ -38,17 +52,27 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtrează echipamentele</h3>
-            <p className="text-xs sm:text-sm text-gray-600">Găsește exact ce cauți</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+              Filtrează echipamentele
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600">
+              Găsește exact ce cauți
+            </p>
           </div>
         </div>
         {/* Mobile: Expand/collapse button */}
         <button
           className="block sm:hidden p-2 rounded-full hover:bg-blue-100 transition"
-          aria-label={filtersOpen ? 'Ascunde filtrele' : 'Afișează mai multe filtre'}
+          aria-label={
+            filtersOpen ? "Ascunde filtrele" : "Afișează mai multe filtre"
+          }
           onClick={() => setFiltersOpen((open) => !open)}
         >
-          {filtersOpen ? <ChevronUp className="h-5 w-5 text-blue-600" /> : <ChevronDown className="h-5 w-5 text-blue-600" />}
+          {filtersOpen ? (
+            <ChevronUp className="h-5 w-5 text-blue-600" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-blue-600" />
+          )}
         </button>
       </div>
       {/* Content */}
@@ -66,11 +90,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-10 sm:pl-12 h-10 sm:h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white rounded-lg shadow-sm text-sm sm:text-base"
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  const el = document.getElementById('gear-results');
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const el = document.getElementById("gear-results");
                   if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
                   }
                 }
               }}
@@ -79,7 +103,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         </div>
         {/* Collapsible filters (mobile), always open on desktop */}
         <div
-          className={`transition-all duration-300 ease-in-out overflow-hidden ${filtersOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} sm:max-h-none sm:opacity-100`}
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${filtersOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"} sm:max-h-none sm:opacity-100`}
           style={{
             // On desktop, always show
             height: undefined,
@@ -95,7 +119,9 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               </label>
               <LocationDetector
                 onLocationChange={onLocationChange}
-                currentLocation={selectedLocation === 'all' ? '' : selectedLocation}
+                currentLocation={
+                  selectedLocation === "all" ? "" : selectedLocation
+                }
                 className="w-full"
               />
             </div>

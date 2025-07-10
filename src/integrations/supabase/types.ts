@@ -3,21 +3,21 @@ export type Database = Record<string, unknown>;
 // Claim types
 export interface ClaimData {
   booking_id: string;
-  claim_type: 'damage' | 'theft' | 'late_return' | 'other';
+  claim_type: "damage" | "theft" | "late_return" | "other";
   description: string;
   evidence_urls?: string[];
   amount_requested?: number;
 }
 
 export interface ClaimUpdate {
-  claim_status?: 'pending' | 'approved' | 'rejected';
+  claim_status?: "pending" | "approved" | "rejected";
   admin_notes?: string;
   resolution_amount?: number;
   resolution_date?: string;
 }
 
 export interface ClaimResolution {
-  claim_status: 'approved' | 'rejected';
+  claim_status: "approved" | "rejected";
   admin_notes?: string;
   resolution_amount?: number;
   resolution_date?: string;
@@ -33,7 +33,7 @@ export interface GearData {
   latitude?: number;
   longitude?: number;
   images?: string[];
-  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  condition?: "excellent" | "good" | "fair" | "poor";
   availability_start?: string;
   availability_end?: string;
   owner_id?: string;
@@ -48,7 +48,7 @@ export interface GearUpdate {
   latitude?: number;
   longitude?: number;
   images?: string[];
-  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  condition?: "excellent" | "good" | "fair" | "poor";
   availability_start?: string;
   availability_end?: string;
   is_active?: boolean;
@@ -66,7 +66,7 @@ export interface PaymentData {
 export interface StripeAccountData {
   country: string;
   email: string;
-  business_type?: 'individual' | 'company';
+  business_type?: "individual" | "company";
   company?: {
     name?: string;
     tax_id?: string;
@@ -107,7 +107,10 @@ export interface ReviewUpdate {
 export interface SupabaseClient {
   from: (table: string) => {
     select: (columns: string) => {
-      eq: (column: string, value: string) => {
+      eq: (
+        column: string,
+        value: string,
+      ) => {
         single: () => Promise<{ data: unknown; error: unknown }>;
       };
     };

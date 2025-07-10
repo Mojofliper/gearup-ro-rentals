@@ -1,6 +1,11 @@
-import React from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 
 interface SkeletonProps {
   className?: string;
@@ -8,15 +13,15 @@ interface SkeletonProps {
 
 // Basic skeleton components
 export const TextSkeleton: React.FC<SkeletonProps> = ({ className }) => (
-  <Skeleton className={`h-4 w-full ${className || ''}`} />
+  <Skeleton className={`h-4 w-full ${className || ""}`} />
 );
 
 export const AvatarSkeleton: React.FC<SkeletonProps> = ({ className }) => (
-  <Skeleton className={`h-10 w-10 rounded-full ${className || ''}`} />
+  <Skeleton className={`h-10 w-10 rounded-full ${className || ""}`} />
 );
 
 export const ImageSkeleton: React.FC<SkeletonProps> = ({ className }) => (
-  <Skeleton className={`aspect-[4/3] w-full ${className || ''}`} />
+  <Skeleton className={`aspect-[4/3] w-full ${className || ""}`} />
 );
 
 // Gear card skeleton
@@ -61,14 +66,14 @@ export const GearCardSkeleton: React.FC = () => (
 );
 
 // Grid skeleton for multiple items
-export const GridSkeleton: React.FC<{ count?: number; columns?: number }> = ({ 
-  count = 6, 
-  columns = 3 
+export const GridSkeleton: React.FC<{ count?: number; columns?: number }> = ({
+  count = 6,
+  columns = 3,
 }) => (
-  <div 
+  <div
     className="grid gap-6"
-    style={{ 
-      gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` 
+    style={{
+      gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
     }}
   >
     {Array.from({ length: count }).map((_, index) => (
@@ -93,7 +98,7 @@ export const DashboardSkeleton: React.FC = () => (
         </Card>
       ))}
     </div>
-    
+
     {/* Recent activity */}
     <Card>
       <CardHeader>
@@ -173,9 +178,9 @@ export const FormSkeleton: React.FC = () => (
 );
 
 // Table skeleton
-export const TableSkeleton: React.FC<{ rows?: number; columns?: number }> = ({ 
-  rows = 5, 
-  columns = 4 
+export const TableSkeleton: React.FC<{ rows?: number; columns?: number }> = ({
+  rows = 5,
+  columns = 4,
 }) => (
   <div className="space-y-3">
     {/* Header */}
@@ -193,4 +198,4 @@ export const TableSkeleton: React.FC<{ rows?: number; columns?: number }> = ({
       </div>
     ))}
   </div>
-); 
+);

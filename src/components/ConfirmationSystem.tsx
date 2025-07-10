@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { CheckCircle, Clock, AlertCircle, Handshake, Package } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Handshake,
+  Package,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ConfirmationSystemProps {
   booking: Record<string, unknown>;
@@ -21,16 +27,17 @@ interface ConfirmationStatus {
 
 export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
   booking,
-  onStatusUpdate
+  onStatusUpdate,
 }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [confirmationStatus, setConfirmationStatus] = useState<ConfirmationStatus>({
-    ownerConfirmed: false,
-    renterConfirmed: false,
-    bothConfirmed: false
-  });
+  const [confirmationStatus, setConfirmationStatus] =
+    useState<ConfirmationStatus>({
+      ownerConfirmed: false,
+      renterConfirmed: false,
+      bothConfirmed: false,
+    });
 
   const bookingId = booking.id as string;
   const status = booking.status as string;
@@ -39,26 +46,28 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
 
   useEffect(() => {
     const checkConfirmationStatus = () => {
-      const ownerConfirmed = booking.pickup_confirmed_by_owner as boolean || false;
-      const renterConfirmed = booking.pickup_confirmed_by_renter as boolean || false;
+      const ownerConfirmed =
+        (booking.pickup_confirmed_by_owner as boolean) || false;
+      const renterConfirmed =
+        (booking.pickup_confirmed_by_renter as boolean) || false;
       const bothConfirmed = ownerConfirmed && renterConfirmed;
 
       setConfirmationStatus({
         ownerConfirmed,
         renterConfirmed,
-        bothConfirmed
+        bothConfirmed,
       });
     };
 
     checkConfirmationStatus();
   }, [booking]);
 
-  const handleConfirmation = async (role: 'owner' | 'renter') => {
+  const handleConfirmation = async (role: "owner" | "renter") => {
     if (!user) {
       toast({
-        title: 'Eroare',
-        description: 'Trebuie să fii autentificat',
-        variant: 'destructive',
+        title: "Eroare",
+        description: "Trebuie să fii autentificat",
+        variant: "destructive",
       });
       return;
     }
@@ -66,8 +75,8 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
     setLoading(true);
     try {
       const updateData: Record<string, unknown> = {};
-      
-      if (role === 'owner') {
+
+      if (role === "owner") {
         updateData.pickup_confirmed_by_owner = true;
         updateData.pickup_confirmed_by_owner_at = new Date().toISOString();
       } else {
@@ -76,39 +85,43 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
       }
 
       const { error } = await supabase
-        .from('bookings')
+        .from("bookings")
         .update(updateData)
-        .eq('id', bookingId);
+        .eq("id", bookingId);
 
       if (error) {
         toast({
-          title: 'Eroare',
-          description: 'Eroare la confirmare: ' + error.message,
-          variant: 'destructive',
+          title: "Eroare",
+          description: "Eroare la confirmare: " + error.message,
+          variant: "destructive",
         });
       } else {
-        const roleName = role === 'owner' ? 'proprietar' : 'chiriaș';
+        const roleName = role === "owner" ? "proprietar" : "chiriaș";
         toast({
-          title: 'Confirmare reușită',
+          title: "Confirmare reușită",
           description: `Confirmarea ${roleName}ului a fost înregistrată.`,
         });
-        
+
         // Update local state
-        setConfirmationStatus(prev => ({
+        setConfirmationStatus((prev) => ({
           ...prev,
-          [role === 'owner' ? 'ownerConfirmed' : 'renterConfirmed']: true,
-          bothConfirmed: role === 'owner' ? prev.renterConfirmed : prev.ownerConfirmed
+          [role === "owner" ? "ownerConfirmed" : "renterConfirmed"]: true,
+          bothConfirmed:
+            role === "owner" ? prev.renterConfirmed : prev.ownerConfirmed,
         }));
 
         onStatusUpdate?.();
-        queryClient.invalidateQueries({ queryKey: ['bookings', bookingId] });
+        queryClient.invalidateQueries({ queryKey: ["bookings", bookingId] });
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare neașteptată';
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "A apărut o eroare neașteptată";
       toast({
-        title: 'Eroare',
+        title: "Eroare",
         description: errorMessage,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -116,46 +129,51 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
   };
 
   const getStatusInfo = () => {
-    if (status === 'confirmed') {
+    if (status === "confirmed") {
       return {
-        title: 'Confirmare Predare/Ridicare',
-        description: 'Ambele părți trebuie să confirme că echipamentul a fost predat și ridicat.',
+        title: "Confirmare Predare/Ridicare",
+        description:
+          "Ambele părți trebuie să confirme că echipamentul a fost predat și ridicat.",
         icon: Handshake,
-        color: 'bg-blue-50 border-blue-200'
+        color: "bg-blue-50 border-blue-200",
       };
-    } else if (status === 'active') {
+    } else if (status === "active") {
       return {
-        title: 'Confirmare Returnare',
-        description: 'Ambele părți trebuie să confirme că echipamentul a fost returnat și primit.',
+        title: "Confirmare Returnare",
+        description:
+          "Ambele părți trebuie să confirme că echipamentul a fost returnat și primit.",
         icon: Package,
-        color: 'bg-green-50 border-green-200'
+        color: "bg-green-50 border-green-200",
       };
     }
     return {
-      title: 'Status Necunoscut',
-      description: 'Status necunoscut pentru confirmare.',
+      title: "Status Necunoscut",
+      description: "Status necunoscut pentru confirmare.",
       icon: AlertCircle,
-      color: 'bg-gray-50 border-gray-200'
+      color: "bg-gray-50 border-gray-200",
     };
   };
 
   const statusInfo = getStatusInfo();
   const IconComponent = statusInfo.icon;
 
-  const canConfirm = (role: 'owner' | 'renter') => {
-    if (role === 'owner' && !isOwner) return false;
-    if (role === 'renter' && !isRenter) return false;
-    
-    if (role === 'owner') {
+  const canConfirm = (role: "owner" | "renter") => {
+    if (role === "owner" && !isOwner) return false;
+    if (role === "renter" && !isRenter) return false;
+
+    if (role === "owner") {
       return !confirmationStatus.ownerConfirmed;
     } else {
       return !confirmationStatus.renterConfirmed;
     }
   };
 
-  const getConfirmationText = (role: 'owner' | 'renter') => {
-    const isConfirmed = role === 'owner' ? confirmationStatus.ownerConfirmed : confirmationStatus.renterConfirmed;
-    
+  const getConfirmationText = (role: "owner" | "renter") => {
+    const isConfirmed =
+      role === "owner"
+        ? confirmationStatus.ownerConfirmed
+        : confirmationStatus.renterConfirmed;
+
     if (isConfirmed) {
       return (
         <div className="flex items-center gap-1 text-green-600">
@@ -182,24 +200,22 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-gray-600">
-          {statusInfo.description}
-        </p>
+        <p className="text-sm text-gray-600">{statusInfo.description}</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex items-center justify-between p-3 border rounded bg-white">
             <span className="text-sm font-medium">Proprietar</span>
-            {getConfirmationText('owner')}
+            {getConfirmationText("owner")}
           </div>
           <div className="flex items-center justify-between p-3 border rounded bg-white">
             <span className="text-sm font-medium">Chiriaș</span>
-            {getConfirmationText('renter')}
+            {getConfirmationText("renter")}
           </div>
         </div>
 
-        {canConfirm('owner') && (
+        {canConfirm("owner") && (
           <Button
-            onClick={() => handleConfirmation('owner')}
+            onClick={() => handleConfirmation("owner")}
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
@@ -208,9 +224,9 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
           </Button>
         )}
 
-        {canConfirm('renter') && (
+        {canConfirm("renter") && (
           <Button
-            onClick={() => handleConfirmation('renter')}
+            onClick={() => handleConfirmation("renter")}
             disabled={loading}
             className="w-full"
             variant="outline"
@@ -234,4 +250,4 @@ export const ConfirmationSystem: React.FC<ConfirmationSystemProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

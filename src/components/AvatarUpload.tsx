@@ -1,21 +1,21 @@
-import React, { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Upload, Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import React, { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Upload, Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string;
   onAvatarUpdate: (newAvatarUrl: string) => void;
 }
 
-export const AvatarUpload: React.FC<AvatarUploadProps> = ({ 
-  currentAvatarUrl, 
-  onAvatarUpdate 
+export const AvatarUpload: React.FC<AvatarUploadProps> = ({
+  currentAvatarUrl,
+  onAvatarUpdate,
 }) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
@@ -28,37 +28,37 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       setUploading(true);
 
       // Upload file to Supabase Storage
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const { data, error } = await supabase.storage
-        .from('avatars')
+        .from("avatars")
         .upload(fileName, file);
 
       if (error) {
         toast({
-          title: 'Eroare',
-          description: error.message || 'Nu s-a putut încărca avatarul',
-          variant: 'destructive',
+          title: "Eroare",
+          description: error.message || "Nu s-a putut încărca avatarul",
+          variant: "destructive",
         });
         throw error;
       }
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
       // Update user profile
       const { error: updateError } = await supabase
-        .from('users')
+        .from("users")
         .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
+        .eq("id", user.id);
 
       if (updateError) {
         toast({
-          title: 'Eroare',
-          description: updateError.message || 'Nu s-a putut actualiza profilul',
-          variant: 'destructive',
+          title: "Eroare",
+          description: updateError.message || "Nu s-a putut actualiza profilul",
+          variant: "destructive",
         });
         throw updateError;
       }
@@ -66,16 +66,16 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       // Update local state
       onAvatarUpdate(publicUrl);
       toast({
-        title: 'Succes',
-        description: 'Avatar actualizat cu succes!',
-        variant: 'default',
+        title: "Succes",
+        description: "Avatar actualizat cu succes!",
+        variant: "default",
       });
     } catch (error: unknown) {
-      console.error('Error uploading avatar:', error);
+      console.error("Error uploading avatar:", error);
       toast({
-        title: 'Eroare',
-        description: 'Nu s-a putut încărca avatarul',
-        variant: 'destructive',
+        title: "Eroare",
+        description: "Nu s-a putut încărca avatarul",
+        variant: "destructive",
       });
     } finally {
       setUploading(false);
@@ -94,7 +94,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
           {user?.email?.charAt(0)?.toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      
+
       <div className="space-y-2">
         <Button
           type="button"
@@ -109,7 +109,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
           ) : (
             <Upload className="h-4 w-4 mr-2" />
           )}
-          {uploading ? 'Se încarcă...' : 'Schimbă avatar'}
+          {uploading ? "Se încarcă..." : "Schimbă avatar"}
         </Button>
         <Input
           id="avatar-upload"

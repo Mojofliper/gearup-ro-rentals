@@ -9,6 +9,7 @@ GearUp is built as a modern web application using a React frontend with Supabase
 ## 🎯 Architecture Principles
 
 ### Design Philosophy
+
 - **Serverless First**: Leverage Supabase for backend services
 - **Real-time by Default**: Live updates for messaging and notifications
 - **Security First**: Row Level Security and comprehensive validation
@@ -17,6 +18,7 @@ GearUp is built as a modern web application using a React frontend with Supabase
 - **Performance**: Optimized for fast loading and smooth UX
 
 ### Technology Stack
+
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS + shadcn/ui
 - **State Management**: React Query + Context API
@@ -32,6 +34,7 @@ GearUp is built as a modern web application using a React frontend with Supabase
 ### Core Tables
 
 #### Users & Authentication
+
 ```sql
 -- Managed by Supabase Auth
 auth.users {
@@ -59,6 +62,7 @@ profiles {
 ```
 
 #### Gear Management
+
 ```sql
 -- Gear categories
 categories {
@@ -94,6 +98,7 @@ gear {
 ```
 
 #### Booking System
+
 ```sql
 -- Bookings
 bookings {
@@ -133,6 +138,7 @@ transactions {
 ```
 
 #### Communication System
+
 ```sql
 -- Messages
 messages {
@@ -156,6 +162,7 @@ message_threads {
 ```
 
 #### Reviews & Feedback
+
 ```sql
 -- Reviews
 reviews {
@@ -171,6 +178,7 @@ reviews {
 ```
 
 #### Dispute Resolution
+
 ```sql
 -- Claims
 claims {
@@ -203,6 +211,7 @@ photo_uploads {
 ```
 
 #### System Tables
+
 ```sql
 -- Rate limiting
 rate_limits {
@@ -218,6 +227,7 @@ rate_limits {
 ### Database Relationships
 
 #### Entity Relationship Diagram
+
 ```
 auth.users (1) ←→ (1) profiles
 profiles (1) ←→ (N) gear
@@ -236,6 +246,7 @@ bookings (1) ←→ (N) reviews
 ### Row Level Security (RLS)
 
 #### Security Policies
+
 ```sql
 -- Profiles: Users can only view public info, edit their own
 CREATE POLICY "Public profiles are viewable by everyone" ON profiles
@@ -259,8 +270,8 @@ CREATE POLICY "Users can view their own bookings" ON bookings
 CREATE POLICY "Users can view messages for their bookings" ON messages
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM bookings 
-      WHERE bookings.id = messages.booking_id 
+      SELECT 1 FROM bookings
+      WHERE bookings.id = messages.booking_id
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
@@ -273,6 +284,7 @@ CREATE POLICY "Users can view messages for their bookings" ON messages
 ### Frontend API Layer
 
 #### React Query Integration
+
 ```typescript
 // Query Client Configuration
 const queryClient = new QueryClient({
@@ -288,24 +300,27 @@ const queryClient = new QueryClient({
 ```
 
 #### Custom Hooks Pattern
+
 ```typescript
 // Example: useGear hook
 export const useGear = (id?: string) => {
   return useQuery({
-    queryKey: ['gear', id],
+    queryKey: ["gear", id],
     queryFn: async () => {
       if (!id) return null;
-      
+
       const { data, error } = await supabase
-        .from('gear')
-        .select(`
+        .from("gear")
+        .select(
+          `
           *,
           owner:profiles(*),
           category:categories(*)
-        `)
-        .eq('id', id)
+        `,
+        )
+        .eq("id", id)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -315,9 +330,10 @@ export const useGear = (id?: string) => {
 ```
 
 ### Supabase Client Configuration
+
 ```typescript
 // Supabase client setup
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -333,53 +349,57 @@ export const supabase = createClient(
         eventsPerSecond: 10,
       },
     },
-  }
+  },
 );
 ```
 
 ### Edge Functions
 
 #### Payment Processing
+
 ```typescript
 // stripe-create-payment-intent
 serve(async (req) => {
   const { amount, currency, metadata } = await req.json();
-  
+
   // Validate user and transaction
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   // Create Stripe checkout session
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
+    payment_method_types: ["card"],
     line_items: [{ price_data: { currency, unit_amount: amount } }],
-    mode: 'payment',
+    mode: "payment",
     success_url: `${SUCCESS_URL}?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: CANCEL_URL,
     metadata,
   });
-  
+
   return new Response(JSON.stringify({ url: session.url }));
 });
 ```
 
 #### Webhook Handling
+
 ```typescript
 // stripe-webhook
 serve(async (req) => {
-  const signature = req.headers.get('stripe-signature');
+  const signature = req.headers.get("stripe-signature");
   const body = await req.text();
-  
+
   const event = stripe.webhooks.constructEvent(
     body,
     signature,
-    Deno.env.get('STRIPE_WEBHOOK_SECRET')
+    Deno.env.get("STRIPE_WEBHOOK_SECRET"),
   );
-  
+
   switch (event.type) {
-    case 'payment_intent.succeeded':
+    case "payment_intent.succeeded":
       await handlePaymentSuccess(event.data.object);
       break;
-    case 'payment_intent.payment_failed':
+    case "payment_intent.payment_failed":
       await handlePaymentFailure(event.data.object);
       break;
   }
@@ -391,54 +411,58 @@ serve(async (req) => {
 ## 🔐 Security Architecture
 
 ### Authentication Flow
+
 ```typescript
 // Auth context implementation
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  
+
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Fetch user profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          setProfile(profile);
-        } else {
-          setProfile(null);
-          // Clear sensitive data on logout
-          localStorage.removeItem('user-preferences');
-          sessionStorage.clear();
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        // Fetch user profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+        setProfile(profile);
+      } else {
+        setProfile(null);
+        // Clear sensitive data on logout
+        localStorage.removeItem("user-preferences");
+        sessionStorage.clear();
       }
-    );
-    
+    });
+
     return () => subscription.unsubscribe();
   }, []);
-  
+
   // ... rest of implementation
 };
 ```
 
 ### Input Validation & Sanitization
+
 ```typescript
 // Validation utilities
 export const validateGearName = (name: string): string | null => {
   if (!name || name.trim().length < 3) {
-    return 'Numele trebuie să aibă cel puțin 3 caractere';
+    return "Numele trebuie să aibă cel puțin 3 caractere";
   }
   if (name.length > 100) {
-    return 'Numele nu poate depăși 100 de caractere';
+    return "Numele nu poate depăși 100 de caractere";
   }
   if (/[<>]/.test(name)) {
-    return 'Numele nu poate conține caractere speciale';
+    return "Numele nu poate conține caractere speciale";
   }
   return null;
 };
@@ -446,13 +470,14 @@ export const validateGearName = (name: string): string | null => {
 export const sanitizeInput = (input: string): string => {
   return input
     .trim()
-    .replace(/[<>]/g, '')
-    .replace(/javascript:/gi, '')
-    .replace(/on\w+=/gi, '');
+    .replace(/[<>]/g, "")
+    .replace(/javascript:/gi, "")
+    .replace(/on\w+=/gi, "");
 };
 ```
 
 ### Rate Limiting
+
 ```sql
 -- Database function for rate limiting
 CREATE OR REPLACE FUNCTION check_rate_limit(
@@ -465,20 +490,20 @@ DECLARE
   window_start TIMESTAMPTZ;
 BEGIN
   window_start := now() - (window_minutes || ' minutes')::INTERVAL;
-  
+
   SELECT COALESCE(SUM(action_count), 0) INTO current_count
   FROM rate_limits
   WHERE user_id = auth.uid()
     AND action_type = check_rate_limit.action_type
     AND created_at > window_start;
-  
+
   IF current_count >= max_actions THEN
     RETURN FALSE;
   END IF;
-  
+
   INSERT INTO rate_limits (user_id, action_type)
   VALUES (auth.uid(), check_rate_limit.action_type);
-  
+
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -489,6 +514,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ## 📱 Frontend Architecture
 
 ### Component Structure
+
 ```
 src/
 ├── components/
@@ -536,14 +562,17 @@ src/
 ```
 
 ### State Management
+
 ```typescript
 // Context-based state management
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);
 
 // React Query for server state
 export const useGearList = (filters?: GearFilters) => {
   return useQuery({
-    queryKey: ['gear', 'list', filters],
+    queryKey: ["gear", "list", filters],
     queryFn: async () => {
       // Fetch gear with filters
     },
@@ -556,6 +585,7 @@ const [selectedDates, setSelectedDates] = useState<Date[]>([]);
 ```
 
 ### Routing Structure
+
 ```typescript
 // App routing
 const AppRoutes = () => {
@@ -580,30 +610,31 @@ const AppRoutes = () => {
 ## 🔄 Real-time Architecture
 
 ### Supabase Realtime Integration
+
 ```typescript
 // Real-time messaging
 useEffect(() => {
   if (!user || bookings.length === 0) return;
-  
+
   const channels = bookings.map((booking) =>
     supabase
-      .channel('messages-realtime-listen-' + booking.id)
+      .channel("messages-realtime-listen-" + booking.id)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
           filter: `booking_id=eq.${booking.id}`,
         },
         (payload) => {
           // Handle new message
           setMessages((prev) => [...prev, payload.new as Message]);
-        }
+        },
       )
-      .subscribe()
+      .subscribe(),
   );
-  
+
   return () => {
     channels.forEach((ch) => supabase.removeChannel(ch));
   };
@@ -611,6 +642,7 @@ useEffect(() => {
 ```
 
 ### Live Updates
+
 - **Messaging**: Real-time message delivery
 - **Booking Status**: Live status updates
 - **Notifications**: Instant user notifications
@@ -621,6 +653,7 @@ useEffect(() => {
 ## 🚀 Performance Optimizations
 
 ### Frontend Optimizations
+
 ```typescript
 // React Query caching
 const queryClient = new QueryClient({
@@ -645,6 +678,7 @@ const LazyComponent = lazy(() => import('./HeavyComponent'));
 ```
 
 ### Database Optimizations
+
 ```sql
 -- Indexes for performance
 CREATE INDEX idx_gear_owner_id ON gear(owner_id);
@@ -658,6 +692,7 @@ CREATE INDEX idx_transactions_booking_id ON transactions(booking_id);
 ```
 
 ### Bundle Optimization
+
 ```typescript
 // Vite configuration
 export default defineConfig({
@@ -665,14 +700,14 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+          vendor: ["react", "react-dom"],
+          ui: ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu"],
         },
       },
     },
   },
   optimizeDeps: {
-    include: ['@supabase/supabase-js', '@stripe/stripe-js'],
+    include: ["@supabase/supabase-js", "@stripe/stripe-js"],
   },
 });
 ```
@@ -682,6 +717,7 @@ export default defineConfig({
 ## 🔧 Development & Deployment
 
 ### Development Environment
+
 ```bash
 # Development setup
 npm install
@@ -694,6 +730,7 @@ VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_key
 ```
 
 ### Deployment Pipeline
+
 ```yaml
 # GitHub Actions workflow
 name: Deploy
@@ -707,7 +744,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: '18'
+          node-version: "18"
       - run: npm ci
       - run: npm run build
       - uses: vercel/action@v1
@@ -718,15 +755,16 @@ jobs:
 ```
 
 ### Environment Configuration
+
 ```typescript
 // Environment validation
 const requiredEnvVars = [
-  'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY',
-  'VITE_STRIPE_PUBLISHABLE_KEY',
+  "VITE_SUPABASE_URL",
+  "VITE_SUPABASE_ANON_KEY",
+  "VITE_STRIPE_PUBLISHABLE_KEY",
 ];
 
-requiredEnvVars.forEach(envVar => {
+requiredEnvVars.forEach((envVar) => {
   if (!import.meta.env[envVar]) {
     throw new Error(`Missing required environment variable: ${envVar}`);
   }
@@ -738,37 +776,43 @@ requiredEnvVars.forEach(envVar => {
 ## 📊 Monitoring & Analytics
 
 ### Error Tracking
+
 ```typescript
 // Error boundary
 class ErrorBoundary extends React.Component {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    console.error("Error caught by boundary:", error, errorInfo);
     // Send to error tracking service
   }
 }
 
 // API error handling
 const handleApiError = (error: any) => {
-  console.error('API Error:', error);
-  
-  if (error.code === 'PGRST116') {
-    return 'Elementul nu a fost găsit';
+  console.error("API Error:", error);
+
+  if (error.code === "PGRST116") {
+    return "Elementul nu a fost găsit";
   }
-  
-  return 'A apărut o eroare neașteptată';
+
+  return "A apărut o eroare neașteptată";
 };
 ```
 
 ### Performance Monitoring
+
 ```typescript
 // Performance metrics
 const measurePageLoad = () => {
-  const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-  
+  const navigation = performance.getEntriesByType(
+    "navigation",
+  )[0] as PerformanceNavigationTiming;
+
   return {
     loadTime: navigation.loadEventEnd - navigation.loadEventStart,
-    domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
-    firstPaint: performance.getEntriesByName('first-paint')[0]?.startTime,
+    domContentLoaded:
+      navigation.domContentLoadedEventEnd -
+      navigation.domContentLoadedEventStart,
+    firstPaint: performance.getEntriesByName("first-paint")[0]?.startTime,
   };
 };
 ```
@@ -778,6 +822,7 @@ const measurePageLoad = () => {
 ## 🔮 Future Architecture Considerations
 
 ### Scalability Improvements
+
 1. **Microservices**: Break down into smaller services
 2. **Caching Layer**: Redis for session and data caching
 3. **CDN**: Global content delivery network
@@ -785,6 +830,7 @@ const measurePageLoad = () => {
 5. **Database Sharding**: Horizontal scaling for data
 
 ### Advanced Features
+
 1. **Real-time Analytics**: Live platform metrics
 2. **AI/ML Integration**: Smart recommendations
 3. **Mobile Optimization**: Enhanced mobile responsive features
@@ -792,10 +838,11 @@ const measurePageLoad = () => {
 5. **Internationalization**: Multi-language support
 
 ### Security Enhancements
+
 1. **2FA**: Two-factor authentication
 2. **Audit Logging**: Comprehensive activity tracking
 3. **Penetration Testing**: Regular security assessments
 4. **Compliance**: GDPR, PCI DSS compliance
 5. **Encryption**: End-to-end encryption for messages
 
-This technical architecture provides a solid foundation for the GearUp platform with room for future growth and scalability. 
+This technical architecture provides a solid foundation for the GearUp platform with room for future growth and scalability.

@@ -9,6 +9,7 @@ The GearUp platform uses **PostgreSQL** as the primary database, hosted on **Sup
 ## 🏗 Database Architecture
 
 ### Core Principles
+
 - **Row Level Security (RLS)**: All tables have RLS enabled for data protection
 - **UUID Primary Keys**: All tables use UUIDs for security and scalability
 - **Audit Trails**: Created/updated timestamps on all tables
@@ -22,6 +23,7 @@ The GearUp platform uses **PostgreSQL** as the primary database, hosted on **Sup
 ### 1. User Management
 
 #### `auth.users` (Supabase Auth)
+
 ```sql
 -- Managed by Supabase Auth
 auth.users {
@@ -36,6 +38,7 @@ auth.users {
 ```
 
 #### `public.users`
+
 ```sql
 CREATE TABLE public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -53,6 +56,7 @@ CREATE TABLE public.users (
 
 **Purpose**: User profile information and role management
 **Key Features**:
+
 - Links to Supabase Auth users
 - Role-based access control
 - Verification status tracking
@@ -61,6 +65,7 @@ CREATE TABLE public.users (
 ### 2. Content Management
 
 #### `public.categories`
+
 ```sql
 CREATE TABLE public.categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -74,6 +79,7 @@ CREATE TABLE public.categories (
 
 **Purpose**: Equipment categories for organization
 **Default Categories**:
+
 - Camere foto (Cameras)
 - Obiective (Lenses)
 - Drone
@@ -84,6 +90,7 @@ CREATE TABLE public.categories (
 - Accesorii (Accessories)
 
 #### `public.gear`
+
 ```sql
 CREATE TABLE public.gear (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -109,6 +116,7 @@ CREATE TABLE public.gear (
 
 **Purpose**: Equipment listings for rental
 **Key Features**:
+
 - Comprehensive equipment details
 - Pricing in RON cents (Romanian currency)
 - Deposit system
@@ -119,6 +127,7 @@ CREATE TABLE public.gear (
 ### 3. Booking System
 
 #### `public.bookings`
+
 ```sql
 CREATE TABLE public.bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -140,6 +149,7 @@ CREATE TABLE public.bookings (
 
 **Purpose**: Rental bookings and status management
 **Status Flow**:
+
 1. `pending` - Booking created, awaiting owner confirmation
 2. `confirmed` - Owner accepted booking
 3. `active` - Rental period active (equipment handed over)
@@ -149,6 +159,7 @@ CREATE TABLE public.bookings (
 ### 4. Payment System
 
 #### `public.transactions`
+
 ```sql
 CREATE TABLE public.transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -170,12 +181,14 @@ CREATE TABLE public.transactions (
 
 **Purpose**: Payment transaction tracking
 **Key Features**:
+
 - Stripe integration
 - Platform fee calculation (13%)
 - Refund tracking
 - Payment method recording
 
 #### `public.connected_accounts` (Future - Stripe Connect)
+
 ```sql
 CREATE TABLE IF NOT EXISTS public.connected_accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -193,6 +206,7 @@ CREATE TABLE IF NOT EXISTS public.connected_accounts (
 **Status**: Not yet implemented
 
 #### `public.escrow_transactions` (Future - Escrow System)
+
 ```sql
 CREATE TABLE IF NOT EXISTS public.escrow_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -213,6 +227,7 @@ CREATE TABLE IF NOT EXISTS public.escrow_transactions (
 ### 5. Communication System
 
 #### `public.messages`
+
 ```sql
 CREATE TABLE public.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -226,11 +241,13 @@ CREATE TABLE public.messages (
 
 **Purpose**: In-app messaging between users
 **Key Features**:
+
 - Booking-specific conversations
 - Read status tracking
 - Real-time notifications
 
 #### `public.message_threads`
+
 ```sql
 CREATE TABLE public.message_threads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -245,6 +262,7 @@ CREATE TABLE public.message_threads (
 
 **Purpose**: Message thread management
 **Key Features**:
+
 - Unique conversation threads
 - Participant tracking
 - Booking association
@@ -252,6 +270,7 @@ CREATE TABLE public.message_threads (
 ### 6. Review System
 
 #### `public.reviews`
+
 ```sql
 CREATE TABLE public.reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -267,6 +286,7 @@ CREATE TABLE public.reviews (
 
 **Purpose**: User and equipment reviews
 **Key Features**:
+
 - 5-star rating system
 - Comment support
 - Booking verification
@@ -275,6 +295,7 @@ CREATE TABLE public.reviews (
 ### 7. Dispute Resolution
 
 #### `public.claims`
+
 ```sql
 CREATE TABLE public.claims (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -296,12 +317,14 @@ CREATE TABLE public.claims (
 
 **Purpose**: Dispute and claim management
 **Key Features**:
+
 - Multiple claim types
 - Photo evidence support
 - Admin resolution system
 - Deposit penalty tracking
 
 #### `public.photo_uploads`
+
 ```sql
 CREATE TABLE public.photo_uploads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -316,6 +339,7 @@ CREATE TABLE public.photo_uploads (
 
 **Purpose**: Photo documentation for handovers and claims
 **Key Features**:
+
 - Handover documentation
 - Claim evidence
 - Metadata tracking
@@ -324,6 +348,7 @@ CREATE TABLE public.photo_uploads (
 ### 8. Security & Rate Limiting
 
 #### `public.rate_limits`
+
 ```sql
 CREATE TABLE public.rate_limits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -337,6 +362,7 @@ CREATE TABLE public.rate_limits (
 
 **Purpose**: API rate limiting and abuse prevention
 **Key Features**:
+
 - Action-based rate limiting
 - Time window tracking
 - User-specific limits
@@ -345,13 +371,14 @@ CREATE TABLE public.rate_limits (
 ### 9. Storage System
 
 #### `storage.buckets`
+
 ```sql
 -- Avatar storage bucket
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
-  'avatars', 
-  'avatars', 
-  true, 
+  'avatars',
+  'avatars',
+  true,
   5242880, -- 5MB limit
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 );
@@ -359,6 +386,7 @@ VALUES (
 
 **Purpose**: File storage for user avatars and equipment photos
 **Key Features**:
+
 - Public access for avatars
 - File size limits
 - MIME type restrictions
@@ -371,6 +399,7 @@ VALUES (
 ### 1. User Management Functions
 
 #### `handle_new_user()`
+
 ```sql
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
@@ -391,13 +420,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 **Purpose**: Automatically create profile when user registers
 
 #### `get_avatar_url(avatar_path text)`
+
 ```sql
 CREATE OR REPLACE FUNCTION get_avatar_url(avatar_path text)
 RETURNS text
 LANGUAGE sql
 STABLE
 AS $$
-  SELECT CASE 
+  SELECT CASE
     WHEN avatar_path IS NULL OR avatar_path = '' THEN NULL
     WHEN avatar_path LIKE 'http%' THEN avatar_path
     ELSE 'https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/' || avatar_path
@@ -410,6 +440,7 @@ $$;
 ### 2. Payment Functions
 
 #### `calculate_platform_fee(rental_amount INTEGER)`
+
 ```sql
 CREATE OR REPLACE FUNCTION public.calculate_platform_fee(rental_amount INTEGER)
 RETURNS INTEGER AS $$
@@ -422,6 +453,7 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 **Purpose**: Calculate 13% platform fee
 
 #### `validate_payment_amounts(rental_amount, deposit_amount, platform_fee)`
+
 ```sql
 CREATE OR REPLACE FUNCTION public.validate_payment_amounts(
   rental_amount INTEGER,
@@ -433,22 +465,22 @@ BEGIN
   IF rental_amount IS NULL OR rental_amount <= 0 OR rental_amount > 100000000 THEN
     RETURN FALSE;
   END IF;
-  
+
   -- Validate deposit amount (can be 0)
   IF deposit_amount IS NULL OR deposit_amount < 0 OR deposit_amount > 100000000 THEN
     RETURN FALSE;
   END IF;
-  
+
   -- Validate platform fee
   IF platform_fee IS NULL OR platform_fee < 0 OR platform_fee > 100000000 THEN
     RETURN FALSE;
   END IF;
-  
+
   -- Validate that platform fee is 13% of rental amount (with small tolerance for rounding)
   IF ABS(platform_fee - ROUND(rental_amount * 0.13)) > 1 THEN
     RETURN FALSE;
   END IF;
-  
+
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
@@ -459,6 +491,7 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 ### 3. Security Functions
 
 #### `check_rate_limit(action_type, max_actions, window_minutes)`
+
 ```sql
 CREATE OR REPLACE FUNCTION public.check_rate_limit(
   action_type TEXT,
@@ -471,23 +504,23 @@ DECLARE
 BEGIN
   -- Get current window start
   window_start := now() - (window_minutes || ' minutes')::INTERVAL;
-  
+
   -- Count actions in current window
   SELECT COALESCE(SUM(action_count), 0) INTO current_count
   FROM public.rate_limits
   WHERE user_id = auth.uid()
     AND action_type = check_rate_limit.action_type
     AND created_at > window_start;
-  
+
   -- Check if limit exceeded
   IF current_count >= max_actions THEN
     RETURN FALSE;
   END IF;
-  
+
   -- Record this action
   INSERT INTO public.rate_limits (user_id, action_type)
   VALUES (auth.uid(), check_rate_limit.action_type);
-  
+
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -498,6 +531,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ### 4. Validation Functions
 
 #### `validate_gear_input(gear_name, gear_description, price_per_day)`
+
 ```sql
 CREATE OR REPLACE FUNCTION public.validate_gear_input(
   gear_name TEXT,
@@ -509,22 +543,22 @@ BEGIN
   IF gear_name IS NULL OR LENGTH(gear_name) < 3 OR LENGTH(gear_name) > 100 THEN
     RETURN FALSE;
   END IF;
-  
+
   -- Check for suspicious content patterns
   IF gear_name ~* '(script|javascript|<|>|onclick|onerror)' THEN
     RETURN FALSE;
   END IF;
-  
+
   -- Validate description length
   IF gear_description IS NOT NULL AND LENGTH(gear_description) > 2000 THEN
     RETURN FALSE;
   END IF;
-  
+
   -- Validate price
   IF price_per_day IS NULL OR price_per_day < 0 OR price_per_day > 100000000 THEN
     RETURN FALSE;
   END IF;
-  
+
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -537,6 +571,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ## 🔒 Row Level Security (RLS)
 
 ### 1. Users Policies
+
 ```sql
 -- Public users are viewable by everyone
 CREATE POLICY "Public users are viewable by everyone" ON public.users
@@ -552,6 +587,7 @@ CREATE POLICY "Users can update their own profile" ON public.users
 ```
 
 ### 2. Gear Policies
+
 ```sql
 -- Gear is viewable by everyone
 CREATE POLICY "Gear is viewable by everyone" ON public.gear
@@ -571,6 +607,7 @@ CREATE POLICY "Users can delete their own gear" ON public.gear
 ```
 
 ### 3. Bookings Policies
+
 ```sql
 -- Users can view their own bookings
 CREATE POLICY "Users can view their own bookings" ON public.bookings
@@ -586,13 +623,14 @@ CREATE POLICY "Owners can update booking status" ON public.bookings
 ```
 
 ### 4. Messages Policies
+
 ```sql
 -- Users can view messages for their bookings
 CREATE POLICY "Users can view messages for their bookings" ON public.messages
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = messages.booking_id 
+      SELECT 1 FROM public.bookings
+      WHERE bookings.id = messages.booking_id
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
@@ -602,14 +640,15 @@ CREATE POLICY "Users can send messages for their bookings" ON public.messages
   FOR INSERT WITH CHECK (
     auth.uid() = sender_id AND
     EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = messages.booking_id 
+      SELECT 1 FROM public.bookings
+      WHERE bookings.id = messages.booking_id
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
 ```
 
 ### 5. Reviews Policies
+
 ```sql
 -- Reviews are viewable by everyone
 CREATE POLICY "Reviews are viewable by everyone" ON public.reviews
@@ -620,8 +659,8 @@ CREATE POLICY "Users can create reviews for completed bookings" ON public.review
   FOR INSERT WITH CHECK (
     auth.uid() = reviewer_id AND
     EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = reviews.booking_id 
+      SELECT 1 FROM public.bookings
+      WHERE bookings.id = reviews.booking_id
       AND bookings.status = 'completed'
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
@@ -629,13 +668,14 @@ CREATE POLICY "Users can create reviews for completed bookings" ON public.review
 ```
 
 ### 6. Transactions Policies
+
 ```sql
 -- Users can view transactions for their bookings
 CREATE POLICY "Users can view transactions for their bookings" ON public.transactions
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = transactions.booking_id 
+      SELECT 1 FROM public.bookings
+      WHERE bookings.id = transactions.booking_id
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
@@ -644,8 +684,8 @@ CREATE POLICY "Users can view transactions for their bookings" ON public.transac
 CREATE POLICY "Users can create transactions for their bookings" ON public.transactions
   FOR INSERT WITH CHECK (
     EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = transactions.booking_id 
+      SELECT 1 FROM public.bookings
+      WHERE bookings.id = transactions.booking_id
       AND bookings.renter_id = auth.uid()
     )
   );
@@ -656,13 +696,14 @@ CREATE POLICY "System can update transaction status" ON public.transactions
 ```
 
 ### 7. Claims Policies
+
 ```sql
 -- Users can view claims for their bookings
 CREATE POLICY "Users can view claims for their bookings" ON public.claims
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = claims.booking_id 
+      SELECT 1 FROM public.bookings
+      WHERE bookings.id = claims.booking_id
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
@@ -672,14 +713,15 @@ CREATE POLICY "Users can create claims for their bookings" ON public.claims
   FOR INSERT WITH CHECK (
     auth.uid() = claimant_id AND
     EXISTS (
-      SELECT 1 FROM public.bookings 
-      WHERE bookings.id = claims.booking_id 
+      SELECT 1 FROM public.bookings
+      WHERE bookings.id = claims.booking_id
       AND (bookings.renter_id = auth.uid() OR bookings.owner_id = auth.uid())
     )
   );
 ```
 
 ### 8. Rate Limits Policies
+
 ```sql
 -- Users can view their own rate limits
 CREATE POLICY "Users can view their own rate limits" ON public.rate_limits
@@ -695,6 +737,7 @@ CREATE POLICY "Users can insert their own rate limits" ON public.rate_limits
 ## 📊 Indexes
 
 ### 1. Performance Indexes
+
 ```sql
 -- Gear indexes
 CREATE INDEX idx_gear_owner_id ON public.gear(owner_id);
@@ -735,6 +778,7 @@ CREATE INDEX idx_rate_limits_created_at ON public.rate_limits(created_at);
 ```
 
 ### 2. Composite Indexes
+
 ```sql
 -- Search optimization
 CREATE INDEX idx_gear_search ON public.gear(category_id, location, is_available, price_per_day);
@@ -751,6 +795,7 @@ CREATE INDEX idx_reviews_gear_rating ON public.reviews(gear_id, rating, created_
 ## 🔄 Triggers
 
 ### 1. Updated At Triggers
+
 ```sql
 -- Function to update timestamp
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -776,6 +821,7 @@ CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.transactions
 ```
 
 ### 2. Validation Triggers
+
 ```sql
 -- Gear validation trigger
 CREATE OR REPLACE FUNCTION public.validate_gear_before_insert_update()
@@ -784,7 +830,7 @@ BEGIN
   IF NOT public.validate_gear_input(NEW.name, NEW.description, NEW.price_per_day) THEN
     RAISE EXCEPTION 'Invalid gear data provided';
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -800,12 +846,12 @@ BEGIN
   IF NOT public.validate_payment_amounts(NEW.rental_amount, NEW.deposit_amount, NEW.platform_fee) THEN
     RAISE EXCEPTION 'Invalid payment amounts provided';
   END IF;
-  
+
   -- Ensure total amount matches
   IF NEW.amount != (NEW.rental_amount + NEW.deposit_amount + NEW.platform_fee) THEN
     RAISE EXCEPTION 'Total amount does not match sum of components';
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -816,6 +862,7 @@ CREATE TRIGGER validate_transaction_amounts_trigger
 ```
 
 ### 3. Business Logic Triggers
+
 ```sql
 -- Update booking payment status when transaction status changes
 CREATE OR REPLACE FUNCTION public.update_booking_payment_status()
@@ -823,19 +870,19 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Update booking payment status based on transaction status
   IF NEW.status = 'completed' THEN
-    UPDATE public.bookings 
+    UPDATE public.bookings
     SET payment_status = 'paid'
     WHERE id = NEW.booking_id;
   ELSIF NEW.status = 'failed' THEN
-    UPDATE public.bookings 
+    UPDATE public.bookings
     SET payment_status = 'failed'
     WHERE id = NEW.booking_id;
   ELSIF NEW.status = 'refunded' THEN
-    UPDATE public.bookings 
+    UPDATE public.bookings
     SET payment_status = 'refunded'
     WHERE id = NEW.booking_id;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -850,6 +897,7 @@ CREATE TRIGGER update_booking_payment_status_trigger
 ## 📈 Data Relationships
 
 ### Entity Relationship Diagram
+
 ```
 auth.users (1) ←→ (1) public.users
 public.users (1) ←→ (N) public.gear
@@ -865,6 +913,7 @@ public.categories (1) ←→ (N) public.gear
 ```
 
 ### Key Relationships
+
 - **Users** can have multiple gear listings
 - **Users** can be both renters and owners
 - **Bookings** connect renters, owners, and gear
@@ -876,4 +925,4 @@ public.categories (1) ←→ (N) public.gear
 
 ---
 
-This comprehensive database schema provides a solid foundation for the GearUp platform with proper security, performance optimization, and business logic enforcement. 
+This comprehensive database schema provides a solid foundation for the GearUp platform with proper security, performance optimization, and business logic enforcement.

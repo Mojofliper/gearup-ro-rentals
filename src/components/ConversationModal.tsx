@@ -1,23 +1,26 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useSendMessage } from '@/hooks/useMessages';
-
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Send } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useSendMessage } from "@/hooks/useMessages";
 
 interface Message {
   id: string;
   content: string;
   sender_id: string;
   created_at: string;
-  message_type?: 'text' | 'image' | 'system';
+  message_type?: "text" | "image" | "system";
   sender?: {
     full_name: string;
     avatar_url: string;
@@ -41,13 +44,13 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
   ownerId,
   gearName,
   ownerName,
-  ownerAvatar
+  ownerAvatar,
 }) => {
   const { user } = useAuth();
   const { notifyNewMessage } = useNotifications();
   const { mutateAsync: sendMessageApi } = useSendMessage();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -58,16 +61,16 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
     try {
       // First, check if there's an existing booking between these users for this gear
       const { data: existingBooking, error: bookingError } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('gear_id', gearId)
-        .eq('renter_id', user?.id)
-        .eq('owner_id', ownerId)
-        .order('created_at', { ascending: false })
+        .from("bookings")
+        .select("id")
+        .eq("gear_id", gearId)
+        .eq("renter_id", user?.id)
+        .eq("owner_id", ownerId)
+        .order("created_at", { ascending: false })
         .limit(1);
 
       if (bookingError) {
-        console.error('Error fetching booking:', bookingError);
+        console.error("Error fetching booking:", bookingError);
         // Create a temporary booking for messaging
         await createTemporaryBooking();
       } else if (existingBooking && existingBooking.length > 0) {
@@ -78,11 +81,11 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
         await createTemporaryBooking();
       }
     } catch (error) {
-      console.error('Error initializing conversation:', error);
+      console.error("Error initializing conversation:", error);
       toast({
-        title: 'Eroare',
-        description: 'Nu s-a putut inițializa conversația.',
-        variant: 'destructive',
+        title: "Eroare",
+        description: "Nu s-a putut inițializa conversația.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -98,15 +101,15 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
   // Real-time subscription for messages
   useEffect(() => {
     if (!bookingId || !user) return;
-    
+
     const channel = supabase
       .channel(`messages-${bookingId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
           filter: `booking_id=eq.${bookingId}`,
         },
         (payload) => {
@@ -116,7 +119,7 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
             if (prev.some((msg) => msg.id === newMessage.id)) return prev;
             return [...prev, newMessage];
           });
-        }
+        },
       )
       .subscribe();
 
@@ -128,18 +131,18 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
   const createTemporaryBooking = async () => {
     try {
       const { data, error } = await supabase
-        .from('bookings')
+        .from("bookings")
         .insert({
           gear_id: gearId,
           renter_id: user?.id,
           owner_id: ownerId,
-          start_date: new Date().toISOString().split('T')[0],
-          end_date: new Date().toISOString().split('T')[0],
+          start_date: new Date().toISOString().split("T")[0],
+          end_date: new Date().toISOString().split("T")[0],
           total_days: 1,
           total_amount: 0,
           deposit_amount: 0,
-          status: 'pending',
-          notes: 'Conversație inițiată pentru întrebări'
+          status: "pending",
+          notes: "Conversație inițiată pentru întrebări",
         })
         .select()
         .single();
@@ -149,7 +152,7 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
       setBookingId(data.id);
       setMessages([]);
     } catch (error) {
-      console.error('Error creating booking:', error);
+      console.error("Error creating booking:", error);
       throw error;
     }
   };
@@ -157,18 +160,20 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
   const fetchMessages = async (bookingId: string) => {
     try {
       const { data, error } = await supabase
-        .from('messages')
-        .select(`
+        .from("messages")
+        .select(
+          `
           *,
           sender:users!messages_sender_id_fkey (full_name, avatar_url)
-        `)
-        .eq('booking_id', bookingId)
-        .order('created_at', { ascending: true });
+        `,
+        )
+        .eq("booking_id", bookingId)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
       setMessages(data || []);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error("Error fetching messages:", error);
     }
   };
 
@@ -183,31 +188,36 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
         content: newMessage.trim(),
         sender_id: user.id,
         created_at: new Date().toISOString(),
-        message_type: 'text',
+        message_type: "text",
         sender: {
-          full_name: user.user_metadata?.full_name || 'You',
-          avatar_url: user.user_metadata?.avatar_url || ''
-        }
+          full_name: user.user_metadata?.full_name || "You",
+          avatar_url: user.user_metadata?.avatar_url || "",
+        },
       };
 
-      setMessages(prev => [...prev, optimisticMessage]);
-      setNewMessage('');
-      
-      await sendMessageApi({ 
-        bookingId: bookingId, 
-        content: newMessage.trim(), 
-        messageType: 'text' 
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setNewMessage("");
+
+      await sendMessageApi({
+        bookingId: bookingId,
+        content: newMessage.trim(),
+        messageType: "text",
       });
 
       // Remove the optimistic message and let the real-time update handle it
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-      toast({ title: 'Mesaj trimis', description: 'Mesajul a fost trimis cu succes.' });
-    } catch (error) {
-      console.error('Error sending message:', error);
+      setMessages((prev) =>
+        prev.filter((msg) => msg.id !== optimisticMessage.id),
+      );
       toast({
-        title: 'Eroare',
-        description: 'Nu s-a putut trimite mesajul.',
-        variant: 'destructive',
+        title: "Mesaj trimis",
+        description: "Mesajul a fost trimis cu succes.",
+      });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut trimite mesajul.",
+        variant: "destructive",
       });
     } finally {
       setSending(false);
@@ -221,27 +231,40 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
     setUploading(true);
     try {
       const filePath = `${user.id}/${Date.now()}_${file.name}`;
-      const { data, error } = await supabase.storage.from('message-uploads').upload(filePath, file);
+      const { data, error } = await supabase.storage
+        .from("message-uploads")
+        .upload(filePath, file);
       if (error) throw error;
-      
-      const { publicUrl } = supabase.storage.from('message-uploads').getPublicUrl(filePath).data;
-      if (!publicUrl) throw new Error('Could not get file URL');
-      
-      await sendMessageApi({ bookingId: bookingId, content: publicUrl, messageType: 'image' });
-      toast({ title: 'Imagine trimisă', description: 'Imaginea a fost trimisă cu succes.' });
+
+      const { publicUrl } = supabase.storage
+        .from("message-uploads")
+        .getPublicUrl(filePath).data;
+      if (!publicUrl) throw new Error("Could not get file URL");
+
+      await sendMessageApi({
+        bookingId: bookingId,
+        content: publicUrl,
+        messageType: "image",
+      });
+      toast({
+        title: "Imagine trimisă",
+        description: "Imaginea a fost trimisă cu succes.",
+      });
       await fetchMessages(bookingId);
     } catch (error) {
-      console.error('Error uploading file:', error);
-      toast({ title: 'Eroare', description: 'Nu s-a putut încărca imaginea.', variant: 'destructive' });
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut încărca imaginea.",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
   };
 
-
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -255,7 +278,10 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
             <Avatar className="h-8 w-8">
               <AvatarImage src={ownerAvatar} />
               <AvatarFallback>
-                {ownerName.split(' ').map(n => n[0]).join('')}
+                {ownerName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -277,19 +303,23 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
             ) : (
               messages.map((message) => {
                 const isOwnMessage = message.sender_id === user?.id;
-                const isSystemMessage = message.message_type === 'system';
-                
+                const isSystemMessage = message.message_type === "system";
+
                 if (isSystemMessage) {
                   // Convert markdown links to clickable HTML links
                   const contentWithLinks = message.content.replace(
                     /\[([^\]]+)\]\(([^)]+)\)/g,
-                    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">$1</a>'
+                    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">$1</a>',
                   );
-                  
+
                   return (
                     <div key={message.id} className="text-center">
                       <div className="inline-block bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
-                        <span dangerouslySetInnerHTML={{ __html: contentWithLinks.replace(/\n/g, '<br/>') }} />
+                        <span
+                          dangerouslySetInnerHTML={{
+                            __html: contentWithLinks.replace(/\n/g, "<br/>"),
+                          }}
+                        />
                       </div>
                     </div>
                   );
@@ -299,20 +329,20 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
                   <div
                     key={message.id}
                     className={`flex ${
-                      isOwnMessage ? 'justify-end' : 'justify-start'
+                      isOwnMessage ? "justify-end" : "justify-start"
                     }`}
                   >
                     <div
                       className={`max-w-xs px-3 py-2 rounded-lg ${
                         isOwnMessage
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-200 text-gray-800'
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-200 text-gray-800"
                       }`}
                     >
-                      {message.message_type === 'image' ? (
-                        <img 
-                          src={message.content} 
-                          alt="Uploaded image" 
+                      {message.message_type === "image" ? (
+                        <img
+                          src={message.content}
+                          alt="Uploaded image"
                           className="max-w-full rounded"
                         />
                       ) : (
@@ -349,14 +379,24 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
                     disabled={sending || loading || uploading}
                   />
                   <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-                    <svg className="h-3 w-3 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    <svg
+                      className="h-3 w-3 text-gray-400 hover:text-gray-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                      />
                     </svg>
                   </Button>
                 </label>
               </div>
             </div>
-            <Button 
+            <Button
               onClick={handleSendMessage}
               disabled={!newMessage.trim() || sending || loading || uploading}
               size="sm"
@@ -368,8 +408,6 @@ export const ConversationModal: React.FC<ConversationModalProps> = ({
               )}
             </Button>
           </div>
-
-
         </div>
       </DialogContent>
     </Dialog>

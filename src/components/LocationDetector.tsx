@@ -1,16 +1,58 @@
-
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Loader2, AlertCircle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MapPin, Loader2, AlertCircle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const romanianCounties = [
-  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 
-  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 
-  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 
-  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 
-  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'
+  "Alba",
+  "Arad",
+  "Argeș",
+  "Bacău",
+  "Bihor",
+  "Bistrița-Năsăud",
+  "Botoșani",
+  "Brăila",
+  "Brașov",
+  "București",
+  "Buzău",
+  "Călărași",
+  "Caraș-Severin",
+  "Cluj",
+  "Constanța",
+  "Covasna",
+  "Dâmbovița",
+  "Dolj",
+  "Galați",
+  "Giurgiu",
+  "Gorj",
+  "Harghita",
+  "Hunedoara",
+  "Ialomița",
+  "Iași",
+  "Ilfov",
+  "Maramureș",
+  "Mehedinți",
+  "Mureș",
+  "Neamț",
+  "Olt",
+  "Prahova",
+  "Sălaj",
+  "Satu Mare",
+  "Sibiu",
+  "Suceava",
+  "Teleorman",
+  "Timiș",
+  "Tulcea",
+  "Vâlcea",
+  "Vaslui",
+  "Vrancea",
 ];
 
 interface LocationDetectorProps {
@@ -21,15 +63,15 @@ interface LocationDetectorProps {
 
 export const LocationDetector: React.FC<LocationDetectorProps> = ({
   onLocationChange,
-  currentLocation = '',
-  className = ''
+  currentLocation = "",
+  className = "",
 }) => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectionError, setDetectionError] = useState<string | null>(null);
 
   const detectLocation = async () => {
     if (!navigator.geolocation) {
-      setDetectionError('Geolocația nu este suportată de browser-ul tău');
+      setDetectionError("Geolocația nu este suportată de browser-ul tău");
       return;
     }
 
@@ -37,149 +79,157 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
     setDetectionError(null);
 
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000
-        });
-      });
+      const position = await new Promise<GeolocationPosition>(
+        (resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000,
+          });
+        },
+      );
 
       const { latitude, longitude } = position.coords;
       const county = await reverseGeocode(latitude, longitude);
-      
+
       if (county) {
         onLocationChange(county);
         toast({
-          title: 'Locație detectată!',
+          title: "Locație detectată!",
           description: `Ai fost localizat în județul ${county}`,
         });
       } else {
-        setDetectionError('Nu am putut determina județul din coordonatele GPS');
+        setDetectionError("Nu am putut determina județul din coordonatele GPS");
       }
     } catch (error: unknown) {
-      console.error('Location detection error:', error);
-      
-      let errorMessage = 'Nu am putut detecta locația';
+      console.error("Location detection error:", error);
+
+      let errorMessage = "Nu am putut detecta locația";
       if ((error as GeolocationPositionError).code === 1) {
-        errorMessage = 'Accesul la locație a fost refuzat. Te rugăm să permiți accesul în setările browser-ului.';
+        errorMessage =
+          "Accesul la locație a fost refuzat. Te rugăm să permiți accesul în setările browser-ului.";
       } else if ((error as GeolocationPositionError).code === 2) {
-        errorMessage = 'Locația nu a putut fi determinată. Verifică-ți conexiunea la internet.';
+        errorMessage =
+          "Locația nu a putut fi determinată. Verifică-ți conexiunea la internet.";
       } else if ((error as GeolocationPositionError).code === 3) {
-        errorMessage = 'Detectarea locației a durat prea mult. Încearcă din nou.';
+        errorMessage =
+          "Detectarea locației a durat prea mult. Încearcă din nou.";
       }
-      
+
       setDetectionError(errorMessage);
     } finally {
       setIsDetecting(false);
     }
   };
 
-  const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
+  const reverseGeocode = async (
+    lat: number,
+    lng: number,
+  ): Promise<string | null> => {
     try {
       // Using OpenStreetMap Nominatim API (free and no API key required)
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=8&accept-language=ro`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=8&accept-language=ro`,
       );
-      
+
       if (!response.ok) {
-        throw new Error('Geocoding request failed');
+        throw new Error("Geocoding request failed");
       }
-      
+
       const data = await response.json();
-      
+
       // Extract county from address components
       const address = data.address;
       if (address) {
         // Try different possible county fields
         const county = address.county || address.state || address.region;
-        
+
         if (county) {
           // Map common county names to Romanian counties
           const countyMapping: { [key: string]: string } = {
-            'București': 'București',
-            'Bucharest': 'București',
-            'Cluj': 'Cluj',
-            'Timiș': 'Timiș',
-            'Brașov': 'Brașov',
-            'Brasov': 'Brașov',
-            'Constanța': 'Constanța',
-            'Constanta': 'Constanța',
-            'Iași': 'Iași',
-            'Iasi': 'Iași',
-            'Sibiu': 'Sibiu',
-            'Arad': 'Arad',
-            'Oradea': 'Bihor',
-            'Bihor': 'Bihor',
-            'Craiova': 'Dolj',
-            'Dolj': 'Dolj',
-            'Galați': 'Galați',
-            'Galati': 'Galați',
-            'Ploiești': 'Prahova',
-            'Prahova': 'Prahova',
-            'Târgu Mureș': 'Mureș',
-            'Targu Mures': 'Mureș',
-            'Mureș': 'Mureș',
-            'Mures': 'Mureș',
-            'Bacău': 'Bacău',
-            'Bacau': 'Bacău',
-            'Pitești': 'Argeș',
-            'Pitesti': 'Argeș',
-            'Argeș': 'Argeș',
-            'Arges': 'Argeș',
-            'Baia Mare': 'Maramureș',
-            'Maramureș': 'Maramureș',
-            'Maramures': 'Maramureș',
-            'Buzău': 'Buzău',
-            'Buzau': 'Buzău',
-            'Botoșani': 'Botoșani',
-            'Botosani': 'Botoșani',
-            'Sălaj': 'Sălaj',
-            'Salaj': 'Sălaj',
-            'Vâlcea': 'Vâlcea',
-            'Valcea': 'Vâlcea',
-            'Suceava': 'Suceava',
-            'Vaslui': 'Vaslui',
-            'Vrancea': 'Vrancea',
-            'Călărași': 'Călărași',
-            'Calarasi': 'Călărași',
-            'Giurgiu': 'Giurgiu',
-            'Ialomița': 'Ialomița',
-            'Ialomita': 'Ialomița',
-            'Ilfov': 'Ilfov',
-            'Mehedinți': 'Mehedinți',
-            'Mehedinti': 'Mehedinți',
-            'Neamț': 'Neamț',
-            'Neamt': 'Neamț',
-            'Olt': 'Olt',
-            'Teleorman': 'Teleorman',
-            'Tulcea': 'Tulcea',
-            'Caraș-Severin': 'Caraș-Severin',
-            'Caras-Severin': 'Caraș-Severin',
-            'Covasna': 'Covasna',
-            'Dâmbovița': 'Dâmbovița',
-            'Dambovita': 'Dâmbovița',
-            'Gorj': 'Gorj',
-            'Harghita': 'Harghita',
-            'Hunedoara': 'Hunedoara',
-            'Satu Mare': 'Satu Mare'
+            București: "București",
+            Bucharest: "București",
+            Cluj: "Cluj",
+            Timiș: "Timiș",
+            Brașov: "Brașov",
+            Brasov: "Brașov",
+            Constanța: "Constanța",
+            Constanta: "Constanța",
+            Iași: "Iași",
+            Iasi: "Iași",
+            Sibiu: "Sibiu",
+            Arad: "Arad",
+            Oradea: "Bihor",
+            Bihor: "Bihor",
+            Craiova: "Dolj",
+            Dolj: "Dolj",
+            Galați: "Galați",
+            Galati: "Galați",
+            Ploiești: "Prahova",
+            Prahova: "Prahova",
+            "Târgu Mureș": "Mureș",
+            "Targu Mures": "Mureș",
+            Mureș: "Mureș",
+            Mures: "Mureș",
+            Bacău: "Bacău",
+            Bacau: "Bacău",
+            Pitești: "Argeș",
+            Pitesti: "Argeș",
+            Argeș: "Argeș",
+            Arges: "Argeș",
+            "Baia Mare": "Maramureș",
+            Maramureș: "Maramureș",
+            Maramures: "Maramureș",
+            Buzău: "Buzău",
+            Buzau: "Buzău",
+            Botoșani: "Botoșani",
+            Botosani: "Botoșani",
+            Sălaj: "Sălaj",
+            Salaj: "Sălaj",
+            Vâlcea: "Vâlcea",
+            Valcea: "Vâlcea",
+            Suceava: "Suceava",
+            Vaslui: "Vaslui",
+            Vrancea: "Vrancea",
+            Călărași: "Călărași",
+            Calarasi: "Călărași",
+            Giurgiu: "Giurgiu",
+            Ialomița: "Ialomița",
+            Ialomita: "Ialomița",
+            Ilfov: "Ilfov",
+            Mehedinți: "Mehedinți",
+            Mehedinti: "Mehedinți",
+            Neamț: "Neamț",
+            Neamt: "Neamț",
+            Olt: "Olt",
+            Teleorman: "Teleorman",
+            Tulcea: "Tulcea",
+            "Caraș-Severin": "Caraș-Severin",
+            "Caras-Severin": "Caraș-Severin",
+            Covasna: "Covasna",
+            Dâmbovița: "Dâmbovița",
+            Dambovita: "Dâmbovița",
+            Gorj: "Gorj",
+            Harghita: "Harghita",
+            Hunedoara: "Hunedoara",
+            "Satu Mare": "Satu Mare",
           };
-          
+
           const mappedCounty = countyMapping[county];
           if (mappedCounty) {
             return mappedCounty;
           }
-          
+
           // If no mapping found, check if it's already a valid Romanian county
           if (romanianCounties.includes(county)) {
             return county;
           }
         }
       }
-      
+
       return null;
     } catch (error: unknown) {
-      console.error('Reverse geocoding error:', error);
+      console.error("Reverse geocoding error:", error);
       return null;
     }
   };
@@ -200,7 +250,7 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
         ) : (
           <MapPin className="h-4 w-4" />
         )}
-        <span>{isDetecting ? 'Se detectează...' : 'Detectează locația'}</span>
+        <span>{isDetecting ? "Se detectează..." : "Detectează locația"}</span>
       </Button>
 
       {/* Error Message */}
@@ -231,106 +281,109 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
   );
 };
 
-const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
+const reverseGeocode = async (
+  lat: number,
+  lng: number,
+): Promise<string | null> => {
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=8&accept-language=ro`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=8&accept-language=ro`,
     );
-    
+
     if (!response.ok) {
-      throw new Error('Geocoding request failed');
+      throw new Error("Geocoding request failed");
     }
-    
+
     const data = await response.json();
     const address = data.address;
-    
+
     if (address) {
       const county = address.county || address.state || address.region;
-      
+
       if (county) {
         const countyMapping: { [key: string]: string } = {
-          'București': 'București',
-          'Bucharest': 'București',
-          'Cluj': 'Cluj',
-          'Timiș': 'Timiș',
-          'Brașov': 'Brașov',
-          'Brasov': 'Brașov',
-          'Constanța': 'Constanța',
-          'Constanta': 'Constanța',
-          'Iași': 'Iași',
-          'Iasi': 'Iași',
-          'Sibiu': 'Sibiu',
-          'Arad': 'Arad',
-          'Oradea': 'Bihor',
-          'Bihor': 'Bihor',
-          'Craiova': 'Dolj',
-          'Dolj': 'Dolj',
-          'Galați': 'Galați',
-          'Galati': 'Galați',
-          'Ploiești': 'Prahova',
-          'Prahova': 'Prahova',
-          'Târgu Mureș': 'Mureș',
-          'Targu Mures': 'Mureș',
-          'Mureș': 'Mureș',
-          'Mures': 'Mureș',
-          'Bacău': 'Bacău',
-          'Bacau': 'Bacău',
-          'Pitești': 'Argeș',
-          'Pitesti': 'Argeș',
-          'Argeș': 'Argeș',
-          'Arges': 'Argeș',
-          'Baia Mare': 'Maramureș',
-          'Maramureș': 'Maramureș',
-          'Maramures': 'Maramureș',
-          'Buzău': 'Buzău',
-          'Buzau': 'Buzău',
-          'Botoșani': 'Botoșani',
-          'Botosani': 'Botoșani',
-          'Sălaj': 'Sălaj',
-          'Salaj': 'Sălaj',
-          'Vâlcea': 'Vâlcea',
-          'Valcea': 'Vâlcea',
-          'Suceava': 'Suceava',
-          'Vaslui': 'Vaslui',
-          'Vrancea': 'Vrancea',
-          'Călărași': 'Călărași',
-          'Calarasi': 'Călărași',
-          'Giurgiu': 'Giurgiu',
-          'Ialomița': 'Ialomița',
-          'Ialomita': 'Ialomița',
-          'Ilfov': 'Ilfov',
-          'Mehedinți': 'Mehedinți',
-          'Mehedinti': 'Mehedinți',
-          'Neamț': 'Neamț',
-          'Neamt': 'Neamț',
-          'Olt': 'Olt',
-          'Teleorman': 'Teleorman',
-          'Tulcea': 'Tulcea',
-          'Caraș-Severin': 'Caraș-Severin',
-          'Caras-Severin': 'Caraș-Severin',
-          'Covasna': 'Covasna',
-          'Dâmbovița': 'Dâmbovița',
-          'Dambovita': 'Dâmbovița',
-          'Gorj': 'Gorj',
-          'Harghita': 'Harghita',
-          'Hunedoara': 'Hunedoara',
-          'Satu Mare': 'Satu Mare'
+          București: "București",
+          Bucharest: "București",
+          Cluj: "Cluj",
+          Timiș: "Timiș",
+          Brașov: "Brașov",
+          Brasov: "Brașov",
+          Constanța: "Constanța",
+          Constanta: "Constanța",
+          Iași: "Iași",
+          Iasi: "Iași",
+          Sibiu: "Sibiu",
+          Arad: "Arad",
+          Oradea: "Bihor",
+          Bihor: "Bihor",
+          Craiova: "Dolj",
+          Dolj: "Dolj",
+          Galați: "Galați",
+          Galati: "Galați",
+          Ploiești: "Prahova",
+          Prahova: "Prahova",
+          "Târgu Mureș": "Mureș",
+          "Targu Mures": "Mureș",
+          Mureș: "Mureș",
+          Mures: "Mureș",
+          Bacău: "Bacău",
+          Bacau: "Bacău",
+          Pitești: "Argeș",
+          Pitesti: "Argeș",
+          Argeș: "Argeș",
+          Arges: "Argeș",
+          "Baia Mare": "Maramureș",
+          Maramureș: "Maramureș",
+          Maramures: "Maramureș",
+          Buzău: "Buzău",
+          Buzau: "Buzău",
+          Botoșani: "Botoșani",
+          Botosani: "Botoșani",
+          Sălaj: "Sălaj",
+          Salaj: "Sălaj",
+          Vâlcea: "Vâlcea",
+          Valcea: "Vâlcea",
+          Suceava: "Suceava",
+          Vaslui: "Vaslui",
+          Vrancea: "Vrancea",
+          Călărași: "Călărași",
+          Calarasi: "Călărași",
+          Giurgiu: "Giurgiu",
+          Ialomița: "Ialomița",
+          Ialomita: "Ialomița",
+          Ilfov: "Ilfov",
+          Mehedinți: "Mehedinți",
+          Mehedinti: "Mehedinți",
+          Neamț: "Neamț",
+          Neamt: "Neamț",
+          Olt: "Olt",
+          Teleorman: "Teleorman",
+          Tulcea: "Tulcea",
+          "Caraș-Severin": "Caraș-Severin",
+          "Caras-Severin": "Caraș-Severin",
+          Covasna: "Covasna",
+          Dâmbovița: "Dâmbovița",
+          Dambovita: "Dâmbovița",
+          Gorj: "Gorj",
+          Harghita: "Harghita",
+          Hunedoara: "Hunedoara",
+          "Satu Mare": "Satu Mare",
         };
-        
+
         const mappedCounty = countyMapping[county];
         if (mappedCounty) {
           return mappedCounty;
         }
-        
+
         if (romanianCounties.includes(county)) {
           return county;
         }
       }
     }
-    
+
     return null;
   } catch (error: unknown) {
-    console.error('Reverse geocoding error:', error);
+    console.error("Reverse geocoding error:", error);
     return null;
   }
 };

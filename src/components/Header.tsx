@@ -1,26 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { AuthModal } from '@/components/AuthModal';
-import { Cart } from '@/components/Cart';
-import { Checkout } from '@/components/Checkout';
-import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Search, Plus, User, MessageSquare, Camera, Menu, X, ShoppingBag, 
-  Shield, Bell, Compass, Star, Home, Package, Settings, LogOut,
-  ChevronDown, Sparkles, Calendar
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { AuthModal } from "@/components/AuthModal";
+import { Cart } from "@/components/Cart";
+import { Checkout } from "@/components/Checkout";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Search,
+  Plus,
+  User,
+  MessageSquare,
+  Camera,
+  Menu,
+  X,
+  ShoppingBag,
+  Shield,
+  Bell,
+  Compass,
+  Star,
+  Home,
+  Package,
+  Settings,
+  LogOut,
+  ChevronDown,
+  Sparkles,
+  Calendar,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuLabel
-} from '@/components/ui/dropdown-menu';
-import { NotificationBell } from './NotificationBell';
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { NotificationBell } from "./NotificationBell";
 
 interface CartItem {
   id: string;
@@ -43,7 +59,7 @@ interface CartItem {
 
 export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -53,26 +69,26 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleAuthClick = (mode: 'login' | 'signup') => {
+  const handleAuthClick = (mode: "login" | "signup") => {
     setAuthMode(mode);
     setIsAuthModalOpen(true);
     setIsMobileMenuOpen(false);
   };
 
   const handleDashboardClick = () => {
-    navigate('/dashboard');
+    navigate("/dashboard");
     setIsMobileMenuOpen(false);
   };
 
   const handleLogout = async () => {
     await signOut();
     setIsMobileMenuOpen(false);
-    navigate('/');
+    navigate("/");
   };
 
   useEffect(() => {
     const updateCartCount = () => {
-      const savedCart = localStorage.getItem('gearup-cart');
+      const savedCart = localStorage.getItem("gearup-cart");
       if (savedCart) {
         try {
           const cartItems = JSON.parse(savedCart);
@@ -86,14 +102,14 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
     };
 
     updateCartCount();
-    
-    window.addEventListener('storage', updateCartCount);
+
+    window.addEventListener("storage", updateCartCount);
     const handleCartUpdate = () => updateCartCount();
-    window.addEventListener('cartUpdated', handleCartUpdate);
-    
+    window.addEventListener("cartUpdated", handleCartUpdate);
+
     return () => {
-      window.removeEventListener('storage', updateCartCount);
-      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener("cartUpdated", handleCartUpdate);
     };
   }, []);
 
@@ -106,14 +122,14 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
   const handleCheckoutSuccess = () => {
     setIsCheckoutOpen(false);
     setCartItemCount(0);
-    navigate('/dashboard');
+    navigate("/dashboard");
   };
 
-  const avatarUrl = profile?.avatar_url 
-    ? profile.avatar_url.startsWith('http') 
-      ? profile.avatar_url 
+  const avatarUrl = profile?.avatar_url
+    ? profile.avatar_url.startsWith("http")
+      ? profile.avatar_url
       : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
-    : '';
+    : "";
 
   const isActiveRoute = (path: string) => location.pathname === path;
 
@@ -133,7 +149,10 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
           <div className="hidden lg:flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-20 h-8 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-pulse"></div>
+                <div
+                  key={i}
+                  className="w-20 h-8 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-pulse"
+                ></div>
               ))}
             </div>
             <div className="flex items-center space-x-3">
@@ -159,9 +178,9 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
           {/* Logo Section */}
           <Link to="/" className="flex items-center group">
             <div className="relative">
-              <img 
-                src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png" 
-                alt="GearUp" 
+              <img
+                src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png"
+                alt="GearUp"
                 className="h-8 w-auto transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
@@ -175,49 +194,51 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                 {/* Main Navigation */}
                 <nav className="flex items-center space-x-1 mr-4">
                   <Link to="/browse">
-                    <Button 
-                      variant={isActiveRoute('/browse') ? "default" : "ghost"} 
-                      size="sm" 
+                    <Button
+                      variant={isActiveRoute("/browse") ? "default" : "ghost"}
+                      size="sm"
                       className={`relative transition-all duration-200 ${
-                        isActiveRoute('/browse') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/browse")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "hover:bg-blue-50 hover:text-blue-600"
                       }`}
                     >
                       <Compass className="h-4 w-4 mr-2" />
                       Caută
-                      {isActiveRoute('/browse') && (
+                      {isActiveRoute("/browse") && (
                         <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
                       )}
                     </Button>
                   </Link>
 
                   <Link to="/dashboard">
-                    <Button 
-                      variant={isActiveRoute('/dashboard') ? "default" : "ghost"} 
-                      size="sm" 
+                    <Button
+                      variant={
+                        isActiveRoute("/dashboard") ? "default" : "ghost"
+                      }
+                      size="sm"
                       className={`relative transition-all duration-200 ${
-                        isActiveRoute('/dashboard') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/dashboard")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "hover:bg-blue-50 hover:text-blue-600"
                       }`}
                     >
                       <User className="h-4 w-4 mr-2" />
                       Dashboard
-                      {isActiveRoute('/dashboard') && (
+                      {isActiveRoute("/dashboard") && (
                         <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
                       )}
                     </Button>
                   </Link>
 
                   <Link to="/messages">
-                    <Button 
-                      variant={isActiveRoute('/messages') ? "default" : "ghost"} 
-                      size="sm" 
+                    <Button
+                      variant={isActiveRoute("/messages") ? "default" : "ghost"}
+                      size="sm"
                       className={`relative transition-all duration-200 ${
-                        isActiveRoute('/messages') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/messages")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "hover:bg-blue-50 hover:text-blue-600"
                       }`}
                     >
                       <MessageSquare className="h-4 w-4 mr-2" />
@@ -227,25 +248,25 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                           {unreadCount}
                         </span>
                       )}
-                      {isActiveRoute('/messages') && (
+                      {isActiveRoute("/messages") && (
                         <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
                       )}
                     </Button>
                   </Link>
 
                   <Link to="/reviews">
-                    <Button 
-                      variant={isActiveRoute('/reviews') ? "default" : "ghost"} 
-                      size="sm" 
+                    <Button
+                      variant={isActiveRoute("/reviews") ? "default" : "ghost"}
+                      size="sm"
                       className={`relative transition-all duration-200 ${
-                        isActiveRoute('/reviews') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/reviews")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "hover:bg-blue-50 hover:text-blue-600"
                       }`}
                     >
                       <Star className="h-4 w-4 mr-2" />
                       Recenzii
-                      {isActiveRoute('/reviews') && (
+                      {isActiveRoute("/reviews") && (
                         <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
                       )}
                     </Button>
@@ -273,11 +294,16 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                   {/* User Menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="relative group">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="relative group"
+                      >
                         <Avatar className="h-8 w-8 ring-2 ring-transparent group-hover:ring-blue-200 transition-all duration-200">
                           <AvatarImage src={avatarUrl} />
                           <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold">
-                            {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                            {profile?.full_name?.charAt(0)?.toUpperCase() ||
+                              user.email?.charAt(0)?.toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <ChevronDown className="h-3 w-3 ml-1 text-gray-500 group-hover:text-gray-700 transition-colors" />
@@ -289,34 +315,54 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={avatarUrl} />
                             <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-                              {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                              {profile?.full_name?.charAt(0)?.toUpperCase() ||
+                                user.email?.charAt(0)?.toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-semibold">{profile?.full_name || 'Utilizator'}</div>
-                            <div className="text-xs text-gray-500">{user.email}</div>
+                            <div className="font-semibold">
+                              {profile?.full_name || "Utilizator"}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {user.email}
+                            </div>
                           </div>
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleDashboardClick} className="cursor-pointer">
+                      <DropdownMenuItem
+                        onClick={handleDashboardClick}
+                        className="cursor-pointer"
+                      >
                         <User className="h-4 w-4 mr-2" />
                         Dashboard
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/my-listings')} className="cursor-pointer">
+                      <DropdownMenuItem
+                        onClick={() => navigate("/my-listings")}
+                        className="cursor-pointer"
+                      >
                         <Package className="h-4 w-4 mr-2" />
                         Echipamentele mele
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/reviews')} className="cursor-pointer">
+                      <DropdownMenuItem
+                        onClick={() => navigate("/reviews")}
+                        className="cursor-pointer"
+                      >
                         <Star className="h-4 w-4 mr-2" />
                         Recenzii
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/bookings')} className="cursor-pointer">
+                      <DropdownMenuItem
+                        onClick={() => navigate("/bookings")}
+                        className="cursor-pointer"
+                      >
                         <Calendar className="h-4 w-4 mr-2" />
                         Rezervările mele
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-700">
+                      <DropdownMenuItem
+                        onClick={handleLogout}
+                        className="cursor-pointer text-red-600 focus:text-red-700"
+                      >
                         <LogOut className="h-4 w-4 mr-2" />
                         Ieși din cont
                       </DropdownMenuItem>
@@ -326,14 +372,21 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                   {/* Status Badges */}
                   <div className="flex items-center space-x-2">
                     {profile?.is_verified && (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-200">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-green-100 text-green-800 border-green-200"
+                      >
                         <Sparkles className="h-3 w-3 mr-1" />
                         Verificat
                       </Badge>
                     )}
-                    {profile?.role === 'admin' && (
+                    {profile?.role === "admin" && (
                       <Link to="/admin">
-                        <Button variant="ghost" size="sm" className="bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:from-purple-100 hover:to-pink-100 border border-purple-200">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:from-purple-100 hover:to-pink-100 border border-purple-200"
+                        >
                           <Shield className="h-4 w-4 mr-1" />
                           Admin
                         </Button>
@@ -345,24 +398,28 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
             ) : (
               <div className="flex items-center space-x-3">
                 <Link to="/browse">
-                  <Button variant="ghost" size="sm" className="hover:bg-blue-50 hover:text-blue-600 transition-all duration-200">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                  >
                     <Compass className="h-4 w-4 mr-2" />
                     Caută
                   </Button>
                 </Link>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => handleAuthClick('login')} 
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAuthClick("login")}
                   className="hover:bg-blue-50 hover:text-blue-700 transition-all duration-200"
                 >
                   <User className="h-4 w-4 mr-2" />
                   Conectează-te
                 </Button>
-                <Button 
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105" 
-                  size="sm" 
-                  onClick={() => handleAuthClick('signup')}
+                <Button
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  size="sm"
+                  onClick={() => handleAuthClick("signup")}
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
                   Înregistrează-te gratuit
@@ -374,29 +431,29 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
           {/* Mobile Menu Button */}
           <div className="lg:hidden flex items-center gap-2">
             {!user && (
-              <Button 
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-sm" 
-                size="sm" 
-                onClick={() => handleAuthClick('signup')}
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-sm"
+                size="sm"
+                onClick={() => handleAuthClick("signup")}
               >
                 <Sparkles className="h-4 w-4 mr-1" />
                 Înregistrează-te
               </Button>
             )}
-          <Button
-            variant="ghost"
-            size="sm"
+            <Button
+              variant="ghost"
+              size="sm"
               className="relative group"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <div className="relative">
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-              ) : (
-                <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-              )}
-            </div>
-          </Button>
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <div className="relative">
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+                ) : (
+                  <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+                )}
+              </div>
+            </Button>
           </div>
         </div>
 
@@ -408,24 +465,33 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                 <>
                   {/* User Info */}
                   <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
-                                          <Avatar className="h-12 w-12 ring-2 ring-blue-200">
-                        <AvatarImage src={avatarUrl} />
-                        <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold">
-                          {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                    <Avatar className="h-12 w-12 ring-2 ring-blue-200">
+                      <AvatarImage src={avatarUrl} />
+                      <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold">
+                        {profile?.full_name?.charAt(0)?.toUpperCase() ||
+                          user.email?.charAt(0)?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
-                      <div className="font-semibold text-gray-900">{profile?.full_name || 'Utilizator'}</div>
+                      <div className="font-semibold text-gray-900">
+                        {profile?.full_name || "Utilizator"}
+                      </div>
                       <div className="text-sm text-gray-600">{user.email}</div>
                       <div className="flex items-center space-x-2 mt-1">
                         {profile?.is_verified && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-green-100 text-green-800"
+                          >
                             <Sparkles className="h-3 w-3 mr-1" />
                             Verificat
                           </Badge>
                         )}
-                        {profile?.role === 'admin' && (
-                          <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                        {profile?.role === "admin" && (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-purple-100 text-purple-800"
+                          >
                             <Shield className="h-3 w-3 mr-1" />
                             Admin
                           </Badge>
@@ -436,25 +502,25 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
 
                   {/* Navigation Links */}
                   <div className="space-y-2">
-                    <Link 
-                      to="/browse" 
+                    <Link
+                      to="/browse"
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                        isActiveRoute('/browse') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/browse")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <Compass className="h-5 w-5" />
                       <span className="font-medium">Caută</span>
                     </Link>
-                    
-                    <Link 
-                      to="/dashboard" 
+
+                    <Link
+                      to="/dashboard"
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                        isActiveRoute('/dashboard') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/dashboard")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -462,12 +528,12 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       <span className="font-medium">Dashboard</span>
                     </Link>
 
-                    <Link 
-                      to="/messages" 
+                    <Link
+                      to="/messages"
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 relative ${
-                        isActiveRoute('/messages') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/messages")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -480,12 +546,12 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       )}
                     </Link>
 
-                    <Link 
-                      to="/reviews" 
+                    <Link
+                      to="/reviews"
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                        isActiveRoute('/reviews') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/reviews")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -493,12 +559,12 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       <span className="font-medium">Recenzii</span>
                     </Link>
 
-                    <Link 
-                      to="/bookings" 
+                    <Link
+                      to="/bookings"
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                        isActiveRoute('/bookings') 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
-                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        isActiveRoute("/bookings")
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -506,8 +572,8 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       <span className="font-medium">Rezervările mele</span>
                     </Link>
 
-                    <Link 
-                      to="/my-listings" 
+                    <Link
+                      to="/my-listings"
                       className="flex items-center space-x-3 p-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -515,9 +581,9 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       <span className="font-medium">Echipamentele mele</span>
                     </Link>
 
-                    {profile?.role === 'admin' && (
-                      <Link 
-                        to="/admin" 
+                    {profile?.role === "admin" && (
+                      <Link
+                        to="/admin"
                         className="flex items-center space-x-3 p-3 rounded-lg text-purple-700 hover:bg-purple-50 transition-all duration-200"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
@@ -540,10 +606,10 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                       <ShoppingBag className="h-4 w-4 mr-2" />
                       Coș ({cartItemCount})
                     </Button>
-                    
-                    <Button 
+
+                    <Button
                       variant="outline"
-                      className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-all duration-200" 
+                      className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-all duration-200"
                       onClick={handleLogout}
                     >
                       <LogOut className="h-4 w-4 mr-2" />
@@ -554,10 +620,12 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3">
-                    <span className="text-sm font-medium text-gray-700">Temă</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Temă
+                    </span>
                   </div>
-                  
-                  <Link 
+
+                  <Link
                     to="/browse"
                     className="flex items-center space-x-3 p-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -565,19 +633,19 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                     <Compass className="h-5 w-5" />
                     <span className="font-medium">Caută</span>
                   </Link>
-                  
+
                   <div className="space-y-2">
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start hover:bg-blue-50 hover:text-blue-700 transition-all duration-200" 
-                      onClick={() => handleAuthClick('login')}
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start hover:bg-blue-50 hover:text-blue-700 transition-all duration-200"
+                      onClick={() => handleAuthClick("login")}
                     >
                       <User className="h-4 w-4 mr-2" />
                       Conectează-te
                     </Button>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
-                      onClick={() => handleAuthClick('signup')}
+                    <Button
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                      onClick={() => handleAuthClick("signup")}
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
                       Înregistrează-te gratuit

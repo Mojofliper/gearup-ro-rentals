@@ -1,8 +1,12 @@
-import React, { useEffect } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw, X } from 'lucide-react';
-import { logCSPError, isCSPFromExtensions, getCSPRecommendations } from '@/utils/cspHelper';
+import React, { useEffect } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, RefreshCw, X } from "lucide-react";
+import {
+  logCSPError,
+  isCSPFromExtensions,
+  getCSPRecommendations,
+} from "@/utils/cspHelper";
 
 interface ErrorHandlerProps {
   error?: Error | string | null;
@@ -15,12 +19,12 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
   error,
   onRetry,
   onDismiss,
-  showCSPGuidance = true
+  showCSPGuidance = true,
 }) => {
   useEffect(() => {
-    if (error && typeof error === 'string') {
+    if (error && typeof error === "string") {
       // Check if it's a CSP error
-      if (error.includes('Content-Security-Policy') || error.includes('CSP')) {
+      if (error.includes("Content-Security-Policy") || error.includes("CSP")) {
         logCSPError(error);
       }
     }
@@ -28,30 +32,33 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
 
   if (!error) return null;
 
-  const errorMessage = typeof error === 'string' ? error : error.message;
-  const isCSPError = errorMessage.includes('Content-Security-Policy') || errorMessage.includes('CSP');
-  const isDatabaseError = errorMessage.includes('column') || errorMessage.includes('42703');
+  const errorMessage = typeof error === "string" ? error : error.message;
+  const isCSPError =
+    errorMessage.includes("Content-Security-Policy") ||
+    errorMessage.includes("CSP");
+  const isDatabaseError =
+    errorMessage.includes("column") || errorMessage.includes("42703");
   const isExtensionError = isCSPError && isCSPFromExtensions(errorMessage);
 
   const getErrorTitle = () => {
-    if (isCSPError) return 'Content Security Policy Error';
-    if (isDatabaseError) return 'Database Query Error';
-    return 'An Error Occurred';
+    if (isCSPError) return "Content Security Policy Error";
+    if (isDatabaseError) return "Database Query Error";
+    return "An Error Occurred";
   };
 
   const getErrorDescription = () => {
     if (isCSPError && isExtensionError) {
-      return 'This error is likely caused by a browser extension. Try disabling extensions or using incognito mode.';
+      return "This error is likely caused by a browser extension. Try disabling extensions or using incognito mode.";
     }
-    
+
     if (isCSPError) {
-      return 'A Content Security Policy error occurred. This may be due to external scripts or browser extensions.';
+      return "A Content Security Policy error occurred. This may be due to external scripts or browser extensions.";
     }
-    
+
     if (isDatabaseError) {
-      return 'A database query error occurred. This has been automatically fixed in the latest update.';
+      return "A database query error occurred. This has been automatically fixed in the latest update.";
     }
-    
+
     return errorMessage;
   };
 
@@ -59,15 +66,15 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
     if (isCSPError) {
       return getCSPRecommendations(errorMessage);
     }
-    
+
     if (isDatabaseError) {
       return [
-        'The database schema has been updated to fix this issue.',
-        'Try refreshing the page to load the latest changes.',
-        'If the problem persists, contact support.'
+        "The database schema has been updated to fix this issue.",
+        "Try refreshing the page to load the latest changes.",
+        "If the problem persists, contact support.",
       ];
     }
-    
+
     return [];
   };
 
@@ -80,10 +87,12 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
       <AlertDescription className="text-red-700">
         {getErrorDescription()}
       </AlertDescription>
-      
+
       {recommendations.length > 0 && (
         <div className="mt-3">
-          <h4 className="text-sm font-medium text-red-800 mb-2">Recommendations:</h4>
+          <h4 className="text-sm font-medium text-red-800 mb-2">
+            Recommendations:
+          </h4>
           <ul className="text-sm text-red-700 space-y-1">
             {recommendations.map((rec, index) => (
               <li key={index} className="flex items-start">
@@ -94,7 +103,7 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
           </ul>
         </div>
       )}
-      
+
       <div className="mt-4 flex gap-2">
         {onRetry && (
           <Button
@@ -107,7 +116,7 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
             Retry
           </Button>
         )}
-        
+
         {onDismiss && (
           <Button
             variant="ghost"
@@ -119,12 +128,17 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
             Dismiss
           </Button>
         )}
-        
+
         {isExtensionError && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open('https://support.google.com/chrome/answer/2765944', '_blank')}
+            onClick={() =>
+              window.open(
+                "https://support.google.com/chrome/answer/2765944",
+                "_blank",
+              )
+            }
             className="border-red-300 text-red-700 hover:bg-red-100"
           >
             Learn More
@@ -133,4 +147,4 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
       </div>
     </Alert>
   );
-}; 
+};

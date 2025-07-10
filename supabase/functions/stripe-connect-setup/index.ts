@@ -1,49 +1,60 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Stripe from 'https://esm.sh/stripe@15.0.0'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Stripe from "https://esm.sh/stripe@15.0.0";
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2024-12-18.acacia',
-})
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+  apiVersion: "2024-12-18.acacia",
+});
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 // Handle successful onboarding completion
-async function handleOnboardingCompletion(userId: string, accountId: string, supabaseClient: ReturnType<typeof createClient>) {
+async function handleOnboardingCompletion(
+  userId: string,
+  accountId: string,
+  supabaseClient: ReturnType<typeof createClient>,
+) {
   try {
     // Verify the account exists on Stripe
-    const stripeAccount = await stripe.accounts.retrieve(accountId)
-    
+    const stripeAccount = await stripe.accounts.retrieve(accountId);
+
     // Determine the account status based on Stripe's response
-    let accountStatus = 'connect_required';
+    let accountStatus = "connect_required";
     if (stripeAccount.charges_enabled && stripeAccount.payouts_enabled) {
-      accountStatus = 'active';
-    } else if (stripeAccount.charges_enabled && !stripeAccount.payouts_enabled) {
-      accountStatus = 'charges_only';
+      accountStatus = "active";
+    } else if (
+      stripeAccount.charges_enabled &&
+      !stripeAccount.payouts_enabled
+    ) {
+      accountStatus = "charges_only";
     } else if (stripeAccount.details_submitted) {
-      accountStatus = 'verification_required';
-    } else if (stripeAccount.requirements && Object.keys(stripeAccount.requirements.currently_due || {}).length > 0) {
+      accountStatus = "verification_required";
+    } else if (
+      stripeAccount.requirements &&
+      Object.keys(stripeAccount.requirements.currently_due || {}).length > 0
+    ) {
       // User has started onboarding but has requirements to complete
-      accountStatus = 'pending';
+      accountStatus = "pending";
     } else {
       // New account, user hasn't started onboarding yet
-      accountStatus = 'connect_required';
+      accountStatus = "connect_required";
     }
 
     // Check if account already exists in database (shouldn't happen with new flow, but safety check)
     const { data: existingAccount } = await supabaseClient
-      .from('connected_accounts')
-      .select('id')
-      .eq('stripe_account_id', accountId)
+      .from("connected_accounts")
+      .select("id")
+      .eq("stripe_account_id", accountId)
       .single();
 
     if (existingAccount) {
       // Account already exists, just update the status
       const { error: updateError } = await supabaseClient
-        .from('connected_accounts')
+        .from("connected_accounts")
         .update({
           account_status: accountStatus,
           charges_enabled: stripeAccount.charges_enabled,
@@ -54,27 +65,30 @@ async function handleOnboardingCompletion(userId: string, accountId: string, sup
           business_profile: stripeAccount.business_profile || {},
           company: stripeAccount.company || {},
           individual: stripeAccount.individual || {},
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('stripe_account_id', accountId);
+        .eq("stripe_account_id", accountId);
 
       if (updateError) {
-        console.error('Error updating connected account after completion:', updateError);
+        console.error(
+          "Error updating connected account after completion:",
+          updateError,
+        );
         return new Response(
-          JSON.stringify({ 
-            error: 'Failed to update connected account after completion',
-            details: updateError.message
+          JSON.stringify({
+            error: "Failed to update connected account after completion",
+            details: updateError.message,
           }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
     } else {
       // Now store the account in our database
       const { error: insertError } = await supabaseClient
-        .from('connected_accounts')
+        .from("connected_accounts")
         .insert({
           owner_id: userId,
           stripe_account_id: accountId,
@@ -88,20 +102,23 @@ async function handleOnboardingCompletion(userId: string, accountId: string, sup
           requirements: stripeAccount.requirements || {},
           business_profile: stripeAccount.business_profile || {},
           company: stripeAccount.company || {},
-          individual: stripeAccount.individual || {}
+          individual: stripeAccount.individual || {},
         });
 
       if (insertError) {
-        console.error('Error storing connected account after completion:', insertError);
+        console.error(
+          "Error storing connected account after completion:",
+          insertError,
+        );
         return new Response(
-          JSON.stringify({ 
-            error: 'Failed to store connected account after completion',
-            details: insertError.message
+          JSON.stringify({
+            error: "Failed to store connected account after completion",
+            details: insertError.message,
           }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
     }
@@ -110,93 +127,98 @@ async function handleOnboardingCompletion(userId: string, accountId: string, sup
       JSON.stringify({
         accountId: accountId,
         accountStatus: accountStatus,
-        message: 'Onboarding completed successfully',
+        message: "Onboarding completed successfully",
         chargesEnabled: stripeAccount.charges_enabled,
         payoutsEnabled: stripeAccount.payouts_enabled,
-        detailsSubmitted: stripeAccount.details_submitted
+        detailsSubmitted: stripeAccount.details_submitted,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
   } catch (error) {
-    console.error('Error handling onboarding completion:', error);
+    console.error("Error handling onboarding completion:", error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Failed to complete onboarding',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      JSON.stringify({
+        error: "Failed to complete onboarding",
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   // Create Supabase client
   const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  )
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
 
   try {
-    const { userId, email, country, accountId } = await req.json()
+    const { userId, email, country, accountId } = await req.json();
 
     // If accountId is provided, this is a completion request
     if (accountId) {
-      return await handleOnboardingCompletion(userId, accountId, supabaseClient)
+      return await handleOnboardingCompletion(
+        userId,
+        accountId,
+        supabaseClient,
+      );
     }
 
     // Otherwise, this is a new setup request
     if (!userId || !email || !country) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: userId, email, country' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        JSON.stringify({
+          error: "Missing required fields: userId, email, country",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Check if user already has a connected account
     const { data: existingAccount } = await supabaseClient
-      .from('connected_accounts')
-      .select('*')
-      .eq('owner_id', userId)
-      .single()
+      .from("connected_accounts")
+      .select("*")
+      .eq("owner_id", userId)
+      .single();
 
     if (existingAccount) {
       // If account is active – nothing to do, just return status
-      if (existingAccount.account_status === 'active') {
-      return new Response(
-        JSON.stringify({ 
-          accountId: existingAccount.stripe_account_id,
+      if (existingAccount.account_status === "active") {
+        return new Response(
+          JSON.stringify({
+            accountId: existingAccount.stripe_account_id,
             accountStatus: existingAccount.account_status,
-        }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
       // For pending / restricted accounts we need a fresh onboarding link so the user can complete verification
       try {
-        const isLiveMode = (stripe._apiKey || '').startsWith('sk_live_')
+        const isLiveMode = (stripe._apiKey || "").startsWith("sk_live_");
         const appBaseUrl = isLiveMode
-          ? 'https://gearup.ro' // TODO: replace with your prod domain
-          : 'http://localhost:8080'
+          ? "https://gearup.ro" // TODO: replace with your prod domain
+          : "http://localhost:8080";
 
         const accountLink = await stripe.accountLinks.create({
           account: existingAccount.stripe_account_id,
           refresh_url: `${appBaseUrl}/dashboard?refresh=true`,
           return_url: `${appBaseUrl}/dashboard?success=true`,
-          type: 'account_onboarding',
-          collection_options: { fields: 'eventually_due' },
-        })
+          type: "account_onboarding",
+          collection_options: { fields: "eventually_due" },
+        });
 
         return new Response(
           JSON.stringify({
@@ -204,8 +226,8 @@ serve(async (req) => {
             accountStatus: existingAccount.account_status,
             onboardingUrl: accountLink.url,
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       } catch (_) {
         // Fall through to trying to create a brand-new account below
       }
@@ -214,25 +236,25 @@ serve(async (req) => {
     try {
       // First create a Stripe Connect account
       const account = await stripe.accounts.create({
-        type: 'express',
+        type: "express",
         country: country,
         email: email,
         capabilities: {
           card_payments: { requested: true },
           transfers: { requested: true },
         },
-        business_type: 'individual',
-      })
+        business_type: "individual",
+      });
 
-      console.log('Created Stripe Connect account:', account.id)
+      console.log("Created Stripe Connect account:", account.id);
 
       // Store the account in our database
       const { error: insertError } = await supabaseClient
-        .from('connected_accounts')
+        .from("connected_accounts")
         .insert({
           owner_id: userId,
           stripe_account_id: account.id,
-          account_status: 'pending',
+          account_status: "pending",
           charges_enabled: account.charges_enabled,
           payouts_enabled: account.payouts_enabled,
           country: account.country,
@@ -241,114 +263,113 @@ serve(async (req) => {
           requirements: account.requirements || {},
           business_profile: account.business_profile || {},
           company: account.company || {},
-          individual: account.individual || {}
-        })
+          individual: account.individual || {},
+        });
 
       if (insertError) {
-        console.error('Error storing new connected account:', insertError)
+        console.error("Error storing new connected account:", insertError);
         return new Response(
-          JSON.stringify({ 
-            error: 'Failed to store connected account',
-            details: insertError.message
+          JSON.stringify({
+            error: "Failed to store connected account",
+            details: insertError.message,
           }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       // Now create the account link for onboarding
-      const isLiveMode = (stripe._apiKey || '').startsWith('sk_live_')
+      const isLiveMode = (stripe._apiKey || "").startsWith("sk_live_");
       const appBaseUrl = isLiveMode
-        ? 'https://gearup.ro' // TODO: replace with your prod domain
-        : 'http://localhost:8080'
+        ? "https://gearup.ro" // TODO: replace with your prod domain
+        : "http://localhost:8080";
 
       const accountLink = await stripe.accountLinks.create({
         account: account.id,
         refresh_url: `${appBaseUrl}/dashboard?refresh=true`,
         return_url: `${appBaseUrl}/dashboard?success=true`,
-        type: 'account_onboarding',
-        collection_options: { fields: 'eventually_due' },
-      })
+        type: "account_onboarding",
+        collection_options: { fields: "eventually_due" },
+      });
 
       return new Response(
         JSON.stringify({
           accountId: account.id,
-          accountStatus: 'pending',
+          accountStatus: "pending",
           onboardingUrl: accountLink.url,
         }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     } catch (stripeError: unknown) {
-      console.error('Stripe Connect setup error:', stripeError)
-      
+      console.error("Stripe Connect setup error:", stripeError);
+
       // If Connect is not enabled, create a placeholder account
-      if (stripeError.message?.includes('signed up for Connect')) {
+      if (stripeError.message?.includes("signed up for Connect")) {
         // Create a placeholder connected account for now
-        const placeholderAccountId = `placeholder_${userId}_${Date.now()}`
-        
+        const placeholderAccountId = `placeholder_${userId}_${Date.now()}`;
+
         const { error: insertError } = await supabaseClient
-          .from('connected_accounts')
+          .from("connected_accounts")
           .insert({
             owner_id: userId,
             stripe_account_id: placeholderAccountId,
-            account_status: 'connect_required',
+            account_status: "connect_required",
             charges_enabled: false,
             payouts_enabled: false,
             country: country,
-            business_type: 'individual',
+            business_type: "individual",
             capabilities: {},
-            requirements: {}
-          })
+            requirements: {},
+          });
 
         if (insertError) {
-          console.error('Error storing placeholder account:', insertError)
-          console.error('Error details:', JSON.stringify(insertError, null, 2))
+          console.error("Error storing placeholder account:", insertError);
+          console.error("Error details:", JSON.stringify(insertError, null, 2));
           return new Response(
-            JSON.stringify({ 
-              error: 'Failed to store placeholder account',
+            JSON.stringify({
+              error: "Failed to store placeholder account",
               details: insertError.message,
-              code: insertError.code
+              code: insertError.code,
             }),
-            { 
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          )
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
         }
 
         return new Response(
           JSON.stringify({
             accountId: placeholderAccountId,
-            accountStatus: 'connect_required',
-            error: 'Stripe Connect needs to be enabled in your Stripe dashboard. Please contact support.',
+            accountStatus: "connect_required",
+            error:
+              "Stripe Connect needs to be enabled in your Stripe dashboard. Please contact support.",
             requiresConnectSetup: true,
           }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       // Re-throw other Stripe errors
-      throw stripeError
+      throw stripeError;
     }
-
   } catch (error) {
-    console.error('Stripe Connect setup error:', error)
+    console.error("Stripe Connect setup error:", error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Failed to setup Stripe Connect account',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      JSON.stringify({
+        error: "Failed to setup Stripe Connect account",
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    )
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
-}) 
+});

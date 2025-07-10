@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Star } from 'lucide-react';
-import { useCreateReview } from '@/hooks/useReviews';
-import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Star } from "lucide-react";
+import { useCreateReview } from "@/hooks/useReviews";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
   id: string;
@@ -37,52 +43,57 @@ interface ReviewModalProps {
 export const ReviewModal: React.FC<ReviewModalProps> = ({
   isOpen,
   onClose,
-  booking
+  booking,
 }) => {
   const { user } = useAuth();
   const { mutate: createReview, isPending } = useCreateReview();
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
 
   // Determine who to review (if user is renter, review owner; if user is owner, review renter)
-  const reviewedUser: User | undefined = user?.id === booking.renter_id ? booking.owner : booking.renter;
+  const reviewedUser: User | undefined =
+    user?.id === booking.renter_id ? booking.owner : booking.renter;
   const isReviewingOwner = user?.id === booking.renter_id;
 
   const handleSubmit = () => {
     if (!user || rating === 0) {
       toast({
-        title: 'Rating obligatoriu',
-        description: 'Te rugăm să dai o notă înainte de a trimite recenzia.',
-        variant: 'destructive',
+        title: "Rating obligatoriu",
+        description: "Te rugăm să dai o notă înainte de a trimite recenzia.",
+        variant: "destructive",
       });
       return;
     }
 
-    createReview({
-      booking_id: booking.id,
-      gear_id: booking.gear_id,
-      reviewer_id: user.id,
-      reviewed_id: reviewedUser?.id,
-      rating,
-      comment: comment.trim() || null
-    }, {
-      onSuccess: () => {
-        toast({
-          title: 'Recenzie trimisă!',
-          description: 'Mulțumim pentru feedback-ul tău.',
-        });
-        onClose();
+    createReview(
+      {
+        booking_id: booking.id,
+        gear_id: booking.gear_id,
+        reviewer_id: user.id,
+        reviewed_id: reviewedUser?.id,
+        rating,
+        comment: comment.trim() || null,
       },
-      onError: (error: unknown) => {
-        toast({
-          title: 'Eroare',
-          description: 'Nu s-a putut trimite recenzia. Te rugăm să încerci din nou.',
-          variant: 'destructive',
-        });
-        console.error('Review error:', error);
-      }
-    });
+      {
+        onSuccess: () => {
+          toast({
+            title: "Recenzie trimisă!",
+            description: "Mulțumim pentru feedback-ul tău.",
+          });
+          onClose();
+        },
+        onError: (error: unknown) => {
+          toast({
+            title: "Eroare",
+            description:
+              "Nu s-a putut trimite recenzia. Te rugăm să încerci din nou.",
+            variant: "destructive",
+          });
+          console.error("Review error:", error);
+        },
+      },
+    );
   };
 
   return (
@@ -91,26 +102,34 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         <DialogHeader>
           <DialogTitle>Lasă o recenzie</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* User Info */}
           <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
             <Avatar className="h-12 w-12">
               <AvatarFallback>
-                {reviewedUser?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                {reviewedUser?.full_name
+                  ?.split(" ")
+                  .map((n: string) => n[0])
+                  .join("") || "U"}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold">{reviewedUser?.full_name || 'Utilizator'}</h3>
+              <h3 className="font-semibold">
+                {reviewedUser?.full_name || "Utilizator"}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                {isReviewingOwner ? 'Proprietar' : 'Închiriator'}
+                {isReviewingOwner ? "Proprietar" : "Închiriator"}
               </p>
             </div>
           </div>
 
           {/* Gear Info */}
           <div className="text-sm text-muted-foreground">
-            <p>Pentru închirierea: <span className="font-medium">{booking.gear?.title}</span></p>
+            <p>
+              Pentru închirierea:{" "}
+              <span className="font-medium">{booking.gear?.title}</span>
+            </p>
           </div>
 
           {/* Rating */}
@@ -128,23 +147,23 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   onMouseEnter={() => setHoveredRating(star)}
                   onMouseLeave={() => setHoveredRating(0)}
                 >
-                  <Star 
+                  <Star
                     className={`h-8 w-8 ${
-                      star <= (hoveredRating || rating) 
-                        ? 'fill-yellow-400 text-yellow-400' 
-                        : 'text-gray-300'
-                    }`} 
+                      star <= (hoveredRating || rating)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
+                    }`}
                   />
                 </button>
               ))}
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
-              {rating === 0 && 'Selectează o notă'}
-              {rating === 1 && 'Foarte nemulțumit'}
-              {rating === 2 && 'Nemulțumit'}
-              {rating === 3 && 'Acceptabil'}
-              {rating === 4 && 'Mulțumit'}
-              {rating === 5 && 'Foarte mulțumit'}
+              {rating === 0 && "Selectează o notă"}
+              {rating === 1 && "Foarte nemulțumit"}
+              {rating === 2 && "Nemulțumit"}
+              {rating === 3 && "Acceptabil"}
+              {rating === 4 && "Mulțumit"}
+              {rating === 5 && "Foarte mulțumit"}
             </div>
           </div>
 
@@ -154,7 +173,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             <Textarea
               id="comment"
               placeholder={
-                isReviewingOwner 
+                isReviewingOwner
                   ? "Cum a fost experiența cu proprietarul și echipamentul?"
                   : "Cum a fost experiența cu închiriatorul?"
               }
@@ -167,18 +186,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         </div>
 
         <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            disabled={isPending}
-          >
+          <Button variant="outline" onClick={onClose} disabled={isPending}>
             Anulează
           </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isPending || rating === 0}
-          >
-            {isPending ? 'Se trimite...' : 'Trimite recenzia'}
+          <Button onClick={handleSubmit} disabled={isPending || rating === 0}>
+            {isPending ? "Se trimite..." : "Trimite recenzia"}
           </Button>
         </DialogFooter>
       </DialogContent>

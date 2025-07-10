@@ -1,21 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCw, 
-  Download, 
-  Eye, 
+import React, { useState, useRef, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Download,
+  Eye,
   EyeOff,
   AlertTriangle,
   CheckCircle,
-  XCircle
-} from 'lucide-react';
-import { toast } from 'sonner';
+  XCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface PhotoComparisonProps {
   beforePhoto: string;
@@ -26,7 +26,7 @@ interface PhotoComparisonProps {
 
 interface DamageAssessment {
   hasDamage: boolean;
-  damageLevel: 'none' | 'minor' | 'moderate' | 'severe';
+  damageLevel: "none" | "minor" | "moderate" | "severe";
   damageDescription: string;
   estimatedCost?: number;
   notes: string;
@@ -36,7 +36,7 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
   beforePhoto,
   afterPhoto,
   onDamageAssessment,
-  readOnly = false
+  readOnly = false,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -44,10 +44,10 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
   const [showAfter, setShowAfter] = useState(true);
   const [assessment, setAssessment] = useState<DamageAssessment>({
     hasDamage: false,
-    damageLevel: 'none',
-    damageDescription: '',
+    damageLevel: "none",
+    damageDescription: "",
     estimatedCost: 0,
-    notes: ''
+    notes: "",
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -64,28 +64,31 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
     try {
       await Promise.all([
         loadImageToCanvas(beforePhoto, beforeCanvasRef.current),
-        loadImageToCanvas(afterPhoto, afterCanvasRef.current)
+        loadImageToCanvas(afterPhoto, afterCanvasRef.current),
       ]);
     } catch (error) {
-      toast.error('Eroare la încărcarea imaginilor');
+      toast.error("Eroare la încărcarea imaginilor");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadImageToCanvas = (src: string, canvas: HTMLCanvasElement | null): Promise<void> => {
+  const loadImageToCanvas = (
+    src: string,
+    canvas: HTMLCanvasElement | null,
+  ): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (!canvas) {
-        reject(new Error('Canvas not found'));
+        reject(new Error("Canvas not found"));
         return;
       }
 
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+      img.crossOrigin = "anonymous";
       img.onload = () => {
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         if (!ctx) {
-          reject(new Error('Could not get canvas context'));
+          reject(new Error("Could not get canvas context"));
           return;
         }
 
@@ -122,11 +125,11 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
     loadImages(); // Reload with new rotation
   };
 
-  const handleDamageLevelChange = (level: DamageAssessment['damageLevel']) => {
+  const handleDamageLevelChange = (level: DamageAssessment["damageLevel"]) => {
     const newAssessment = {
       ...assessment,
-      hasDamage: level !== 'none',
-      damageLevel: level
+      hasDamage: level !== "none",
+      damageLevel: level,
     };
     setAssessment(newAssessment);
     onDamageAssessment?.(newAssessment);
@@ -150,32 +153,45 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
     onDamageAssessment?.(newAssessment);
   };
 
-  const downloadImage = (canvas: HTMLCanvasElement | null, filename: string) => {
+  const downloadImage = (
+    canvas: HTMLCanvasElement | null,
+    filename: string,
+  ) => {
     if (!canvas) return;
-    
-    const link = document.createElement('a');
+
+    const link = document.createElement("a");
     link.download = filename;
     link.href = canvas.toDataURL();
     link.click();
   };
 
-  const getDamageLevelColor = (level: DamageAssessment['damageLevel']) => {
+  const getDamageLevelColor = (level: DamageAssessment["damageLevel"]) => {
     switch (level) {
-      case 'none': return 'bg-green-100 text-green-800';
-      case 'minor': return 'bg-yellow-100 text-yellow-800';
-      case 'moderate': return 'bg-orange-100 text-orange-800';
-      case 'severe': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "none":
+        return "bg-green-100 text-green-800";
+      case "minor":
+        return "bg-yellow-100 text-yellow-800";
+      case "moderate":
+        return "bg-orange-100 text-orange-800";
+      case "severe":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getDamageLevelIcon = (level: DamageAssessment['damageLevel']) => {
+  const getDamageLevelIcon = (level: DamageAssessment["damageLevel"]) => {
     switch (level) {
-      case 'none': return <CheckCircle className="h-4 w-4" />;
-      case 'minor': return <AlertTriangle className="h-4 w-4" />;
-      case 'moderate': return <AlertTriangle className="h-4 w-4" />;
-      case 'severe': return <XCircle className="h-4 w-4" />;
-      default: return <AlertTriangle className="h-4 w-4" />;
+      case "none":
+        return <CheckCircle className="h-4 w-4" />;
+      case "minor":
+        return <AlertTriangle className="h-4 w-4" />;
+      case "moderate":
+        return <AlertTriangle className="h-4 w-4" />;
+      case "severe":
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <AlertTriangle className="h-4 w-4" />;
     }
   };
 
@@ -199,8 +215,8 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Comparare Foto - Evaluare Daune</span>
-            <Badge variant={assessment.hasDamage ? 'destructive' : 'default'}>
-              {assessment.hasDamage ? 'Daune Detectate' : 'Fără Daune'}
+            <Badge variant={assessment.hasDamage ? "destructive" : "default"}>
+              {assessment.hasDamage ? "Daune Detectate" : "Fără Daune"}
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -213,7 +229,11 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
                 size="sm"
                 onClick={() => setShowBefore(!showBefore)}
               >
-                {showBefore ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showBefore ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
                 Foto Înainte
               </Button>
               <Button
@@ -221,7 +241,11 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
                 size="sm"
                 onClick={() => setShowAfter(!showAfter)}
               >
-                {showAfter ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showAfter ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
                 Foto După
               </Button>
             </div>
@@ -250,7 +274,9 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadImage(beforeCanvasRef.current, 'foto-inainte.png')}
+                onClick={() =>
+                  downloadImage(beforeCanvasRef.current, "foto-inainte.png")
+                }
               >
                 <Download className="h-4 w-4 mr-1" />
                 Descarcă Înainte
@@ -258,7 +284,9 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadImage(afterCanvasRef.current, 'foto-dupa.png')}
+                onClick={() =>
+                  downloadImage(afterCanvasRef.current, "foto-dupa.png")
+                }
               >
                 <Download className="h-4 w-4 mr-1" />
                 Descarcă După
@@ -281,7 +309,7 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
                 <canvas
                   ref={beforeCanvasRef}
                   className="w-full h-auto max-h-96 object-contain"
-                  style={{ cursor: 'crosshair' }}
+                  style={{ cursor: "crosshair" }}
                 />
               </div>
             </CardContent>
@@ -299,7 +327,7 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
                 <canvas
                   ref={afterCanvasRef}
                   className="w-full h-auto max-h-96 object-contain"
-                  style={{ cursor: 'crosshair' }}
+                  style={{ cursor: "crosshair" }}
                 />
               </div>
             </CardContent>
@@ -316,35 +344,45 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
           <CardContent className="space-y-4">
             {/* Damage Level */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Nivel Daune</label>
+              <label className="text-sm font-medium mb-2 block">
+                Nivel Daune
+              </label>
               <div className="flex flex-wrap gap-2">
-                {(['none', 'minor', 'moderate', 'severe'] as const).map((level) => (
-                  <Button
-                    key={level}
-                    variant={assessment.damageLevel === level ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleDamageLevelChange(level)}
-                    className="flex items-center space-x-2"
-                  >
-                    {getDamageLevelIcon(level)}
-                    <span className="capitalize">
-                      {level === 'none' && 'Fără daune'}
-                      {level === 'minor' && 'Daune minore'}
-                      {level === 'moderate' && 'Daune moderate'}
-                      {level === 'severe' && 'Daune grave'}
-                    </span>
-                  </Button>
-                ))}
+                {(["none", "minor", "moderate", "severe"] as const).map(
+                  (level) => (
+                    <Button
+                      key={level}
+                      variant={
+                        assessment.damageLevel === level ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handleDamageLevelChange(level)}
+                      className="flex items-center space-x-2"
+                    >
+                      {getDamageLevelIcon(level)}
+                      <span className="capitalize">
+                        {level === "none" && "Fără daune"}
+                        {level === "minor" && "Daune minore"}
+                        {level === "moderate" && "Daune moderate"}
+                        {level === "severe" && "Daune grave"}
+                      </span>
+                    </Button>
+                  ),
+                )}
               </div>
             </div>
 
             {/* Damage Description */}
             {assessment.hasDamage && (
               <div>
-                <label className="text-sm font-medium mb-2 block">Descriere Daune</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Descriere Daune
+                </label>
                 <textarea
                   value={assessment.damageDescription}
-                  onChange={(e) => handleDamageDescriptionChange(e.target.value)}
+                  onChange={(e) =>
+                    handleDamageDescriptionChange(e.target.value)
+                  }
                   placeholder="Descrie daunele observate..."
                   className="w-full p-2 border rounded-md"
                   rows={3}
@@ -355,11 +393,15 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
             {/* Estimated Cost */}
             {assessment.hasDamage && (
               <div>
-                <label className="text-sm font-medium mb-2 block">Cost Estimativ (RON)</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Cost Estimativ (RON)
+                </label>
                 <input
                   type="number"
-                  value={assessment.estimatedCost || ''}
-                  onChange={(e) => handleEstimatedCostChange(Number(e.target.value))}
+                  value={assessment.estimatedCost || ""}
+                  onChange={(e) =>
+                    handleEstimatedCostChange(Number(e.target.value))
+                  }
                   placeholder="0"
                   className="w-full p-2 border rounded-md"
                   min="0"
@@ -369,7 +411,9 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
 
             {/* Notes */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Note Suplimentare</label>
+              <label className="text-sm font-medium mb-2 block">
+                Note Suplimentare
+              </label>
               <textarea
                 value={assessment.notes}
                 onChange={(e) => handleNotesChange(e.target.value)}
@@ -394,23 +438,25 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
               <Badge className={getDamageLevelColor(assessment.damageLevel)}>
                 {getDamageLevelIcon(assessment.damageLevel)}
                 <span className="ml-1 capitalize">
-                  {assessment.damageLevel === 'none' && 'Fără daune'}
-                  {assessment.damageLevel === 'minor' && 'Daune minore'}
-                  {assessment.damageLevel === 'moderate' && 'Daune moderate'}
-                  {assessment.damageLevel === 'severe' && 'Daune grave'}
+                  {assessment.damageLevel === "none" && "Fără daune"}
+                  {assessment.damageLevel === "minor" && "Daune minore"}
+                  {assessment.damageLevel === "moderate" && "Daune moderate"}
+                  {assessment.damageLevel === "severe" && "Daune grave"}
                 </span>
               </Badge>
             </div>
-            
+
             {assessment.hasDamage && (
               <>
                 {assessment.damageDescription && (
                   <div>
                     <span className="font-medium">Descriere:</span>
-                    <p className="text-sm text-gray-600 mt-1">{assessment.damageDescription}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {assessment.damageDescription}
+                    </p>
                   </div>
                 )}
-                
+
                 {assessment.estimatedCost && assessment.estimatedCost > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Cost estimativ:</span>
@@ -421,7 +467,7 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
                 )}
               </>
             )}
-            
+
             {assessment.notes && (
               <div>
                 <span className="font-medium">Note:</span>
@@ -433,4 +479,4 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({
       </Card>
     </div>
   );
-}; 
+};

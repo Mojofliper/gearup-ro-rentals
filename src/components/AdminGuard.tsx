@@ -1,6 +1,6 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   children: React.ReactElement;
@@ -16,10 +16,10 @@ export const AdminGuard: React.FC<Props> = ({ children }) => {
       </div>
     );
   }
-  
-  if (!user || profile?.role !== 'admin') {
+
+  if (!user || profile?.role !== "admin") {
     return <Navigate to="/" replace />;
   }
-  
+
   return children;
-}; 
+};

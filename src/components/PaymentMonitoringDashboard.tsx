@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  CreditCard, 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  CreditCard,
   Shield,
   AlertTriangle,
   CheckCircle,
@@ -16,11 +22,11 @@ import {
   RefreshCw,
   Activity,
   Users,
-  Calendar
-} from 'lucide-react';
-import { useEscrowPayments } from '@/hooks/useEscrowPayments';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+  Calendar,
+} from "lucide-react";
+import { useEscrowPayments } from "@/hooks/useEscrowPayments";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface PaymentMetrics {
   totalTransactions: number;
@@ -35,9 +41,9 @@ interface PaymentMetrics {
 }
 
 interface SystemHealth {
-  webhookStatus: 'healthy' | 'warning' | 'error';
-  databaseStatus: 'healthy' | 'warning' | 'error';
-  stripeStatus: 'healthy' | 'warning' | 'error';
+  webhookStatus: "healthy" | "warning" | "error";
+  databaseStatus: "healthy" | "warning" | "error";
+  stripeStatus: "healthy" | "warning" | "error";
   lastWebhookTime: string;
   lastDatabaseCheck: string;
 }
@@ -59,32 +65,41 @@ export const PaymentMonitoringDashboard: React.FC = () => {
     try {
       // Get transaction metrics
       const { data: transactions, error: txError } = await supabase
-        .from('transactions')
-        .select('*');
+        .from("transactions")
+        .select("*");
 
       if (txError) throw txError;
 
       // Get escrow transactions
       const { data: escrowTransactions, error: escrowError } = await supabase
-        .from('escrow_transactions')
-        .select('*');
+        .from("escrow_transactions")
+        .select("*");
 
       if (escrowError) throw escrowError;
 
       // Calculate metrics
       const totalTransactions = transactions?.length || 0;
-      const successfulTransactions = transactions?.filter(t => t.status === 'completed').length || 0;
-      const failedTransactions = transactions?.filter(t => t.status === 'failed').length || 0;
-      const pendingTransactions = transactions?.filter(t => t.status === 'pending').length || 0;
-      
-      const totalAmount = transactions?.reduce((sum, t) => sum + t.amount, 0) || 0;
-      const averageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
-      const successRate = totalTransactions > 0 ? (successfulTransactions / totalTransactions) * 100 : 0;
+      const successfulTransactions =
+        transactions?.filter((t) => t.status === "completed").length || 0;
+      const failedTransactions =
+        transactions?.filter((t) => t.status === "failed").length || 0;
+      const pendingTransactions =
+        transactions?.filter((t) => t.status === "pending").length || 0;
+
+      const totalAmount =
+        transactions?.reduce((sum, t) => sum + t.amount, 0) || 0;
+      const averageAmount =
+        totalTransactions > 0 ? totalAmount / totalTransactions : 0;
+      const successRate =
+        totalTransactions > 0
+          ? (successfulTransactions / totalTransactions) * 100
+          : 0;
 
       const escrowCount = escrowTransactions?.length || 0;
-      const activeEscrowAmount = escrowTransactions
-        ?.filter(e => e.escrow_status === 'held')
-        .reduce((sum, e) => sum + e.rental_amount + e.deposit_amount, 0) || 0;
+      const activeEscrowAmount =
+        escrowTransactions
+          ?.filter((e) => e.escrow_status === "held")
+          .reduce((sum, e) => sum + e.rental_amount + e.deposit_amount, 0) || 0;
 
       setMetrics({
         totalTransactions,
@@ -95,14 +110,14 @@ export const PaymentMonitoringDashboard: React.FC = () => {
         averageAmount,
         successRate,
         escrowTransactions: escrowCount,
-        activeEscrowAmount
+        activeEscrowAmount,
       });
     } catch (error) {
-      console.error('Error loading metrics:', error);
+      console.error("Error loading metrics:", error);
       toast({
-        title: 'Eroare la încărcarea metricilor',
-        description: 'Nu s-au putut încărca datele de plată.',
-        variant: 'destructive',
+        title: "Eroare la încărcarea metricilor",
+        description: "Nu s-au putut încărca datele de plată.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -112,34 +127,37 @@ export const PaymentMonitoringDashboard: React.FC = () => {
   const checkSystemHealth = async () => {
     try {
       // Check webhook endpoints
-      const webhookResponse = await fetch('https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-webhook', {
-        method: 'OPTIONS'
-      });
+      const webhookResponse = await fetch(
+        "https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-webhook",
+        {
+          method: "OPTIONS",
+        },
+      );
 
       // Check database connection
       const { data: dbTest, error: dbError } = await supabase
-        .from('transactions')
-        .select('count')
+        .from("transactions")
+        .select("count")
         .limit(1);
 
       // Check Stripe connection (simplified)
-      const stripeStatus = connectedAccount ? 'healthy' : 'warning';
+      const stripeStatus = connectedAccount ? "healthy" : "warning";
 
       setSystemHealth({
-        webhookStatus: webhookResponse.ok ? 'healthy' : 'error',
-        databaseStatus: dbError ? 'error' : 'healthy',
+        webhookStatus: webhookResponse.ok ? "healthy" : "error",
+        databaseStatus: dbError ? "error" : "healthy",
         stripeStatus,
         lastWebhookTime: new Date().toISOString(),
-        lastDatabaseCheck: new Date().toISOString()
+        lastDatabaseCheck: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Error checking system health:', error);
+      console.error("Error checking system health:", error);
       setSystemHealth({
-        webhookStatus: 'error',
-        databaseStatus: 'error',
-        stripeStatus: 'error',
+        webhookStatus: "error",
+        databaseStatus: "error",
+        stripeStatus: "error",
         lastWebhookTime: new Date().toISOString(),
-        lastDatabaseCheck: new Date().toISOString()
+        lastDatabaseCheck: new Date().toISOString(),
       });
     }
   };
@@ -149,30 +167,30 @@ export const PaymentMonitoringDashboard: React.FC = () => {
     await Promise.all([loadMetrics(), checkSystemHealth()]);
     setLastUpdated(new Date());
     toast({
-      title: 'Date actualizate',
-      description: 'Metricile au fost actualizate cu succes.',
+      title: "Date actualizate",
+      description: "Metricile au fost actualizate cu succes.",
     });
   };
 
-  const getStatusIcon = (status: 'healthy' | 'warning' | 'error') => {
+  const getStatusIcon = (status: "healthy" | "warning" | "error") => {
     switch (status) {
-      case 'healthy':
+      case "healthy":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'warning':
+      case "warning":
         return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      case 'error':
+      case "error":
         return <AlertTriangle className="h-4 w-4 text-red-600" />;
     }
   };
 
-  const getStatusColor = (status: 'healthy' | 'warning' | 'error') => {
+  const getStatusColor = (status: "healthy" | "warning" | "error") => {
     switch (status) {
-      case 'healthy':
-        return 'bg-green-100 text-green-800';
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'error':
-        return 'bg-red-100 text-red-800';
+      case "healthy":
+        return "bg-green-100 text-green-800";
+      case "warning":
+        return "bg-yellow-100 text-yellow-800";
+      case "error":
+        return "bg-red-100 text-red-800";
     }
   };
 
@@ -199,7 +217,9 @@ export const PaymentMonitoringDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Monitorizare Plăți în Timp Real</h1>
+          <h1 className="text-2xl font-bold">
+            Monitorizare Plăți în Timp Real
+          </h1>
           <p className="text-muted-foreground">
             Monitorizare și analiză în timp real a sistemului de plăți
           </p>
@@ -260,11 +280,15 @@ export const PaymentMonitoringDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tranzacții</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Tranzacții
+            </CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalTransactions}</div>
+            <div className="text-2xl font-bold">
+              {metrics.totalTransactions}
+            </div>
             <p className="text-xs text-muted-foreground">
               {metrics.successfulTransactions} reușite
             </p>
@@ -273,11 +297,15 @@ export const PaymentMonitoringDashboard: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rata de Succes</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Rata de Succes
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.successRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">
+              {metrics.successRate.toFixed(1)}%
+            </div>
             <p className="text-xs text-muted-foreground">
               {metrics.successfulTransactions} din {metrics.totalTransactions}
             </p>
@@ -290,7 +318,9 @@ export const PaymentMonitoringDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalAmount.toFixed(2)} RON</div>
+            <div className="text-2xl font-bold">
+              {metrics.totalAmount.toFixed(2)} RON
+            </div>
             <p className="text-xs text-muted-foreground">
               Medie: {metrics.averageAmount.toFixed(2)} RON
             </p>
@@ -303,7 +333,9 @@ export const PaymentMonitoringDashboard: React.FC = () => {
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.escrowTransactions}</div>
+            <div className="text-2xl font-bold">
+              {metrics.escrowTransactions}
+            </div>
             <p className="text-xs text-muted-foreground">
               {metrics.activeEscrowAmount.toFixed(2)} RON deținut
             </p>
@@ -324,8 +356,17 @@ export const PaymentMonitoringDashboard: React.FC = () => {
                 <span>Reușite</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="font-medium">{metrics.successfulTransactions}</span>
-                <Progress value={(metrics.successfulTransactions / metrics.totalTransactions) * 100} className="w-24" />
+                <span className="font-medium">
+                  {metrics.successfulTransactions}
+                </span>
+                <Progress
+                  value={
+                    (metrics.successfulTransactions /
+                      metrics.totalTransactions) *
+                    100
+                  }
+                  className="w-24"
+                />
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -334,8 +375,16 @@ export const PaymentMonitoringDashboard: React.FC = () => {
                 <span>În așteptare</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="font-medium">{metrics.pendingTransactions}</span>
-                <Progress value={(metrics.pendingTransactions / metrics.totalTransactions) * 100} className="w-24" />
+                <span className="font-medium">
+                  {metrics.pendingTransactions}
+                </span>
+                <Progress
+                  value={
+                    (metrics.pendingTransactions / metrics.totalTransactions) *
+                    100
+                  }
+                  className="w-24"
+                />
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -344,8 +393,16 @@ export const PaymentMonitoringDashboard: React.FC = () => {
                 <span>Eșuate</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="font-medium">{metrics.failedTransactions}</span>
-                <Progress value={(metrics.failedTransactions / metrics.totalTransactions) * 100} className="w-24" />
+                <span className="font-medium">
+                  {metrics.failedTransactions}
+                </span>
+                <Progress
+                  value={
+                    (metrics.failedTransactions / metrics.totalTransactions) *
+                    100
+                  }
+                  className="w-24"
+                />
               </div>
             </div>
           </div>
@@ -355,4 +412,4 @@ export const PaymentMonitoringDashboard: React.FC = () => {
   );
 };
 
-export default PaymentMonitoringDashboard; 
+export default PaymentMonitoringDashboard;

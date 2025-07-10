@@ -15,38 +15,46 @@ The `claim-photos` bucket has been created, but the storage policies need to be 
 3. **Create the following policies:**
 
 #### Policy 1: Users can upload claim photos
+
 - **Policy Name**: `Users can upload claim photos`
 - **Allowed Operation**: INSERT
 - **Policy Definition**:
+
 ```sql
-bucket_id = 'claim-photos' AND 
+bucket_id = 'claim-photos' AND
 auth.uid()::text = (storage.foldername(name))[1]
 ```
 
 #### Policy 2: Users can view claim photos
+
 - **Policy Name**: `Users can view claim photos`
 - **Allowed Operation**: SELECT
 - **Policy Definition**:
+
 ```sql
-bucket_id = 'claim-photos' AND 
+bucket_id = 'claim-photos' AND
 auth.uid()::text = (storage.foldername(name))[1]
 ```
 
 #### Policy 3: Users can update claim photos
+
 - **Policy Name**: `Users can update claim photos`
 - **Allowed Operation**: UPDATE
 - **Policy Definition**:
+
 ```sql
-bucket_id = 'claim-photos' AND 
+bucket_id = 'claim-photos' AND
 auth.uid()::text = (storage.foldername(name))[1]
 ```
 
 #### Policy 4: Users can delete claim photos
+
 - **Policy Name**: `Users can delete claim photos`
 - **Allowed Operation**: DELETE
 - **Policy Definition**:
+
 ```sql
-bucket_id = 'claim-photos' AND 
+bucket_id = 'claim-photos' AND
 auth.uid()::text = (storage.foldername(name))[1]
 ```
 
@@ -59,10 +67,11 @@ auth.uid()::text = (storage.foldername(name))[1]
 ### Testing the Policies:
 
 After setting up the policies, you can test them by:
+
 1. Creating a claim with photos
 2. Verifying that only the claim owner can view/upload/update/delete their photos
 3. Confirming that other users cannot access the photos
 
 ### Note:
 
-These policies ensure that claim evidence photos are properly secured and users can only access their own claim photos. 
+These policies ensure that claim evidence photos are properly secured and users can only access their own claim photos.

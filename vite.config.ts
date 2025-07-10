@@ -21,26 +21,24 @@ export default defineConfig({
         "base-uri 'self'",
         "form-action 'self'",
         "frame-ancestors 'self'",
-        "upgrade-insecure-requests"
+        "upgrade-insecure-requests",
       ].join("; "),
     },
   },
-  plugins: [
-    react(),
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
-    sourcemap: 'hidden',
+    sourcemap: "hidden",
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          stripe: ['@stripe/stripe-js'],
-          supabase: ['@supabase/supabase-js'],
+          vendor: ["react", "react-dom"],
+          stripe: ["@stripe/stripe-js"],
+          supabase: ["@supabase/supabase-js"],
         },
       },
     },
@@ -49,6 +47,11 @@ export default defineConfig({
     devSourcemap: true,
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', '@stripe/stripe-js', '@supabase/supabase-js'],
+    include: [
+      "react",
+      "react-dom",
+      "@stripe/stripe-js",
+      "@supabase/supabase-js",
+    ],
   },
 });

@@ -1,22 +1,28 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  CheckCircle, 
-  Shield, 
-  Clock, 
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  CheckCircle,
+  Shield,
+  Clock,
   CreditCard,
   Calendar,
   User,
   Package,
   ArrowRight,
-  Info
-} from 'lucide-react';
-import { EscrowStatusBadge } from './EscrowStatusBadge';
-import { formatAmountForDisplay } from '@/integrations/stripe/client';
+  Info,
+} from "lucide-react";
+import { EscrowStatusBadge } from "./EscrowStatusBadge";
+import { formatAmountForDisplay } from "@/integrations/stripe/client";
 
 interface PaymentConfirmationProps {
   booking: Record<string, unknown>;
@@ -29,17 +35,17 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
   booking,
   escrowTransaction,
   onViewBooking,
-  onClose
+  onClose,
 }) => {
   if (!booking || !escrowTransaction) {
     return null;
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ro-RO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("ro-RO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -54,13 +60,14 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
           Plata a fost procesată cu succes și este în escrow.
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Success Alert */}
         <Alert className="border-green-200 bg-green-50">
           <Shield className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            Fondurile sunt în siguranță și vor fi eliberate automat după finalizarea închirierii.
+            Fondurile sunt în siguranță și vor fi eliberate automat după
+            finalizarea închirierii.
           </AlertDescription>
         </Alert>
 
@@ -73,21 +80,28 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
           <div className="bg-muted rounded-lg p-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span>Echipament:</span>
-                              <span className="font-medium">{booking.gear?.title || 'Necunoscut'}</span>
+              <span className="font-medium">
+                {booking.gear?.title || "Necunoscut"}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Proprietar:</span>
-              <span className="font-medium">{booking.owner?.full_name || 'Necunoscut'}</span>
+              <span className="font-medium">
+                {booking.owner?.full_name || "Necunoscut"}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Perioada:</span>
               <span className="font-medium">
-                {formatDate(booking.start_date)} - {formatDate(booking.end_date)}
+                {formatDate(booking.start_date)} -{" "}
+                {formatDate(booking.end_date)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Durata:</span>
-              <span className="font-medium">{booking.total_days} {booking.total_days === 1 ? 'zi' : 'zile'}</span>
+              <span className="font-medium">
+                {booking.total_days} {booking.total_days === 1 ? "zi" : "zile"}
+              </span>
             </div>
           </div>
         </div>
@@ -101,22 +115,34 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
           <div className="bg-muted rounded-lg p-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span>Închiriere:</span>
-              <span>{formatAmountForDisplay(escrowTransaction.rental_amount)}</span>
+              <span>
+                {formatAmountForDisplay(escrowTransaction.rental_amount)}
+              </span>
             </div>
             {escrowTransaction.deposit_amount > 0 && (
               <div className="flex justify-between text-sm">
                 <span>Garanție:</span>
-                <span>{formatAmountForDisplay(escrowTransaction.deposit_amount)}</span>
+                <span>
+                  {formatAmountForDisplay(escrowTransaction.deposit_amount)}
+                </span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span>Taxă platformă:</span>
-              <span>{formatAmountForDisplay(escrowTransaction.platform_fee)}</span>
+              <span>
+                {formatAmountForDisplay(escrowTransaction.platform_fee)}
+              </span>
             </div>
             <Separator />
             <div className="flex justify-between font-semibold">
               <span>Total plătit:</span>
-              <span>{formatAmountForDisplay(escrowTransaction.rental_amount + escrowTransaction.deposit_amount + escrowTransaction.platform_fee)}</span>
+              <span>
+                {formatAmountForDisplay(
+                  escrowTransaction.rental_amount +
+                    escrowTransaction.deposit_amount +
+                    escrowTransaction.platform_fee,
+                )}
+              </span>
             </div>
           </div>
         </div>
@@ -134,11 +160,17 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
             </div>
             <div className="flex justify-between text-sm">
               <span>ID tranzacție:</span>
-              <span className="font-mono text-xs">{escrowTransaction.stripe_payment_intent_id.slice(-8)}</span>
+              <span className="font-mono text-xs">
+                {escrowTransaction.stripe_payment_intent_id.slice(-8)}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Data plății:</span>
-              <span>{formatDate(escrowTransaction.created_at || new Date().toISOString())}</span>
+              <span>
+                {formatDate(
+                  escrowTransaction.created_at || new Date().toISOString(),
+                )}
+              </span>
             </div>
           </div>
         </div>
@@ -156,7 +188,9 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
               </div>
               <div>
                 <span className="font-medium">Contactați proprietarul</span>
-                <p className="text-muted-foreground">Pentru a aranja ridicarea echipamentului</p>
+                <p className="text-muted-foreground">
+                  Pentru a aranja ridicarea echipamentului
+                </p>
               </div>
             </div>
             <div className="flex items-start">
@@ -165,7 +199,9 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
               </div>
               <div>
                 <span className="font-medium">Ridicați echipamentul</span>
-                <p className="text-muted-foreground">La locația și data convenită</p>
+                <p className="text-muted-foreground">
+                  La locația și data convenită
+                </p>
               </div>
             </div>
             <div className="flex items-start">
@@ -174,7 +210,9 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
               </div>
               <div>
                 <span className="font-medium">Returnați echipamentul</span>
-                <p className="text-muted-foreground">Fondurile vor fi eliberate automat</p>
+                <p className="text-muted-foreground">
+                  Fondurile vor fi eliberate automat
+                </p>
               </div>
             </div>
           </div>
@@ -198,7 +236,9 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
         <Alert className="border-yellow-200 bg-yellow-50">
           <Info className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="text-yellow-800 text-xs">
-            <strong>Informații despre rambursări:</strong> Când fondurile sunt eliberate din escrow, rambursările pot dura 5-10 zile lucrătoare pentru a apărea pe extrasul bancar.
+            <strong>Informații despre rambursări:</strong> Când fondurile sunt
+            eliberate din escrow, rambursările pot dura 5-10 zile lucrătoare
+            pentru a apărea pe extrasul bancar.
           </AlertDescription>
         </Alert>
 
@@ -212,4 +252,4 @@ export const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({
   );
 };
 
-export default PaymentConfirmation; 
+export default PaymentConfirmation;

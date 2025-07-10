@@ -1,11 +1,12 @@
 # Organizing tasks for claim system fixes
+
 _Exported on 7/10/2025 at 17:35:29 GMT+3 from Cursor (1.2.2)_
 
 ---
 
 **User**
 
-delete from the @Header.tsx  the dark mode and light mode button
+delete from the @Header.tsx the dark mode and light mode button
 
 ---
 
@@ -13,12 +14,9 @@ delete from the @Header.tsx  the dark mode and light mode button
 
 I'll help you remove the dark mode and light mode button from the Header component. Let me first examine the current Header.tsx file to understand how the theme toggle is implemented.
 
-
 Now let me search for where the ThemeToggle component is used in the Header:
 
-
 Now I'll remove the ThemeToggle import and all its usages from the Header component:
-
 
 ```typescriptreact
 import { NotificationBell } from './NotificationBell';
@@ -31,9 +29,7 @@ import { NotificationBell } from './NotificationBell';
 
 Now I need to remove the ThemeToggle component usages. Let me find and remove them:
 
-
 Now let me remove the first ThemeToggle usage:
-
 
 ```typescriptreact
                 {/* Action Buttons */}
@@ -50,9 +46,7 @@ Now let me remove the first ThemeToggle usage:
 
 Now let me find and remove the second ThemeToggle usage around line 522:
 
-
 Now I'll remove the second ThemeToggle usage (around line 522):
-
 
 ```typescriptreact
                   {/* Action Buttons */}
@@ -69,7 +63,6 @@ Now I'll remove the second ThemeToggle usage (around line 522):
 ```
 
 Now I'll remove the third and final ThemeToggle usage (around line 547):
-
 
 ```typescriptreact
               ) : (
@@ -106,32 +99,23 @@ so one problem on the dashboard it says in asteptare plata but it should say lik
 
 I need to investigate the dashboard to see where it's showing "in asteptare plata" instead of the correct status "in asteptare confirmare". Let me first look at the dashboard component and then compare it with the bookings page to understand the correct flow.
 
-
 Now let me search for where "in asteptare plata" is being displayed:
-
 
 Let me search for "asteptare" to find the status labels:
 
-
 Let me search for "plata" to find payment-related status:
-
 
 Let me check the getPaymentStatusLabel function which seems to handle payment status labels:
 
-
 Now let me check the getStatusLabel function to see how booking statuses are labeled:
-
 
 Now let me check the BookingsPage to see how it correctly displays "in asteptare confirmare":
 
-
 Perfect! Now I can see the issue. In the BookingsPage, the correct label is "În așteptare confirmare" for pending bookings, but in the Dashboard, the getStatusLabel function shows "În așteptare" for pending status. Let me check the getBookingBadges function in the Dashboard to see if it's using the wrong label:
-
 
 I found the issue! In the `getBookingBadges` function on line 82, there's a badge that shows "În așteptare plată" for pending payment status. However, the issue is that this function doesn't handle the case where a booking has `status === 'pending'` (which should show "În așteptare confirmare" like in the BookingsPage).
 
 Let me check if there's a missing case for pending status in the getBookingBadges function. I need to add a case for when `status === 'pending'` to show "În așteptare confirmare":
-
 
 ```typescriptreact
   // 3. Active/Confirmed/Returned
@@ -157,7 +141,7 @@ Let me check if there's a missing case for pending status in the getBookingBadge
   }
 ```
 
-Perfect! I've fixed the issue in the Dashboard component. The problem was that the `getBookingBadges` function was missing a case for when a booking has `status === 'pending'`. 
+Perfect! I've fixed the issue in the Dashboard component. The problem was that the `getBookingBadges` function was missing a case for when a booking has `status === 'pending'`.
 
 Here's what I changed:
 
@@ -181,9 +165,7 @@ it should be like in the bookings page now it shows in the dashboard both of the
 
 I understand the issue. You want the Dashboard to show the same status logic as the BookingsPage, where there's only one status badge instead of showing both booking status and payment status separately. Let me check the BookingsPage logic first to understand how it handles the status display.
 
-
 Now I can see the difference! In the BookingsPage, the logic is much cleaner and shows only one primary status badge per booking, with payment status as a secondary badge only when relevant. Let me update the Dashboard's `getBookingBadges` function to match this logic:
-
 
 ```typescriptreact
 function getBookingBadges(booking: any, userId: string) {
@@ -307,7 +289,7 @@ Perfect! I've updated the Dashboard's `getBookingBadges` function to match the e
 
 2. **Removed redundant badges**: Eliminated the complex logic that was showing multiple badges for the same booking status.
 
-3. **Consistent status flow**: 
+3. **Consistent status flow**:
    - **Pending**: Shows only "În așteptare confirmare" (no payment status)
    - **Confirmed**: Shows "Confirmată" + payment status if relevant
    - **Active**: Shows "În curs" + "Plătit" if payment completed
@@ -332,10 +314,12 @@ as the owner i need to be able to confirm from the recent bookings as the owner 
 Thank you for the screenshot and the context. You are correct: as the owner, you should be able to confirm a booking directly from the "recent bookings" section in the Dashboard, but currently, the button/action to confirm is missing or not working.
 
 ### What’s likely happening:
+
 - The Dashboard is showing the correct status ("În așteptare confirmare") for a pending booking.
 - However, the "Confirm" button (for the owner to accept/confirm the booking) is not being rendered, or its logic is not triggering as expected.
 
 ### Next steps:
+
 1. **Check the Dashboard recent bookings rendering logic** to see if/when the "Confirm" button is shown for owners.
 2. **Compare with BookingsPage** (where the logic works) to ensure the same action is available for owners.
 
@@ -344,10 +328,10 @@ Let’s start by finding the relevant code in the Dashboard for rendering action
 The Dashboard already has logic to show a "Confirmă" button for owners on pending bookings in the "recent bookings" section:
 
 ```tsx
-<Button 
-  variant="default" 
-  size="sm" 
-  onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
+<Button
+  variant="default"
+  size="sm"
+  onClick={() => handleBookingAction(String(booking.id), "confirmed")}
   disabled={acceptingBooking}
   className="bg-green-600 hover:bg-green-700 text-xs px-3 py-1 h-7"
 >
@@ -356,11 +340,13 @@ The Dashboard already has logic to show a "Confirmă" button for owners on pendi
 </Button>
 ```
 
-**But:**  
+**But:**
+
 - This button is only rendered for the "Pending owner bookings" block, which is a separate section from the main recent bookings list.
 - In your screenshot, the booking is shown in the main recent bookings list, not in the "Pending owner bookings" block.
 
 ### Why is this happening?
+
 - The main recent bookings list combines both user and owner bookings, but does not render the "Confirmă" button for owners.
 - The "Pending owner bookings" block does render the button, but only for the first 2 pending owner bookings, and in a different style/section.
 
@@ -369,14 +355,15 @@ The Dashboard already has logic to show a "Confirmă" button for owners on pendi
 ## Solution
 
 **To make the "Confirmă" button always available for owners in the main recent bookings list:**
+
 - Add logic to render the "Confirmă" button for owner bookings with `status === 'pending'` in the main recent bookings loop, just like in the "Pending owner bookings" block.
 
 Would you like me to implement this so the "Confirmă" button always appears for owners in the main recent bookings list, matching the BookingsPage experience?
 
 ```typescriptreact
-<Button 
-  variant="default" 
-  size="sm" 
+<Button
+  variant="default"
+  size="sm"
   onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
   disabled={acceptingBooking}
   className="bg-green-600 hover:bg-green-700 text-xs px-3 py-1 h-7"
@@ -406,9 +393,9 @@ Let's proceed!
 ```typescriptreact
 // ... existing code ...
                                   <div className="flex items-center gap-1">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
                                       onClick={() => navigate('/bookings')}
                                       className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs px-2 py-1 h-7"
                                     >
@@ -449,15 +436,22 @@ and the Chirias fallsback it doesnt work fix it
 **Cursor**
 
 The current fallback for "Chiriaș" (renter) in the Dashboard is not robust. The function is:
+
 ```ts
 const getUserDisplayName = (userData: any) => {
-  if (!userData) return 'Necunoscut';
-  return `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.email || 'Necunoscut';
+  if (!userData) return "Necunoscut";
+  return (
+    `${userData.first_name || ""} ${userData.last_name || ""}`.trim() ||
+    userData.email ||
+    "Necunoscut"
+  );
 };
 ```
+
 This will return an empty string if both first and last name are missing, even if email is present, and will not show "Necunoscut" if all are missing.
 
 **Let's improve it to:**
+
 - Prefer full_name if present.
 - Then first + last name.
 - Then email (before fallback).
@@ -467,8 +461,12 @@ I'll update the function accordingly.
 
 ```typescript
 const getUserDisplayName = (userData: any) => {
-  if (!userData) return 'Necunoscut';
-  return `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.email || 'Necunoscut';
+  if (!userData) return "Necunoscut";
+  return (
+    `${userData.first_name || ""} ${userData.last_name || ""}`.trim() ||
+    userData.email ||
+    "Necunoscut"
+  );
 };
 ```
 
@@ -485,6 +483,7 @@ const getUserDisplayName = (userData: any) => {
 ```
 
 The `getUserDisplayName` function is now robust and will correctly display the renter's name in this order of preference:
+
 1. `full_name` (if present)
 2. `first_name` + `last_name` (if either is present)
 3. The part before `@` in the email (if present)
@@ -507,6 +506,7 @@ Thank you for your feedback. Here’s how I’ll address both issues:
 ---
 
 ### 1. **Status badges missing from recent bookings**
+
 You are correct: in the recent refactor, the status badges (e.g., "În așteptare confirmare", "Confirmată", etc.) were removed from the main recent bookings list. These should be visible for each booking, just like before.
 
 **Solution:**  
@@ -515,6 +515,7 @@ Restore the `{getBookingBadges(booking, user?.id)}` call in the main recent book
 ---
 
 ### 2. **Recent bookings do not update after confirming**
+
 When you confirm a booking as owner from the recent bookings, the UI does not update until you refresh the page. This is because the bookings data is not being refetched after the confirmation mutation.
 
 **Solution:**  
@@ -601,15 +602,17 @@ However, in your Dashboard mutation, you are only invalidating `['user-bookings'
 ## Solution
 
 **Update the invalidation to:**
+
 ```js
-queryClient.invalidateQueries({ queryKey: ['user-bookings', user?.id] });
+queryClient.invalidateQueries({ queryKey: ["user-bookings", user?.id] });
 ```
+
 This will ensure the correct query is invalidated and the recent bookings will sync immediately after confirmation.
 
 I'll make this change now.
 
 ```javascript
-queryClient.invalidateQueries({ queryKey: ['user-bookings', user?.id] });
+queryClient.invalidateQueries({ queryKey: ["user-bookings", user?.id] });
 ```
 
 ```typescriptreact
@@ -644,12 +647,14 @@ the login modal and the sign modal needs to be mobile responsive fix it
 The modal uses `<DialogContent className="sm:max-w-md">`, which sets a fixed max width for small screens but does not guarantee full mobile responsiveness (e.g., padding, scroll, input sizing, button spacing, etc.).
 
 **To make the AuthModal fully mobile responsive:**
+
 - Ensure the modal uses full width on mobile (`w-full`, `max-w-xs` or similar).
 - Add proper padding and spacing for small screens.
 - Make sure the modal content is scrollable if it overflows.
 - Adjust input/button sizes for touch.
 
 I'll update the modal to:
+
 - Use `w-full max-w-xs sm:max-w-md` for the dialog content.
 - Add `p-4 sm:p-6` for padding.
 - Ensure vertical scrolling on overflow.
@@ -676,7 +681,7 @@ Your login and signup modals will now be much more user-friendly and visually co
 
 **User**
 
-style the scrollbar schema width better its too wider @index.css 
+style the scrollbar schema width better its too wider @index.css
 
 ---
 
@@ -686,6 +691,7 @@ To make the scrollbar thinner, you can reduce the width in the `::-webkit-scroll
 Currently, it is set to `width: 8px;`, which is a bit wide for modern UI.
 
 **Recommended update:**
+
 - Change the main scrollbar width from `8px` to `4px` for a sleeker look.
 - Optionally, you can also reduce the chat scrollbar width from `6px` to `3px` for even more compactness.
 
@@ -723,6 +729,7 @@ one problem is that the sign up, i can sign up with an already made account and 
 This issue happens because the signup logic in your `AuthModal` does not properly handle the case when a user tries to sign up with an email that already exists. Supabase (and most auth providers) will return an error in this case, but your code may not be surfacing it correctly, or the toast logic is not showing the error and instead always shows the success message.
 
 ### Root Cause
+
 - The code checks for `result && result.error` to show an error toast, but then also checks for `result && result.error === undefined` to show a success toast.
 - If the error is not set as expected, or the result structure is not handled properly, the success toast may show even on failure.
 
@@ -737,6 +744,7 @@ This issue happens because the signup logic in your `AuthModal` does not properl
 ---
 
 ### I will update the `AuthModal` logic to:
+
 - Only show the success toast if `result && !result.error`.
 - Show the error toast if `result && result.error` (including for duplicate email).
 
@@ -796,6 +804,7 @@ the landing page header should be made mobile responsive you dont see cleary whe
 To address your concerns for the landing page header on mobile:
 
 ### Problems
+
 1. **Register/Sign Up button is not clearly visible on mobile.**
 2. **The registration should open a modal, not a separate page.**
 3. **The mobile menu layout is not clear or visually appealing for registration.**
@@ -805,13 +814,16 @@ To address your concerns for the landing page header on mobile:
 ## Solution
 
 **1. Make the Register button visually prominent on mobile:**
+
 - Use a bold, full-width button for "Înregistrează-te gratuit" at the top of the mobile menu.
 - Use a distinct color (e.g., blue gradient) and larger size for the button.
 
 **2. Always open the AuthModal for registration and login, never navigate away.**
+
 - The current logic already opens the modal, but ensure the button is visually clear and accessible.
 
 **3. Improve mobile menu layout:**
+
 - Place the "Înregistrează-te gratuit" button at the top of the mobile menu, above other actions.
 - Add more spacing and padding for touch targets.
 - Make sure the button is sticky or always visible when the menu is open.
@@ -819,6 +831,7 @@ To address your concerns for the landing page header on mobile:
 ---
 
 I will update the mobile menu in the Header component to:
+
 - Move the "Înregistrează-te gratuit" button to the top of the mobile menu.
 - Make it full-width, visually distinct, and easy to tap.
 - Ensure it always opens the AuthModal in signup mode.
@@ -881,13 +894,14 @@ This will make it much easier for mobile users to see and access the registratio
 
 **User**
 
-so basically the landing page is perfect but i think the scroll mouse animation should in the center for the mobiles it looks wierd and for the pc it doesnt appear at the beginning its too low so  to see it i need to scroll yk
+so basically the landing page is perfect but i think the scroll mouse animation should in the center for the mobiles it looks wierd and for the pc it doesnt appear at the beginning its too low so to see it i need to scroll yk
 
 ---
 
 **Cursor**
 
-You are correct:  
+You are correct:
+
 - The scroll mouse animation is currently always at `bottom-8 left-1/2`, which is too low on desktop (sometimes below the fold) and not centered or visually optimal on mobile.
 
 ---
@@ -895,10 +909,12 @@ You are correct:
 ## Solution
 
 **1. Make the scroll indicator always visible and centered:**
+
 - On desktop: Move it higher (e.g., `bottom-20` or `bottom-32`).
 - On mobile: Keep it centered horizontally, but also move it up a bit and make it larger for visibility.
 
 **2. Use responsive Tailwind classes:**
+
 - Use `bottom-20 sm:bottom-8` (higher on mobile, lower on desktop).
 - Use `w-8 h-14` for mobile, `w-6 h-10` for desktop.
 - Optionally, add a background blur or shadow for better contrast.
@@ -906,6 +922,7 @@ You are correct:
 ---
 
 I will update the scroll indicator in the Hero component to:
+
 - Use `bottom-20` on mobile, `bottom-8` on desktop.
 - Use `w-8 h-14` on mobile, `w-6 h-10` on desktop.
 - Remain perfectly centered.
@@ -937,40 +954,39 @@ This ensures the scroll indicator is always visible and visually appealing, both
 **User**
 
 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: NetworkError when attempting to fetch resource.
-    n https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    a https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    t https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    e https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    promise callback*96024/e/< https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    e https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    c https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    batchTimer https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    setTimeout handler*value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    promise callback*value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    e https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    value https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    e https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    36836 https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    e https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    o https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    O https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    <anonymous> https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
-    <anonymous> https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+n https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+a https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+t https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+e https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+promise callback*96024/e/< https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+e https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+c https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+batchTimer https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+setTimeout handler*value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+promise callback\*value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1
+value https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+e https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+value https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+e https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+36836 https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+e https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+o https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+O https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+<anonymous> https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
+<anonymous> https://js.stripe.com/v3/fingerprinted/js/controller-with-preconnect-176e7bfec430abfa931827620d3a888a.js:1
 shared-29d83e6dce5d23438c5f74a025ccf6d8.js:1:333781
-
 
 ---
 
@@ -989,7 +1005,7 @@ is coming from Stripe’s JavaScript SDK (`https://js.stripe.com/v3/...`). It is
 ## What does it mean?
 
 - **Not a critical error:** This does not affect payment processing or core Stripe functionality. It’s usually a background analytics or anti-fraud request.
-- **Common causes:**  
+- **Common causes:**
   - Ad blockers or privacy extensions blocking Stripe’s analytics endpoints.
   - Network issues or firewalls blocking requests to `r.stripe.com`.
   - Running the app in a local/dev environment where some requests are blocked.
@@ -1032,12 +1048,14 @@ To make the Hero section appear higher (closer to the top of the page), you shou
 ```jsx
 <div className="relative container mx-auto px-4 py-20 sm:py-32">
 ```
+
 - `py-20` (top/bottom padding on mobile)
 - `sm:py-32` (top/bottom padding on desktop)
 
 ---
 
 **To move the Hero content higher:**
+
 - Reduce `py-20` to something like `py-8` or `py-10`
 - Reduce `sm:py-32` to something like `sm:py-16` or `sm:py-20`
 
@@ -1116,9 +1134,9 @@ Let's implement this!
           {/* Logo Section */}
           <Link to="/" className="flex items-center group">
             <div className="relative">
-              <img 
-                src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png" 
-                alt="GearUp" 
+              <img
+                src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png"
+                alt="GearUp"
                 className="h-8 w-auto transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
@@ -1210,6 +1228,7 @@ I will now search for all modal/dialog/overlay components in your codebase and t
 I've created a comprehensive TODO list to ensure all overlay modals and forms are made mobile responsive. Here’s what will be addressed:
 
 ### Overlay Modals to Update:
+
 - ReviewModal
 - BookingModal
 - PaymentModal
@@ -1217,12 +1236,14 @@ I've created a comprehensive TODO list to ensure all overlay modals and forms ar
 - StripeConnectModal
 
 ### Forms to Update:
+
 - SecureForm
 - OwnerClaimForm
 - RenterClaimForm
 - AddGear/GearForm
 
 **Each will be updated to:**
+
 - Use full width or nearly full width on mobile
 - Have proper padding and spacing
 - Be scrollable if content overflows
@@ -1294,7 +1315,7 @@ do it
         <DialogHeader>
           <DialogTitle>Lasă o recenzie</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* User Info */}
           <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
@@ -1353,8 +1374,8 @@ I'll continue making the rest of the modals and forms mobile responsive, followi
 
 **User**
 
-:8080/dashboard:30  The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
-stripe.js:1  The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
+:8080/dashboard:30 The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
+stripe.js:1 The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
 value @ stripe.js:1
 value @ stripe.js:1
 value @ stripe.js:1
@@ -1367,10 +1388,10 @@ yf @ stripe.js:1
 bf @ stripe.js:1
 value @ stripe.js:1
 e @ stripe.js:1
-b_ @ stripe.js:1
+b\_ @ stripe.js:1
 initStripe2 @ index.mjs:153
 (anonymous) @ index.mjs:192
-stripe.js:1  The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
+stripe.js:1 The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
 value @ stripe.js:1
 value @ stripe.js:1
 value @ stripe.js:1
@@ -1378,18 +1399,17 @@ t @ stripe.js:1
 (anonymous) @ stripe.js:1
 t @ stripe.js:1
 (anonymous) @ stripe.js:1
-consoleFilter.ts:85  Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+consoleFilter.ts:85 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
 console.warn @ consoleFilter.ts:85
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1   Failed to load resource: the server responded with a status of 400 ()
-consoleFilter.ts:59  Error saving notification: Object
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1 Failed to load resource: the server responded with a status of 400 ()
+consoleFilter.ts:59 Error saving notification: Object
 console.error @ consoleFilter.ts:59
-wnrbxwzeshgblkfidayb.supabase.co/auth/v1/user:1   Failed to load resource: the server responded with a status of 403 ()
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/bookings?select=id%2Cgear_id%2Cstart_date%2Cend_date%2Cstatus%2Cpickup_lat%2Cpickup_lng%2Cpickup_location%2Crenter_id%2Cowner_id%2Ctotal_amount%2Cgear%3Agear_id%28title%2Cgear_photos%28photo_url%2Cis_primary%29%29&or=%28renter_id.eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d%2Cowner_id.eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d%29&order=created_at.desc:1   Failed to load resource: the server responded with a status of 401 ()
-consoleFilter.ts:59  Error fetching bookings: Objectcode: "42501"details: nullhint: nullmessage: "permission denied for table bookings"[[Prototype]]: Object
+wnrbxwzeshgblkfidayb.supabase.co/auth/v1/user:1 Failed to load resource: the server responded with a status of 403 ()
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/bookings?select=id%2Cgear_id%2Cstart_date%2Cend_date%2Cstatus%2Cpickup_lat%2Cpickup_lng%2Cpickup_location%2Crenter_id%2Cowner_id%2Ctotal_amount%2Cgear%3Agear_id%28title%2Cgear_photos%28photo_url%2Cis_primary%29%29&or=%28renter_id.eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d%2Cowner_id.eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d%29&order=created_at.desc:1 Failed to load resource: the server responded with a status of 401 ()
+consoleFilter.ts:59 Error fetching bookings: Objectcode: "42501"details: nullhint: nullmessage: "permission denied for table bookings"[[Prototype]]: Object
 console.error @ consoleFilter.ts:59
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/bookings?select=*&renter_id=eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d:1   Failed to load resource: the server responded with a status of 401 ()
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/bookings?select=*&owner_id=eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d:1   Failed to load resource: the server responded with a status of 401 ()
-
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/bookings?select=_&renter_id=eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d:1 Failed to load resource: the server responded with a status of 401 ()
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/bookings?select=_&owner_id=eq.74fef6fa-711a-4aa7-a57c-1cddf2e6ff2d:1 Failed to load resource: the server responded with a status of 401 ()
 
 ---
 
@@ -1400,6 +1420,7 @@ Here’s a breakdown of the issues you’re seeing:
 ---
 
 ### 1. **Content Security Policy (CSP) `frame-ancestors` warning**
+
 - **Message:**  
   `The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.`
 - **Cause:**  
@@ -1411,14 +1432,16 @@ Here’s a breakdown of the issues you’re seeing:
 ---
 
 ### 2. **Stripe.js CSP warning**
+
 - **Message:**  
-  Same as above, but from Stripe’s script.  
+  Same as above, but from Stripe’s script.
 - **Action:**  
   Ignore. Stripe will handle this on their end; it does not affect your payments.
 
 ---
 
 ### 3. **DialogContent accessibility warning**
+
 - **Message:**  
   `Warning: Missing Description or aria-describedby={undefined} for {DialogContent}.`
 - **Cause:**  
@@ -1430,16 +1453,17 @@ Here’s a breakdown of the issues you’re seeing:
 ---
 
 ### 4. **Supabase 400/401/403 errors**
-- **Message:**  
+
+- **Message:**
   - `Failed to load resource: the server responded with a status of 400 ()`
   - `Failed to load resource: the server responded with a status of 401 ()`
   - `Failed to load resource: the server responded with a status of 403 ()`
   - `permission denied for table bookings`
-- **Cause:**  
+- **Cause:**
   - 401: Unauthorized (user not logged in or token expired)
   - 403: Forbidden (user does not have permission)
   - 400: Bad request (malformed request)
-- **Action:**  
+- **Action:**
   - Make sure the user is logged in and has a valid session.
   - Check your Supabase Row Level Security (RLS) policies for the `bookings` and `notifications` tables.
   - Ensure your API requests include the correct auth headers.
@@ -1449,7 +1473,7 @@ Here’s a breakdown of the issues you’re seeing:
 
 ## **What you should do next:**
 
-1. **For the DialogContent warning:**  
+1. **For the DialogContent warning:**
    - Add a `<DialogDescription>` to all your
 
 ---
@@ -1502,10 +1526,12 @@ CREATE POLICY "Users can delete their own bookings"
 ```
 
 **How to use:**
+
 - Run this SQL in the Supabase SQL editor for your `bookings` table.
 - Adjust field names if your table uses different column names for `renter_id` or `owner_id`.
 
 **This will:**
+
 - Allow users to see, create, update, and delete only their own bookings (as renter or owner).
 - Prevent access to bookings where they are not involved.
 
@@ -1570,10 +1596,12 @@ This error (`Operation timed out after 5002 milliseconds with 0 bytes received`)
 **1. Disable the confirm button while a mutation is in progress.**  
 (You likely already do this.)
 
-**2. After a successful confirmation by one party, immediately refetch the booking status from the backend.**  
+**2. After a successful confirmation by one party, immediately refetch the booking status from the backend.**
+
 - This ensures the UI is always up-to-date before allowing the next action.
 
-**3. Before allowing the owner to confirm the return, check the latest booking status from the backend.**  
+**3. Before allowing the owner to confirm the return, check the latest booking status from the backend.**
+
 - If the status is not as expected, show a message and refresh the UI.
 
 **4. Optionally, show a loading spinner or “syncing” state after a confirmation, and block further actions until the new state is loaded.**
@@ -1596,8 +1624,8 @@ This error (`Operation timed out after 5002 milliseconds with 0 bytes received`)
 ```js
 // Before confirming return
 const latestBooking = await api.getBooking(booking.id);
-if (latestBooking.status !== 'returned_by_renter') {
-  showToast('Booking status changed. Please refresh.');
+if (latestBooking.status !== "returned_by_renter") {
+  showToast("Booking status changed. Please refresh.");
   refetchBooking();
   return;
 }
@@ -1617,8 +1645,8 @@ Would you like me to implement this logic for your booking return flow? If so, l
 ```javascript
 // Before confirming return
 const latestBooking = await api.getBooking(booking.id);
-if (latestBooking.status !== 'returned_by_renter') {
-  showToast('Booking status changed. Please refresh.');
+if (latestBooking.status !== "returned_by_renter") {
+  showToast("Booking status changed. Please refresh.");
   refetchBooking();
   return;
 }
@@ -1785,27 +1813,26 @@ This will prevent the timeout and out-of-sync errors you experienced, ensuring a
 
 ERROR MESSAGE but escrow release still works
 
-bookings:30  The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
-stripe.js:1  The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
+bookings:30 The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
+stripe.js:1 The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
 value @ stripe.js:1
-stripe.js:1  The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
+stripe.js:1 The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.
 value @ stripe.js:1
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1   Failed to load resource: the server responded with a status of 400 ()
-consoleFilter.ts:59  Error saving notification: Object
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1 Failed to load resource: the server responded with a status of 400 ()
+consoleFilter.ts:59 Error saving notification: Object
 console.error @ consoleFilter.ts:59
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1   Failed to load resource: the server responded with a status of 400 ()
-consoleFilter.ts:59  Error saving notification: Object
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1 Failed to load resource: the server responded with a status of 400 ()
+consoleFilter.ts:59 Error saving notification: Object
 console.error @ consoleFilter.ts:59
-consoleFilter.ts:85  Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+consoleFilter.ts:85 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
 console.warn @ consoleFilter.ts:85
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1   Failed to load resource: the server responded with a status of 400 ()
-consoleFilter.ts:59  Error saving notification: Object
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1 Failed to load resource: the server responded with a status of 400 ()
+consoleFilter.ts:59 Error saving notification: Object
 console.error @ consoleFilter.ts:59
-wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1   Failed to load resource: the server responded with a status of 400 ()
-consoleFilter.ts:59  Error saving notification: Objectcode: "PGRST204"details: nullhint: nullmessage: "Could not find the 'body' column of 'notifications' in the schema cache"[[Prototype]]: Object
+wnrbxwzeshgblkfidayb.supabase.co/rest/v1/notifications:1 Failed to load resource: the server responded with a status of 400 ()
+consoleFilter.ts:59 Error saving notification: Objectcode: "PGRST204"details: nullhint: nullmessage: "Could not find the 'body' column of 'notifications' in the schema cache"[[Prototype]]: Object
 console.error @ consoleFilter.ts:59
-bookings:1   Failed to load resource: the server responded with a status of 500 ()
-
+bookings:1 Failed to load resource: the server responded with a status of 500 ()
 
 ---
 
@@ -1816,6 +1843,7 @@ Here’s a breakdown of your current situation and what to do next:
 ---
 
 ## 1. **Timeout Error on Return Confirmation**
+
 - **Message:**  
   `Eroare la confirmarea returnării: Operation timed out after 5002 milliseconds with 0 bytes received`
 - **Observation:**  
@@ -1824,7 +1852,7 @@ Here’s a breakdown of your current situation and what to do next:
   The backend operation (return confirmation + escrow release) is **completing successfully**, but the frontend is not getting a timely response—likely due to:
   - A slow or blocking trigger/function in your database (e.g., a long-running trigger for escrow release or notification).
   - A network or Supabase/PostgREST timeout.
-- **What to do:**  
+- **What to do:**
   - Check your Supabase database triggers/functions for the `bookings` or `escrow` flow. Optimize them if possible.
   - If you have notification logic in a trigger or function, move it to a background job or Supabase Function if possible.
   - Consider increasing the timeout if you control the client, but ideally, make the backend faster.
@@ -1832,6 +1860,7 @@ Here’s a breakdown of your current situation and what to do next:
 ---
 
 ## 2. **CSP `frame-ancestors` warning**
+
 - **Message:**  
   `The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.`
 - **Action:**  
@@ -1840,12 +1869,13 @@ Here’s a breakdown of your current situation and what to do next:
 ---
 
 ## 3. **Supabase Notifications Table Error**
+
 - **Message:**  
   `Failed to load resource: the server responded with a status of 400 ()`
   `Error saving notification: Objectcode: "PGRST204" ... message: "Could not find the 'body' column of 'notifications' in the schema cache"`
 - **What this means:**  
   Your Supabase `notifications` table is missing a `body` column, but your code or a trigger is trying to use it.
-- **What to do:**  
+- **What to do:**
   - **Fix your database schema:**  
     Add the `body` column to the `notifications` table, or update your code/triggers to not use it if it’s not needed.
     ```sql
@@ -1857,6 +1887,7 @@ Here’s a breakdown of your current situation and what to do next:
 ---
 
 ## 4. **DialogContent Accessibility Warning**
+
 - **Message:**  
   `Warning: Missing Description or aria-describedby={undefined} for {DialogContent}.`
 - **Action:**  
@@ -1865,11 +1896,12 @@ Here’s a breakdown of your current situation and what to do next:
 ---
 
 ## 5. **500 Error on Bookings**
+
 - **Message:**  
   `bookings:1   Failed to load resource: the server responded with a status of 500 ()`
 - **What this means:**  
   There is a server-side error (likely related to the notification or trigger issue above).
-- **What to do:**  
+- **What to do:**
   - Check your Supabase logs for the exact error.
   - Fix the `notifications` table schema and any related triggers/functions.
 
@@ -1941,16 +1973,20 @@ Here’s what I found after reading all your relevant Supabase SQL triggers and 
 ## How to Fix/Optimize
 
 ### 1. **Make Escrow Release Asynchronous**
+
 - Instead of calling the Edge Function synchronously in the trigger, use a queue or background job (Supabase Function, CRON, or external worker).
 - This way, the booking update returns immediately, and the escrow release happens in the background.
 
 ### 2. **Fix Notification Table Schema**
+
 - Make sure all columns referenced in triggers/functions exist in the `notifications` table.
 
 ### 3. **Add Error Handling in Triggers**
+
 - If the HTTP call fails, log the error but do not block the transaction.
 
 ### 4. **Monitor Edge Function Performance**
+
 - Check logs for the escrow release Edge Function for slowness or errors.
 
 ---
@@ -1958,6 +1994,7 @@ Here’s what I found after reading all your relevant Supabase SQL triggers and 
 ## Example: Make Escrow Release Non-Blocking
 
 Change this part in your trigger:
+
 ```plpgsql
 -- Instead of:
 SELECT status, content INTO response_status, response_content
@@ -1967,6 +2004,7 @@ FROM http( ... );
 PERFORM http( ... );
 -- (and always return NEW, do not block on the response)
 ```
+
 Or, better, move the call to a background job.
 
 ---
@@ -1991,6 +2029,7 @@ PERFORM http( ... );
 ```
 
 Your logs show that the **escrow release flow is working perfectly** on the backend:
+
 - The Edge Function starts, processes, and logs each step (Stripe account, transfer, refund, etc.).
 - The final log is “Escrow release completed successfully.”
 
@@ -2024,6 +2063,7 @@ You will not get timeouts, and the user experience will be smooth.
 ### How to Make the Escrow Release Call Non-Blocking
 
 **Change this part in your trigger:**
+
 ```plpgsql
 -- Instead of:
 SELECT status, content INTO response_status, response_content
@@ -2033,6 +2073,7 @@ FROM http( ... );
 PERFORM http( ... );
 -- (and always RETURN NEW, do not block on the response)
 ```
+
 Or, even better, move the call to a Supabase Edge Function or background job that polls for bookings needing escrow release.
 
 ---
@@ -2248,6 +2289,7 @@ Thank you for your clarity. The error you see (`syntax error at or near "PERFORM
 ## Permanent Fix: How to Make the Escrow Release Call Asynchronous
 
 ### 1. **Edit the Trigger Function (Not the Migration)**
+
 You need to **edit your PL/pgSQL trigger function** (`handle_dual_confirmation`) so that, inside the function, you use `PERFORM http(...)` instead of `SELECT ... INTO ... FROM http(...)`.
 
 **You do NOT run `PERFORM` as a standalone SQL statement. You must put it inside the function code.**
@@ -2257,6 +2299,7 @@ You need to **edit your PL/pgSQL trigger function** (`handle_dual_confirmation`)
 ### 2. **Full Example: Replace the Synchronous Call**
 
 **Find this block in your function:**
+
 ```plpgsql
 -- Old (synchronous, causes timeout)
 SELECT status, content INTO response_status, response_content
@@ -2273,6 +2316,7 @@ FROM http(
 ```
 
 **Replace it with:**
+
 ```plpgsql
 -- New (asynchronous, non-blocking)
 PERFORM http(
@@ -2304,13 +2348,13 @@ CREATE OR REPLACE FUNCTION public.handle_dual_confirmation()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Handle pickup dual confirmation (no escrow release, just status update)
-  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR 
+  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR
       NEW.pickup_confirmed_by_renter IS DISTINCT FROM OLD.pickup_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed pickup, update status to active
-    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND 
+    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND
        (NOT OLD.pickup_confirmed_by_owner OR NOT OLD.pickup_confirmed_by_renter) THEN
-      
+
       -- Update status to active (equipment is now with renter)
       NEW.status = 'active';
       RAISE LOG 'Dual confirmation: Both parties confirmed pickup for booking %', NEW.id;
@@ -2318,18 +2362,18 @@ BEGIN
   END IF;
 
   -- Handle return dual confirmation (this is where escrow gets released)
-  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR 
+  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR
       NEW.return_confirmed_by_renter IS DISTINCT FROM OLD.return_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed return, update status and trigger escrow release
-    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND 
+    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND
        (NOT OLD.return_confirmed_by_owner OR NOT OLD.return_confirmed_by_renter) THEN
-      
+
       -- Update status to completed
       NEW.status = 'completed';
       NEW.completed_at = now();
       RAISE LOG 'Dual confirmation: Both parties confirmed return for booking %', NEW.id;
-      
+
       -- Asynchronous escrow release call (non-blocking)
       PERFORM http(
         'POST',
@@ -2394,13 +2438,13 @@ CREATE OR REPLACE FUNCTION public.handle_dual_confirmation()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Handle pickup dual confirmation (no escrow release, just status update)
-  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR 
+  IF (NEW.pickup_confirmed_by_owner IS DISTINCT FROM OLD.pickup_confirmed_by_owner OR
       NEW.pickup_confirmed_by_renter IS DISTINCT FROM OLD.pickup_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed pickup, update status to active
-    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND 
+    IF NEW.pickup_confirmed_by_owner AND NEW.pickup_confirmed_by_renter AND
        (NOT OLD.pickup_confirmed_by_owner OR NOT OLD.pickup_confirmed_by_renter) THEN
-      
+
       -- Update status to active (equipment is now with renter)
       NEW.status = 'active';
       RAISE LOG 'Dual confirmation: Both parties confirmed pickup for booking %', NEW.id;
@@ -2408,18 +2452,18 @@ BEGIN
   END IF;
 
   -- Handle return dual confirmation (this is where escrow gets released)
-  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR 
+  IF (NEW.return_confirmed_by_owner IS DISTINCT FROM OLD.return_confirmed_by_owner OR
       NEW.return_confirmed_by_renter IS DISTINCT FROM OLD.return_confirmed_by_renter) THEN
-    
+
     -- If both parties have confirmed return, update status and trigger escrow release
-    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND 
+    IF NEW.return_confirmed_by_owner AND NEW.return_confirmed_by_renter AND
        (NOT OLD.return_confirmed_by_owner OR NOT OLD.return_confirmed_by_renter) THEN
-      
+
       -- Update status to completed
       NEW.status = 'completed';
       NEW.completed_at = now();
       RAISE LOG 'Dual confirmation: Both parties confirmed return for booking %', NEW.id;
-      
+
       -- Asynchronous escrow release call (non-blocking)
       PERFORM http(
         'POST',
@@ -2457,6 +2501,7 @@ You’ve described a common UX and backend flow issue in payment systems:
 - This causes confusion for owners, who see a booking as “cancelled” and then suddenly “approved/paid” if the renter completes payment later.
 
 **Problems:**
+
 - Owners see bookings as cancelled, then paid, which is confusing and may lead to trust issues.
 - The booking status is not accurately reflecting the real payment state during the payment process.
 - There’s a race condition between payment intent creation, user actions, and webhook/database updates.
@@ -2472,6 +2517,7 @@ You’ve described a common UX and backend flow issue in payment systems:
 - If the payment is cancelled or fails, set to `payment_failed` or revert to `pending_payment` (not “cancelled” unless the user explicitly cancels the booking).
 
 **Status Flow Example:**
+
 1. **pending** → User initiates payment → **pending_payment**
 2. **pending_payment** → Payment success (webhook/callback) → **paid**
 3. **pending_payment** → Payment failed/cancelled (webhook/callback) → **payment_failed** (or revert to **pending**)
@@ -2493,15 +2539,15 @@ You’ve described a common UX and backend flow issue in payment systems:
 
 ## **How to Implement This in Your System**
 
-1. **Add new statuses to your bookings table:**  
+1. **Add new statuses to your bookings table:**
    - `pending_payment`
    - `payment_failed` (optional, or reuse `pending`)
-2. **Update your payment initiation logic:**  
+2. **Update your payment initiation logic:**
    - When user clicks “Pay,” set booking to `pending_payment`.
-3. **Update your Stripe webhook handler:**  
+3. **Update your Stripe webhook handler:**
    - On successful payment, set booking to `paid`.
    - On payment failure/cancellation, set booking to `payment_failed` or revert to `pending_payment`.
-4. **Update frontend to reflect new statuses:**  
+4. **Update frontend to reflect new statuses:**
    - Show “Awaiting payment” to both parties when in `pending_payment`.
    - Only show “cancelled” if the booking is truly cancelled.
 
@@ -2509,12 +2555,12 @@ You’ve described a common UX and backend flow issue in payment systems:
 
 ## **Summary Table**
 
-| User Action         | Booking Status      | Owner Sees         |
-|---------------------|--------------------|--------------------|
-| Initiate payment    | pending_payment    | Awaiting payment   |
-| Payment success     | paid               | Paid/Confirmed     |
-| Payment failed      | payment_failed     | Payment failed     |
-| User cancels        | cancelled          | Cancelled          |
+| User Action      | Booking Status  | Owner Sees       |
+| ---------------- | --------------- | ---------------- |
+| Initiate payment | pending_payment | Awaiting payment |
+| Payment success  | paid            | Paid/Confirmed   |
+| Payment failed   | payment_failed  | Payment failed   |
+| User cancels     | cancelled       | Cancelled        |
 
 ---
 
@@ -2548,6 +2594,7 @@ You're absolutely right! Looking at your database schema, you already have the p
 This is actually a better design than what I suggested. You can use these two fields together to create a clear state:
 
 **Current State Analysis:**
+
 - `status: "confirmed"` + `payment_status: "completed"` = Booking confirmed and paid
 - `status: "confirmed"` + `payment_status: "pending"` = Booking confirmed, payment pending
 - `status: "confirmed"` + `payment_status: "failed"` = Booking confirmed, payment failed
@@ -2558,22 +2605,26 @@ The problem is that when a user cancels payment, you're setting `status: "confir
 
 **Solution:**
 Use the `payment_status` field properly with values like:
+
 - `"pending"` - Payment initiated but not completed
 - `"completed"` - Payment successful
 - `"failed"` - Payment failed/cancelled
 - `"cancelled"` - Payment cancelled by user
 
 **Updated Flow:**
+
 1. User clicks "Pay" → `payment_status: "pending"`
 2. Payment succeeds → `payment_status: "completed"`
 3. Payment fails/cancelled → `payment_status: "failed"` (not "completed")
 
 This way:
+
 - Owner sees "Payment pending" when user initiates payment
 - Owner sees "Payment completed" only when payment actually succeeds
 - No confusing "cancelled → paid" transition
 
 Would you like me to:
+
 1. Update your payment flow to use `payment_status: "pending"` when initiating payment?
 2. Update your Stripe webhook to properly set `payment_status` based on actual payment state?
 3. Update the frontend to display the correct status based on both `status` and `payment_status`?
@@ -2592,102 +2643,98 @@ do it
 
 I'll implement the proper payment status flow using your existing fields. Let me start by examining your current payment flow and then update it.
 
-
 Now let me look at the current payment flow to understand how the payment status is being set:
-
 
 Now let me check the current payment flow to understand how the payment status is being set when initiating payment:
 
-
 Now let me check the webhook to see how it handles payment status updates:
-
 
 Now let me check the payment intent failed handler:
 
-
 Now I understand the issue! Let me implement the proper payment status flow. The problem is that when a user initiates payment, the booking status should be set to `pending_payment` (or similar) to indicate that payment is in progress, not just `pending`. Let me fix this:
 
-
 ```typescript
-    // Update transaction with session ID
-    await supabaseClient
-      .from('transactions')
-      .update({
-        stripe_payment_intent_id: session.payment_intent,
-        status: 'processing',
-      })
-      .eq('id', transaction.id);
+// Update transaction with session ID
+await supabaseClient
+  .from("transactions")
+  .update({
+    stripe_payment_intent_id: session.payment_intent,
+    status: "processing",
+  })
+  .eq("id", transaction.id);
 
-    // Update booking payment status to 'pending' to indicate payment is in progress
-    await supabaseClient
-      .from('bookings')
-      .update({
-        payment_status: 'pending',
-        payment_intent_id: session.payment_intent,
-      })
-      .eq('id', transaction.booking_id);
+// Update booking payment status to 'pending' to indicate payment is in progress
+await supabaseClient
+  .from("bookings")
+  .update({
+    payment_status: "pending",
+    payment_intent_id: session.payment_intent,
+  })
+  .eq("id", transaction.booking_id);
 
-    return new Response(
-      JSON.stringify({
-        url: session.url,
-        sessionId: session.id,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+return new Response(
+  JSON.stringify({
+    url: session.url,
+    sessionId: session.id,
+  }),
+  {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  },
+);
 ```
 
 The linter errors are expected for Deno Edge Functions - they're not actual errors, just TypeScript not recognizing Deno's global objects. Now let me update the webhook to handle payment cancellation properly:
 
-
 ```typescript
-async function handlePaymentIntentFailed(paymentIntent: unknown, supabaseClient: unknown) {
-  console.log('Payment failed:', paymentIntent.id)
+async function handlePaymentIntentFailed(
+  paymentIntent: unknown,
+  supabaseClient: unknown,
+) {
+  console.log("Payment failed:", paymentIntent.id);
 
   try {
     // Update booking payment status using escrow transaction
     const { data: escrowTransaction } = await supabaseClient
-      .from('escrow_transactions')
-      .select('booking_id')
-      .eq('stripe_payment_intent_id', paymentIntent.id)
-      .single()
+      .from("escrow_transactions")
+      .select("booking_id")
+      .eq("stripe_payment_intent_id", paymentIntent.id)
+      .single();
 
     if (escrowTransaction) {
       await supabaseClient
-        .from('bookings')
-        .update({ 
-          payment_status: 'failed',
+        .from("bookings")
+        .update({
+          payment_status: "failed",
           // Don't automatically cancel the booking - let user decide if they want to retry payment
           // status: 'cancelled' // Removed - only cancel if user explicitly cancels
         })
-        .eq('id', escrowTransaction.booking_id)
+        .eq("id", escrowTransaction.booking_id);
     }
 
     // Also update the transactions table for accounting purposes (if it exists)
     const { error: transactionUpdateError } = await supabaseClient
-      .from('transactions')
+      .from("transactions")
       .update({
-        status: 'failed',
+        status: "failed",
       })
-      .eq('stripe_payment_intent_id', paymentIntent.id)
+      .eq("stripe_payment_intent_id", paymentIntent.id);
 
     if (transactionUpdateError) {
-      console.error('Error updating transaction (non-critical):', transactionUpdateError)
+      console.error(
+        "Error updating transaction (non-critical):",
+        transactionUpdateError,
+      );
     }
-
   } catch (error) {
-    console.error('Error handling payment failure:', error)
+    console.error("Error handling payment failure:", error);
   }
 }
 ```
 
 The linter errors are expected for Deno Edge Functions. Now let me add a handler for checkout session expired/cancelled to properly handle when users abandon payment:
 
-
 Now let me add a handler for checkout session expired to properly handle abandoned payments:
-
 
 ```typescript
       case 'checkout.session.completed':
@@ -2702,9 +2749,7 @@ Now let me add a handler for checkout session expired to properly handle abandon
 
 The linter errors are expected for Deno Edge Functions. Now let me update the frontend to display the correct payment status. Let me check how the payment status is currently displayed:
 
-
 Now I need to update the frontend to properly display the new payment status flow. Let me update the status badge functions to handle the new payment status values:
-
 
 ```typescriptreact
 function getBookingBadges(booking: any, userId: string) {
@@ -2768,7 +2813,6 @@ function getBookingBadges(booking: any, userId: string) {
 
 Now let me update the BookingsPage component as well:
 
-
 ```typescriptreact
   function getBookingBadges(booking: any, userId: string) {
     const badges = [];
@@ -2829,7 +2873,6 @@ Now let me update the BookingsPage component as well:
 
 Now let me update the payment status label function to handle the new status values:
 
-
 ```typescriptreact
   const getPaymentStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
@@ -2844,7 +2887,6 @@ Now let me update the payment status label function to handle the new status val
 ```
 
 Now let me update the payment status badge variants to handle the new status values:
-
 
 ```typescriptreact
   const getPaymentStatusBadge = (status: string) => {
@@ -2865,9 +2907,7 @@ Now let me update the payment status badge variants to handle the new status val
 
 Now let me deploy the updated functions to make the payment status flow work properly:
 
-
 Let me try deploying the webhook function instead:
-
 
 ---
 
@@ -2881,163 +2921,197 @@ the bookings page should be in real time sync the booking flow isnt
 
 You're right! The bookings page needs real-time updates to reflect the payment status changes. Let me implement real-time synchronization for the bookings page.
 
-
 I can see the issue! The real-time subscription is already set up in the `useBookings` hook, but there might be inconsistencies in query keys or the subscription isn't working properly. Let me check the current implementation and fix it.
-
 
 The real-time subscription looks good. Let me check if there are any issues with the BookingsPage component not using the same hook or if there are query key inconsistencies:
 
-
 Good! The BookingsPage is using the same `useUserBookings` hook, so it should get real-time updates. Let me check if there are any issues with the real-time subscription by adding some debugging and ensuring the subscription is working properly. Let me also add a refetch interval as a fallback:
 
-
 ```typescript
-  const query = useQuery({
-    queryKey: ['bookings', 'user', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      return await getUserBookings(user.id);
-    },
-    enabled: !!user?.id,
-    refetchInterval: 10000, // Refetch every 10 seconds as fallback
-    retry: (failureCount, error) => {
-      // Retry up to 3 times, but only if it's a session-related error
-      if (failureCount < 3 && error?.message?.includes('401')) {
-        console.log('useUserBookings (useBookings): Retrying due to 401 error, attempt:', failureCount + 1);
-        return true;
-      }
-      return false;
-    },
-    retryDelay: 1000, // Wait 1 second between retries
-  });
+const query = useQuery({
+  queryKey: ["bookings", "user", user?.id],
+  queryFn: async () => {
+    if (!user?.id) return [];
+    return await getUserBookings(user.id);
+  },
+  enabled: !!user?.id,
+  refetchInterval: 10000, // Refetch every 10 seconds as fallback
+  retry: (failureCount, error) => {
+    // Retry up to 3 times, but only if it's a session-related error
+    if (failureCount < 3 && error?.message?.includes("401")) {
+      console.log(
+        "useUserBookings (useBookings): Retrying due to 401 error, attempt:",
+        failureCount + 1,
+      );
+      return true;
+    }
+    return false;
+  },
+  retryDelay: 1000, // Wait 1 second between retries
+});
 ```
 
 Now let me also improve the real-time subscription to handle connection issues better:
 
-
 ```typescript
-  // Set up real-time subscription for booking updates
-  useEffect(() => {
-    if (!user?.id) return;
+// Set up real-time subscription for booking updates
+useEffect(() => {
+  if (!user?.id) return;
 
-    console.log('useBookings: Setting up real-time subscriptions for user:', user.id);
+  console.log(
+    "useBookings: Setting up real-time subscriptions for user:",
+    user.id,
+  );
 
-    const channel = supabase
-      .channel('booking-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-          filter: `renter_id=eq.${user.id} OR owner_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('useBookings: Booking update received:', payload);
-          console.log('useBookings: New booking status:', (payload.new as Record<string, unknown>)?.status);
-          console.log('useBookings: New payment status:', (payload.new as Record<string, unknown>)?.payment_status);
-          console.log('useBookings: Old booking status:', (payload.old as Record<string, unknown>)?.status);
-          console.log('useBookings: Old payment status:', (payload.old as Record<string, unknown>)?.payment_status);
-          
-          // Invalidate and refetch bookings when any booking changes
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-          // Also refresh calendar availability when booking status changes
-          queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] });
-          
-          // Force refetch to ensure immediate update
-          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'escrow_transactions'
-        },
-        (payload) => {
-          console.log('useBookings: Escrow transaction update received:', payload);
-          console.log('useBookings: Escrow status:', (payload.new as Record<string, unknown>)?.escrow_status);
-          // Invalidate and refetch bookings when escrow status changes
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-          // Force refetch to ensure immediate update
-          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'transactions'
-        },
-        (payload) => {
-          console.log('useBookings: Transaction update received:', payload);
-          console.log('useBookings: Transaction status:', (payload.new as Record<string, unknown>)?.status);
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-          // Force refetch to ensure immediate update
-          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'claims'
-        },
-        (payload) => {
-          console.log('useBookings: Claim update received:', payload);
-          console.log('useBookings: Claim status:', (payload.new as Record<string, unknown>)?.claim_status);
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-          // Force refetch to ensure immediate update
-          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reviews'
-        },
-        (payload) => {
-          console.log('useBookings: Review update received:', payload);
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-          // Force refetch to ensure immediate update
-          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
-      )
-      .subscribe((status) => {
-        console.log('useBookings: Real-time subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('useBookings: Real-time subscription active');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('useBookings: Real-time subscription error');
-        } else if (status === 'TIMED_OUT') {
-          console.error('useBookings: Real-time subscription timed out');
-        } else if (status === 'CLOSED') {
-          console.log('useBookings: Real-time subscription closed');
-        }
-      });
+  const channel = supabase
+    .channel("booking-updates")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "bookings",
+        filter: `renter_id=eq.${user.id} OR owner_id=eq.${user.id}`,
+      },
+      (payload) => {
+        console.log("useBookings: Booking update received:", payload);
+        console.log(
+          "useBookings: New booking status:",
+          (payload.new as Record<string, unknown>)?.status,
+        );
+        console.log(
+          "useBookings: New payment status:",
+          (payload.new as Record<string, unknown>)?.payment_status,
+        );
+        console.log(
+          "useBookings: Old booking status:",
+          (payload.old as Record<string, unknown>)?.status,
+        );
+        console.log(
+          "useBookings: Old payment status:",
+          (payload.old as Record<string, unknown>)?.payment_status,
+        );
 
-    // Polling fallback - refresh every 30 seconds as backup
-    const pollInterval = setInterval(() => {
-      console.log('useBookings: Polling fallback - refreshing bookings');
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-      queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
-    }, 30000);
+        // Invalidate and refetch bookings when any booking changes
+        queryClient.invalidateQueries({
+          queryKey: ["bookings", "user", user.id],
+        });
+        // Also refresh calendar availability when booking status changes
+        queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] });
 
-    return () => {
-      console.log('useBookings: Cleaning up real-time subscriptions');
-      supabase.removeChannel(channel);
-      clearInterval(pollInterval);
-    };
-  }, [user?.id, queryClient]);
+        // Force refetch to ensure immediate update
+        queryClient.refetchQueries({ queryKey: ["bookings", "user", user.id] });
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "escrow_transactions",
+      },
+      (payload) => {
+        console.log(
+          "useBookings: Escrow transaction update received:",
+          payload,
+        );
+        console.log(
+          "useBookings: Escrow status:",
+          (payload.new as Record<string, unknown>)?.escrow_status,
+        );
+        // Invalidate and refetch bookings when escrow status changes
+        queryClient.invalidateQueries({
+          queryKey: ["bookings", "user", user.id],
+        });
+        // Force refetch to ensure immediate update
+        queryClient.refetchQueries({ queryKey: ["bookings", "user", user.id] });
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "transactions",
+      },
+      (payload) => {
+        console.log("useBookings: Transaction update received:", payload);
+        console.log(
+          "useBookings: Transaction status:",
+          (payload.new as Record<string, unknown>)?.status,
+        );
+        queryClient.invalidateQueries({
+          queryKey: ["bookings", "user", user.id],
+        });
+        // Force refetch to ensure immediate update
+        queryClient.refetchQueries({ queryKey: ["bookings", "user", user.id] });
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "claims",
+      },
+      (payload) => {
+        console.log("useBookings: Claim update received:", payload);
+        console.log(
+          "useBookings: Claim status:",
+          (payload.new as Record<string, unknown>)?.claim_status,
+        );
+        queryClient.invalidateQueries({
+          queryKey: ["bookings", "user", user.id],
+        });
+        // Force refetch to ensure immediate update
+        queryClient.refetchQueries({ queryKey: ["bookings", "user", user.id] });
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "reviews",
+      },
+      (payload) => {
+        console.log("useBookings: Review update received:", payload);
+        queryClient.invalidateQueries({
+          queryKey: ["bookings", "user", user.id],
+        });
+        // Force refetch to ensure immediate update
+        queryClient.refetchQueries({ queryKey: ["bookings", "user", user.id] });
+      },
+    )
+    .subscribe((status) => {
+      console.log("useBookings: Real-time subscription status:", status);
+      if (status === "SUBSCRIBED") {
+        console.log("useBookings: Real-time subscription active");
+      } else if (status === "CHANNEL_ERROR") {
+        console.error("useBookings: Real-time subscription error");
+      } else if (status === "TIMED_OUT") {
+        console.error("useBookings: Real-time subscription timed out");
+      } else if (status === "CLOSED") {
+        console.log("useBookings: Real-time subscription closed");
+      }
+    });
+
+  // Polling fallback - refresh every 30 seconds as backup
+  const pollInterval = setInterval(() => {
+    console.log("useBookings: Polling fallback - refreshing bookings");
+    queryClient.invalidateQueries({ queryKey: ["bookings", "user", user.id] });
+    queryClient.refetchQueries({ queryKey: ["bookings", "user", user.id] });
+  }, 30000);
+
+  return () => {
+    console.log("useBookings: Cleaning up real-time subscriptions");
+    supabase.removeChannel(channel);
+    clearInterval(pollInterval);
+  };
+}, [user?.id, queryClient]);
 ```
 
 Now let me also add a visual indicator to the BookingsPage to show when real-time updates are working:
-
 
 ```typescriptreact
 export const BookingsPage: React.FC = () => {
@@ -3050,7 +3124,7 @@ export const BookingsPage: React.FC = () => {
   const { mutate: completeRental, isPending: completingRental } = useCompleteRental();
   const { mutate: confirmReturn, isPending: confirmingReturn } = useConfirmReturn();
   const { mutate: deleteConversation } = useDeleteConversation();
-  
+
   const [pickupBooking, setPickupBooking] = useState<any>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [paymentBooking, setPaymentBooking] = useState<any>(null);
@@ -3062,7 +3136,6 @@ export const BookingsPage: React.FC = () => {
 ```
 
 Now let me add a real-time subscription to the BookingsPage component to track connection status:
-
 
 ```typescriptreact
   // Filter bookings using the actual authenticated user ID
@@ -3101,9 +3174,7 @@ Now let me add a real-time subscription to the BookingsPage component to track c
 
 Now let me add a visual indicator in the UI to show the real-time status:
 
-
 Let me add the real-time status indicator right after the header:
-
 
 ```typescriptreact
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-6">
@@ -3169,8 +3240,8 @@ If you use migrations, add the above `create extension` statement to your migrat
 
 ## **Summary Table**
 
-| Error Message | Cause | Solution |
-|---------------|-------|----------|
+| Error Message                     | Cause                        | Solution                                                      |
+| --------------------------------- | ---------------------------- | ------------------------------------------------------------- |
 | function http(...) does not exist | `http` extension not enabled | Run `create extension if not exists http with schema public;` |
 
 ---
@@ -3303,5 +3374,4 @@ select * from pg_available_extensions where name = 'http';
 
 **User**
 
-can you tell me the exact trigger does it have more give me the all of it  cant you give the one we made this conversation and not from the old migrations does this handle the claims logic and the the whole trigger logic that we talked about
-
+can you tell me the exact trigger does it have more give me the all of it cant you give the one we made this conversation and not from the old migrations does this handle the claims logic and the the whole trigger logic that we talked about

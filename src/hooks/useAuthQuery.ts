@@ -1,12 +1,19 @@
-import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { authErrorHandler } from '@/utils/authErrorHandler';
+import {
+  useQuery,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { authErrorHandler } from "@/utils/authErrorHandler";
 
 // Industry-standard auth-aware query hook
 export function useAuthQuery<TData, TError = unknown>(
   queryKey: readonly unknown[],
   queryFn: () => Promise<TData>,
-  options?: Omit<UseQueryOptions<TData, TError, TData, readonly unknown[]>, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<TData, TError, TData, readonly unknown[]>,
+    "queryKey" | "queryFn"
+  >,
 ): UseQueryResult<TData, TError> {
   const { user } = useAuth();
 
@@ -15,19 +22,19 @@ export function useAuthQuery<TData, TError = unknown>(
     queryFn: async () => {
       // Check if user is authenticated before making the request
       if (!user) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
       // Wrap the API call with auth error handling
       return await authErrorHandler.withAuthErrorHandling(queryFn);
     },
-    enabled: !!user && (options?.enabled !== false),
+    enabled: !!user && options?.enabled !== false,
     retry: (failureCount, error) => {
       // Don't retry on auth errors - let the auth handler deal with them
       if (authErrorHandler.isAuthError(error)) {
         return false;
       }
-      
+
       // Default retry logic - 3 attempts
       return failureCount < 3;
     },
@@ -48,18 +55,23 @@ export function useAuthQuery<TData, TError = unknown>(
 // Auth-aware mutation hook
 export function useAuthMutation<TData, TError = unknown, TVariables = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
-  options?: Omit<UseQueryOptions<TData, TError, TData, readonly unknown[]>, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<TData, TError, TData, readonly unknown[]>,
+    "queryKey" | "queryFn"
+  >,
 ) {
   const { user } = useAuth();
 
   return {
     mutate: async (variables: TVariables) => {
       if (!user) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
       try {
-        return await authErrorHandler.withAuthErrorHandling(() => mutationFn(variables));
+        return await authErrorHandler.withAuthErrorHandling(() =>
+          mutationFn(variables),
+        );
       } catch (error) {
         if (authErrorHandler.isAuthError(error)) {
           // Auth error handler will handle the session refresh
@@ -75,7 +87,7 @@ export function useAuthMutation<TData, TError = unknown, TVariables = unknown>(
 // Utility hook for checking auth status
 export function useAuthStatus() {
   const { user, loading } = useAuth();
-  
+
   return {
     isAuthenticated: !!user,
     isLoading: loading,
@@ -87,12 +99,15 @@ export function useAuthStatus() {
 export function useConditionalAuthQuery<TData, TError = unknown>(
   queryKey: readonly unknown[],
   queryFn: () => Promise<TData>,
-  options?: Omit<UseQueryOptions<TData, TError, TData, readonly unknown[]>, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<TData, TError, TData, readonly unknown[]>,
+    "queryKey" | "queryFn"
+  >,
 ): UseQueryResult<TData, TError> {
   const { isAuthenticated } = useAuthStatus();
 
   return useAuthQuery(queryKey, queryFn, {
     ...options,
-    enabled: isAuthenticated && (options?.enabled !== false),
+    enabled: isAuthenticated && options?.enabled !== false,
   });
-} 
+}

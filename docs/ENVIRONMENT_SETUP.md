@@ -76,16 +76,19 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ## Deploying Edge Functions
 
 1. Install Supabase CLI:
+
    ```bash
    npm install -g supabase
    ```
 
 2. Login to Supabase:
+
    ```bash
    supabase login
    ```
 
 3. Link your project:
+
    ```bash
    supabase link --project-ref your-project-ref
    ```
@@ -102,6 +105,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ### Test Stripe Keys
 
 Use these test card numbers:
+
 - **Success**: `4242 4242 4242 4242`
 - **Decline**: `4000 0000 0000 0002`
 - **Requires Authentication**: `4000 0025 0000 3155`
@@ -109,6 +113,7 @@ Use these test card numbers:
 ### Test Webhook
 
 1. Use Stripe CLI to test webhooks locally:
+
    ```bash
    stripe listen --forward-to localhost:54321/functions/v1/stripe-webhook
    ```
@@ -132,4 +137,4 @@ Use these test card numbers:
 - [ ] Set up monitoring
 - [ ] Configure error alerts
 - [ ] Set up logging
-- [ ] Test refund scenarios 
+- [ ] Test refund scenarios

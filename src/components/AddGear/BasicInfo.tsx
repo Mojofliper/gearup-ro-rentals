@@ -1,14 +1,19 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
-import { useCategories } from '@/hooks/useCategories';
-import { useState } from 'react';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
+import { useCategories } from "@/hooks/useCategories";
+import { useState } from "react";
 
 interface BasicInfoProps {
   formData: {
@@ -24,42 +29,46 @@ interface BasicInfoProps {
     specifications: string[];
     includedItems: string[];
   };
-  updateFormData: (updates: Partial<BasicInfoProps['formData']>) => void;
+  updateFormData: (updates: Partial<BasicInfoProps["formData"]>) => void;
   validationErrors: Record<string, string>;
 }
 
-export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, validationErrors }) => {
+export const BasicInfo: React.FC<BasicInfoProps> = ({
+  formData,
+  updateFormData,
+  validationErrors,
+}) => {
   const { data: categories = [] } = useCategories();
-  const [newSpecification, setNewSpecification] = useState('');
-  const [newIncludedItem, setNewIncludedItem] = useState('');
+  const [newSpecification, setNewSpecification] = useState("");
+  const [newIncludedItem, setNewIncludedItem] = useState("");
 
   const addSpecification = () => {
     if (newSpecification.trim()) {
       updateFormData({
-        specifications: [...formData.specifications, newSpecification.trim()]
+        specifications: [...formData.specifications, newSpecification.trim()],
       });
-      setNewSpecification('');
+      setNewSpecification("");
     }
   };
 
   const removeSpecification = (index: number) => {
     updateFormData({
-      specifications: formData.specifications.filter((_, i) => i !== index)
+      specifications: formData.specifications.filter((_, i) => i !== index),
     });
   };
 
   const addIncludedItem = () => {
     if (newIncludedItem.trim()) {
       updateFormData({
-        includedItems: [...formData.includedItems, newIncludedItem.trim()]
+        includedItems: [...formData.includedItems, newIncludedItem.trim()],
       });
-      setNewIncludedItem('');
+      setNewIncludedItem("");
     }
   };
 
   const removeIncludedItem = (index: number) => {
     updateFormData({
-      includedItems: formData.includedItems.filter((_, i) => i !== index)
+      includedItems: formData.includedItems.filter((_, i) => i !== index),
     });
   };
 
@@ -68,7 +77,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
       {/* Basic Information */}
       <Card className="shadow-lg border-0 bg-white">
         <CardHeader>
-          <CardTitle className="text-2xl text-gray-800">Informații generale *</CardTitle>
+          <CardTitle className="text-2xl text-gray-800">
+            Informații generale *
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -79,17 +90,24 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
                 value={formData.name}
                 onChange={(e) => updateFormData({ name: e.target.value })}
                 placeholder="ex. Sony A7 III"
-                className={`mt-1 ${validationErrors.name ? 'border-red-500' : ''}`}
+                className={`mt-1 ${validationErrors.name ? "border-red-500" : ""}`}
               />
               {validationErrors.name && (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.name}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {validationErrors.name}
+                </p>
               )}
             </div>
 
             <div>
               <Label htmlFor="category">Categoria *</Label>
-              <Select value={formData.categoryId} onValueChange={(value) => updateFormData({ categoryId: value })}>
-                <SelectTrigger className={`mt-1 ${validationErrors.categoryId ? 'border-red-500' : ''}`}>
+              <Select
+                value={formData.categoryId}
+                onValueChange={(value) => updateFormData({ categoryId: value })}
+              >
+                <SelectTrigger
+                  className={`mt-1 ${validationErrors.categoryId ? "border-red-500" : ""}`}
+                >
                   <SelectValue placeholder="Selectează categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -101,7 +119,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
                 </SelectContent>
               </Select>
               {validationErrors.categoryId && (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.categoryId}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {validationErrors.categoryId}
+                </p>
               )}
             </div>
 
@@ -129,8 +149,13 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
 
             <div>
               <Label htmlFor="condition">Starea echipamentului *</Label>
-              <Select value={formData.condition} onValueChange={(value) => updateFormData({ condition: value })}>
-                <SelectTrigger className={`mt-1 ${validationErrors.condition ? 'border-red-500' : ''}`}>
+              <Select
+                value={formData.condition}
+                onValueChange={(value) => updateFormData({ condition: value })}
+              >
+                <SelectTrigger
+                  className={`mt-1 ${validationErrors.condition ? "border-red-500" : ""}`}
+                >
                   <SelectValue placeholder="Selectează starea" />
                 </SelectTrigger>
                 <SelectContent>
@@ -142,7 +167,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
                 </SelectContent>
               </Select>
               {validationErrors.condition && (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.condition}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {validationErrors.condition}
+                </p>
               )}
             </div>
 
@@ -151,7 +178,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
               <Input
                 id="pickupLocation"
                 value={formData.pickupLocation}
-                onChange={(e) => updateFormData({ pickupLocation: e.target.value })}
+                onChange={(e) =>
+                  updateFormData({ pickupLocation: e.target.value })
+                }
                 placeholder="ex. Centrul Clujului"
                 className="mt-1"
               />
@@ -166,10 +195,12 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
               onChange={(e) => updateFormData({ description: e.target.value })}
               placeholder="Descrie echipamentul tău, pentru ce este potrivit, ce experiență oferă..."
               rows={4}
-              className={`mt-1 ${validationErrors.description ? 'border-red-500' : ''}`}
+              className={`mt-1 ${validationErrors.description ? "border-red-500" : ""}`}
             />
             {validationErrors.description && (
-              <p className="text-sm text-red-500 mt-1">{validationErrors.description}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {validationErrors.description}
+              </p>
             )}
           </div>
         </CardContent>
@@ -189,12 +220,16 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
                 type="number"
                 min="1"
                 value={formData.pricePerDay}
-                onChange={(e) => updateFormData({ pricePerDay: e.target.value })}
+                onChange={(e) =>
+                  updateFormData({ pricePerDay: e.target.value })
+                }
                 placeholder="150"
-                className={`mt-1 ${validationErrors.pricePerDay ? 'border-red-500' : ''}`}
+                className={`mt-1 ${validationErrors.pricePerDay ? "border-red-500" : ""}`}
               />
               {validationErrors.pricePerDay && (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.pricePerDay}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {validationErrors.pricePerDay}
+                </p>
               )}
             </div>
 
@@ -205,7 +240,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
                 type="number"
                 min="0"
                 value={formData.depositAmount}
-                onChange={(e) => updateFormData({ depositAmount: e.target.value })}
+                onChange={(e) =>
+                  updateFormData({ depositAmount: e.target.value })
+                }
                 placeholder="500"
                 className="mt-1"
               />
@@ -220,7 +257,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
       {/* Specifications */}
       <Card className="shadow-lg border-0 bg-white">
         <CardHeader>
-          <CardTitle className="text-2xl text-gray-800">Specificații tehnice</CardTitle>
+          <CardTitle className="text-2xl text-gray-800">
+            Specificații tehnice
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -228,7 +267,7 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
               value={newSpecification}
               onChange={(e) => setNewSpecification(e.target.value)}
               placeholder="ex. 24.2 MP Full Frame"
-              onKeyPress={(e) => e.key === 'Enter' && addSpecification()}
+              onKeyPress={(e) => e.key === "Enter" && addSpecification()}
             />
             <Button type="button" onClick={addSpecification} variant="outline">
               <Plus className="h-4 w-4" />
@@ -237,7 +276,10 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
 
           <div className="flex flex-wrap gap-2">
             {formData.specifications.map((spec, index) => (
-              <div key={index} className="flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
+              <div
+                key={index}
+                className="flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm"
+              >
                 <span>{spec}</span>
                 <button
                   type="button"
@@ -255,7 +297,9 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
       {/* Included Items */}
       <Card className="shadow-lg border-0 bg-white">
         <CardHeader>
-          <CardTitle className="text-2xl text-gray-800">Ce include închirierea</CardTitle>
+          <CardTitle className="text-2xl text-gray-800">
+            Ce include închirierea
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -263,7 +307,7 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
               value={newIncludedItem}
               onChange={(e) => setNewIncludedItem(e.target.value)}
               placeholder="ex. Husă de transport"
-              onKeyPress={(e) => e.key === 'Enter' && addIncludedItem()}
+              onKeyPress={(e) => e.key === "Enter" && addIncludedItem()}
             />
             <Button type="button" onClick={addIncludedItem} variant="outline">
               <Plus className="h-4 w-4" />
@@ -272,7 +316,10 @@ export const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, 
 
           <div className="flex flex-wrap gap-2">
             {formData.includedItems.map((item, index) => (
-              <div key={index} className="flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+              <div
+                key={index}
+                className="flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm"
+              >
                 <span>{item}</span>
                 <button
                   type="button"

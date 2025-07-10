@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar } from '@/components/ui/calendar';
-import { Separator } from '@/components/ui/separator';
-import { Trash2, ShoppingBag, Calendar as CalendarIcon, MapPin, Star } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Calendar } from "@/components/ui/calendar";
+import { Separator } from "@/components/ui/separator";
+import {
+  Trash2,
+  ShoppingBag,
+  Calendar as CalendarIcon,
+  MapPin,
+  Star,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface CartItem {
   id: string;
@@ -42,51 +53,53 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
 
   useEffect(() => {
     // Load cart items from localStorage
-    const savedCart = localStorage.getItem('gearup-cart');
+    const savedCart = localStorage.getItem("gearup-cart");
     if (savedCart) {
       try {
         const parsed = JSON.parse(savedCart);
         // Convert date strings back to Date objects
         const itemsWithDates = parsed.map((item: Record<string, unknown>) => ({
           ...item,
-          selectedDates: (item.selectedDates as string[]).map((dateStr: string) => new Date(dateStr))
+          selectedDates: (item.selectedDates as string[]).map(
+            (dateStr: string) => new Date(dateStr),
+          ),
         }));
         setCartItems(itemsWithDates);
       } catch (error) {
-        console.error('Error parsing cart data:', error);
+        console.error("Error parsing cart data:", error);
         setCartItems([]);
       }
     }
   }, [isOpen]);
 
   const removeFromCart = (itemId: string) => {
-    const updatedCart = cartItems.filter(item => item.id !== itemId);
+    const updatedCart = cartItems.filter((item) => item.id !== itemId);
     setCartItems(updatedCart);
-    localStorage.setItem('gearup-cart', JSON.stringify(updatedCart));
-    
+    localStorage.setItem("gearup-cart", JSON.stringify(updatedCart));
+
     // Dispatch custom event to update cart count in header
-    window.dispatchEvent(new Event('cartUpdated'));
-    
+    window.dispatchEvent(new Event("cartUpdated"));
+
     toast({
-      title: 'Eliminat din coș',
-      description: 'Echipamentul a fost eliminat din coșul de cumpărături.',
+      title: "Eliminat din coș",
+      description: "Echipamentul a fost eliminat din coșul de cumpărături.",
     });
   };
 
   const updateItemDates = (itemId: string, dates: Date[]) => {
-    const updatedCart = cartItems.map(item => 
-      item.id === itemId ? { ...item, selectedDates: dates } : item
+    const updatedCart = cartItems.map((item) =>
+      item.id === itemId ? { ...item, selectedDates: dates } : item,
     );
     setCartItems(updatedCart);
-    localStorage.setItem('gearup-cart', JSON.stringify(updatedCart));
+    localStorage.setItem("gearup-cart", JSON.stringify(updatedCart));
   };
 
   const updateItemNotes = (itemId: string, notes: string) => {
-    const updatedCart = cartItems.map(item => 
-      item.id === itemId ? { ...item, notes } : item
+    const updatedCart = cartItems.map((item) =>
+      item.id === itemId ? { ...item, notes } : item,
     );
     setCartItems(updatedCart);
-    localStorage.setItem('gearup-cart', JSON.stringify(updatedCart));
+    localStorage.setItem("gearup-cart", JSON.stringify(updatedCart));
   };
 
   const calculateItemTotal = (item: CartItem) => {
@@ -97,35 +110,40 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
   };
 
   const calculateCartTotal = () => {
-    return cartItems.reduce((total, item) => total + calculateItemTotal(item), 0);
+    return cartItems.reduce(
+      (total, item) => total + calculateItemTotal(item),
+      0,
+    );
   };
 
   const handleCheckout = () => {
     if (!user) {
       toast({
-        title: 'Trebuie să fii conectat',
-        description: 'Te rugăm să te conectezi pentru a finaliza comanda.',
-        variant: 'destructive',
+        title: "Trebuie să fii conectat",
+        description: "Te rugăm să te conectezi pentru a finaliza comanda.",
+        variant: "destructive",
       });
       return;
     }
 
     if (cartItems.length === 0) {
       toast({
-        title: 'Coșul este gol',
-        description: 'Adaugă echipamente în coș pentru a continua.',
-        variant: 'destructive',
+        title: "Coșul este gol",
+        description: "Adaugă echipamente în coș pentru a continua.",
+        variant: "destructive",
       });
       return;
     }
 
     // Validate that all items have selected dates
-    const itemsWithoutDates = cartItems.filter(item => item.selectedDates.length === 0);
+    const itemsWithoutDates = cartItems.filter(
+      (item) => item.selectedDates.length === 0,
+    );
     if (itemsWithoutDates.length > 0) {
       toast({
-        title: 'Date lipsă',
-        description: 'Te rugăm să selectezi datele pentru toate echipamentele.',
-        variant: 'destructive',
+        title: "Date lipsă",
+        description: "Te rugăm să selectezi datele pentru toate echipamentele.",
+        variant: "destructive",
       });
       return;
     }
@@ -135,14 +153,14 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
 
   const clearCart = () => {
     setCartItems([]);
-    localStorage.removeItem('gearup-cart');
-    
+    localStorage.removeItem("gearup-cart");
+
     // Dispatch custom event to update cart count in header
-    window.dispatchEvent(new Event('cartUpdated'));
-    
+    window.dispatchEvent(new Event("cartUpdated"));
+
     toast({
-      title: 'Coș golit',
-      description: 'Toate echipamentele au fost eliminate din coș.',
+      title: "Coș golit",
+      description: "Toate echipamentele au fost eliminate din coș.",
     });
   };
 
@@ -159,7 +177,9 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
         {cartItems.length === 0 ? (
           <div className="text-center py-12">
             <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Coșul tău este gol</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Coșul tău este gol
+            </h3>
             <p className="text-gray-600 mb-4">
               Adaugă echipamente în coș pentru a începe să închiriezi
             </p>
@@ -177,7 +197,8 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                     <div className="flex items-start space-x-4">
                       {/* Gear Image */}
                       <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                        {item.gear.gear_photos && item.gear.gear_photos.length > 0 ? (
+                        {item.gear.gear_photos &&
+                        item.gear.gear_photos.length > 0 ? (
                           <img
                             src={item.gear.gear_photos[0] as string}
                             alt={item.gear.title}
@@ -197,16 +218,23 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                             <h3 className="font-semibold text-gray-800 mb-1">
                               {item.gear.title}
                             </h3>
-                            
+
                             <div className="flex items-center space-x-2 mb-2">
                               <Avatar className="h-6 w-6">
                                 <AvatarFallback className="text-xs">
-                                  {item.gear.owner.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                                  {item.gear.owner.full_name
+                                    ?.split(" ")
+                                    .map((n) => n[0])
+                                    .join("") || "U"}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm text-gray-600">{item.gear.owner.full_name}</span>
+                              <span className="text-sm text-gray-600">
+                                {item.gear.owner.full_name}
+                              </span>
                               {item.gear.owner.is_verified && (
-                                <Badge variant="secondary" className="text-xs">Verificat</Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  Verificat
+                                </Badge>
                               )}
                             </div>
 
@@ -220,11 +248,15 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                                 <span className="text-lg font-bold text-gray-800">
                                   {item.gear.price_per_day} RON
                                 </span>
-                                <span className="text-sm text-gray-500">/zi</span>
+                                <span className="text-sm text-gray-500">
+                                  /zi
+                                </span>
                               </div>
                               {item.gear.deposit_amount > 0 && (
                                 <div>
-                                  <span className="text-sm text-gray-600">Garanție: </span>
+                                  <span className="text-sm text-gray-600">
+                                    Garanție:{" "}
+                                  </span>
                                   <span className="text-sm font-medium">
                                     {item.gear.deposit_amount} RON
                                   </span>
@@ -252,7 +284,9 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                           <Calendar
                             mode="multiple"
                             selected={item.selectedDates}
-                            onSelect={(dates) => updateItemDates(item.id, dates || [])}
+                            onSelect={(dates) =>
+                              updateItemDates(item.id, dates || [])
+                            }
                             className="rounded-md border"
                             disabled={(date) => date < new Date()}
                           />
@@ -265,7 +299,9 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                           </label>
                           <textarea
                             value={item.notes}
-                            onChange={(e) => updateItemNotes(item.id, e.target.value)}
+                            onChange={(e) =>
+                              updateItemNotes(item.id, e.target.value)
+                            }
                             placeholder="Detalii suplimentare despre închiriere..."
                             className="w-full p-2 border border-gray-300 rounded-md text-sm resize-none"
                             rows={2}
@@ -276,7 +312,8 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                         <div className="mt-3 pt-3 border-t">
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">
-                              {item.selectedDates.length} {item.selectedDates.length === 1 ? 'zi' : 'zile'}
+                              {item.selectedDates.length}{" "}
+                              {item.selectedDates.length === 1 ? "zi" : "zile"}
                             </span>
                             <span className="font-semibold text-gray-800">
                               {calculateItemTotal(item).toFixed(2)} RON
@@ -309,14 +346,15 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span className="text-gray-600">
-                        {item.gear.title} ({item.selectedDates.length} {item.selectedDates.length === 1 ? 'zi' : 'zile'})
+                        {item.gear.title} ({item.selectedDates.length}{" "}
+                        {item.selectedDates.length === 1 ? "zi" : "zile"})
                       </span>
                       <span>{calculateItemTotal(item).toFixed(2)} RON</span>
                     </div>
                   ))}
-                  
+
                   <Separator />
-                  
+
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total</span>
                     <span>{calculateCartTotal().toFixed(2)} RON</span>
@@ -324,14 +362,11 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                 </div>
 
                 <div className="mt-4 space-y-2">
-                  <Button
-                    onClick={handleCheckout}
-                    className="w-full"
-                    size="lg"
-                  >
-                    Finalizează comanda ({cartItems.length} {cartItems.length === 1 ? 'echipament' : 'echipamente'})
+                  <Button onClick={handleCheckout} className="w-full" size="lg">
+                    Finalizează comanda ({cartItems.length}{" "}
+                    {cartItems.length === 1 ? "echipament" : "echipamente"})
                   </Button>
-                  
+
                   <Button
                     onClick={onClose}
                     variant="outline"
@@ -347,4 +382,4 @@ export const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
       </DialogContent>
     </Dialog>
   );
-}; 
+};

@@ -3,6 +3,7 @@
 ## [2025-07-08] - Major Implementation, Debugging, and Audit Milestone
 
 ### Added
+
 - **Database Schema & Migrations**: Created and iteratively fixed migrations for transactions, connected accounts, escrow transactions, claims, notifications, moderation queue, push subscriptions, rate limits, and handover photos. Ensured all RLS policies are robust and idempotent.
 - **Frontend Refactoring**: Renamed Profile to Dashboard, added tabs, stats cards, alerts, and Stripe Connect setup flow. Integrated BookingFlowGuard and PhotoDocumentation components for booking flow management.
 - **Edge Functions**: Developed and deployed edge functions for Stripe Connect setup, webhook handling, escrow transactions, escrow release, auto-refund safeguard, email notifications, and presigned photo uploads. Fixed deployment and permission issues.
@@ -19,12 +20,14 @@
 - **Testing & Audit**: Created comprehensive implementation audit document summarizing completed features, in-progress tasks, remaining tasks, database schema status, technical implementation status, performance metrics, deployment readiness, next steps, success metrics, and risk assessment.
 
 ### Fixed
+
 - **403/406 RLS Errors**: Fixed repeated errors by recreating tables and policies, making migrations idempotent, and adjusting policies and enums.
 - **Stripe Connect Onboarding**: Resolved issues by using HTTPS URLs in live mode and handling account statuses properly.
 - **Migration Errors**: Made migrations idempotent and adjusted for existing policies and schema elements.
 - **Docker & Edge Function Deployment**: Diagnosed and partially resolved Docker and edge function deployment issues. Cleaned up containers and restarted services.
 
 ### Known Issues
+
 - Edge function deployment still partially blocked by Docker/container issues.
 - Some API functions like `getUserReviews` and `processRefund` not yet implemented.
 - Type mismatches in some components expecting different data structures.
@@ -32,6 +35,7 @@
 - Email service integration and push notification backend pending.
 
 ### Next Steps
+
 - Complete edge function deployment and Docker fixes.
 - Integrate email notification service and test all flows.
 - Implement push notification backend and VAPID keys.
@@ -43,17 +47,20 @@
 ## [2025-01-01] - Database Schema & Documentation Overhaul
 
 ### Added
+
 - **Database Schema Documentation**: Created comprehensive `docs/DATABASE_SCHEMA.md` with complete table definitions, relationships, and RLS policies
 - **Transactions Table**: Created `supabase/migrations/20250101000001_create_transactions_table.sql` with full transaction management system
 - **Implementation Roadmap**: Created `docs/IMPLEMENTATION_ROADMAP.md` with detailed development phases
 - **Implementation Status**: Created `IMPLEMENTATION_STATUS.md` tracking current features and planned work
 
 ### Changed
+
 - **Database Schema**: Applied complete schema redesign with proper UUID primary keys, foreign key constraints, and RLS policies
 - **Documentation Structure**: Removed all percentage completions and timeline references from roadmap and status documents
 - **Migration Files**: Consolidated and cleaned up database migration files
 
 ### Fixed
+
 - **Database Queries**: Fixed 400 errors from Supabase by aligning frontend queries with actual database schema
 - **Field Name Mismatches**: Corrected field names like `owner_id`, `renter_id`, `gear_photos`, `full_name` to match database
 - **Table References**: Fixed queries referencing non-existent tables (e.g., `profiles` → `users`)
@@ -61,6 +68,7 @@
 - **Type Mismatches**: Fixed UUID type issues in database schema
 
 ### Technical Details
+
 - **Database**: PostgreSQL on Supabase with comprehensive RLS
 - **Frontend**: React + TypeScript with Supabase client
 - **Authentication**: Supabase Auth with JWT tokens
@@ -68,18 +76,21 @@
 - **File Storage**: Supabase Storage for avatars and gear photos
 
 ### Current Issues Resolved
+
 - Fixed "relation does not exist" errors for transactions table
 - Resolved 403 Forbidden errors due to RLS policy mismatches
 - Corrected frontend-backend schema alignment issues
 - Fixed payment button visibility logic for renters
 
 ### Known Issues
+
 - Some API functions like `getUserReviews` and `processRefund` not yet implemented
 - Type mismatches in some components expecting different data structures
 - Legacy code patterns in some components need refactoring
 
 ### Next Steps
+
 - Complete component migration to new API service layer
 - Implement missing API functions
 - Add comprehensive error handling and loading states
-- Set up testing framework and write tests 
+- Set up testing framework and write tests

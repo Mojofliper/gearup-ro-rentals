@@ -1,17 +1,29 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ConversationModal } from '@/components/ConversationModal';
-import { MapPin, Search, MessageSquare, Star, Eye, Heart, Calendar, Camera } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useAllGear } from '@/hooks/useGear';
-import { useGearReviews } from '@/hooks/useReviews';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ConversationModal } from "@/components/ConversationModal";
+import {
+  MapPin,
+  Search,
+  MessageSquare,
+  Star,
+  Eye,
+  Heart,
+  Calendar,
+  Camera,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAllGear } from "@/hooks/useGear";
+import { useGearReviews } from "@/hooks/useReviews";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Component for individual featured gear card
-const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConversation: (gear: Record<string, unknown>) => void }> = ({ gear, onStartConversation }) => {
+const FeaturedGearCard: React.FC<{
+  gear: Record<string, unknown>;
+  onStartConversation: (gear: Record<string, unknown>) => void;
+}> = ({ gear, onStartConversation }) => {
   const { data: reviewsDataRaw } = useGearReviews(gear.id as string);
   const safeReviewsData = Array.isArray(reviewsDataRaw) ? reviewsDataRaw : [];
   const { user } = useAuth();
@@ -21,48 +33,72 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
   if (Array.isArray(gear.gear_photos)) {
     // Supabase join may return array of objects with photo_url
     images = (gear.gear_photos as Array<{ photo_url: string } | string>)
-      .map((p) => typeof p === 'string' ? p : p?.photo_url)
+      .map((p) => (typeof p === "string" ? p : p?.photo_url))
       .filter(Boolean);
   }
-  const firstImage = images.length > 0
-    ? images[0]
-    : 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop';
+  const firstImage =
+    images.length > 0
+      ? images[0]
+      : "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop";
 
   // Robustly extract owner info (object or array)
   let owner = gear.owner;
   if (Array.isArray(owner)) owner = owner[0];
-  owner = owner || (gear.users || (Array.isArray(gear.users) ? gear.users[0] : undefined)) || {};
+  owner =
+    owner ||
+    gear.users ||
+    (Array.isArray(gear.users) ? gear.users[0] : undefined) ||
+    {};
   const ownerObj = owner as Record<string, unknown>;
-  const ownerName = (ownerObj?.full_name as string) || 'Utilizator';
-  const ownerLocation = (ownerObj?.location as string) || 'România';
+  const ownerName = (ownerObj?.full_name as string) || "Utilizator";
+  const ownerLocation = (ownerObj?.location as string) || "România";
   const ownerAvatar = ownerObj?.avatar_url
-    ? (ownerObj.avatar_url as string).startsWith('http')
-      ? ownerObj.avatar_url as string
+    ? (ownerObj.avatar_url as string).startsWith("http")
+      ? (ownerObj.avatar_url as string)
       : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${ownerObj.avatar_url as string}`
-    : '';
-  const avatarFallback = typeof ownerName === 'string' && ownerName.trim().length > 0 ? ownerName.split(' ').map((n) => n[0]).join('') : 'U';
+    : "";
+  const avatarFallback =
+    typeof ownerName === "string" && ownerName.trim().length > 0
+      ? ownerName
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+      : "U";
 
   // Robustly extract category info (object or array)
   let category = gear.category;
   if (Array.isArray(category)) category = category[0];
-  category = category || (gear.categories || (Array.isArray(gear.categories) ? gear.categories[0] : undefined)) || {};
+  category =
+    category ||
+    gear.categories ||
+    (Array.isArray(gear.categories) ? gear.categories[0] : undefined) ||
+    {};
   const categoryObj = category as Record<string, unknown>;
-  const categoryName = (categoryObj?.name as string) || 'Echipament';
+  const categoryName = (categoryObj?.name as string) || "Echipament";
 
   // Price is already in RON
-  const priceInRON = gear.price_per_day as number || 0;
+  const priceInRON = (gear.price_per_day as number) || 0;
 
-  const averageRating = safeReviewsData.length > 0 
-    ? (safeReviewsData.reduce((sum: number, review: Record<string, unknown>) => sum + (review.rating as number || 0), 0) / safeReviewsData.length).toFixed(1)
-    : null;
+  const averageRating =
+    safeReviewsData.length > 0
+      ? (
+          safeReviewsData.reduce(
+            (sum: number, review: Record<string, unknown>) =>
+              sum + ((review.rating as number) || 0),
+            0,
+          ) / safeReviewsData.length
+        ).toFixed(1)
+      : null;
 
-  const gearTitle = typeof gear.title === 'string' ? gear.title : '';
-  const gearId = typeof gear.id === 'string' ? gear.id : '';
+  const gearTitle = typeof gear.title === "string" ? gear.title : "";
+  const gearId = typeof gear.id === "string" ? gear.id : "";
 
-  const safeCategoryName = typeof categoryName === 'string' ? categoryName : '';
-  const safeOwnerName = typeof ownerName === 'string' ? ownerName : '';
-  const safeOwnerLocation = typeof ownerLocation === 'string' ? ownerLocation : '';
-  const safePriceInRON = typeof priceInRON === 'number' ? priceInRON.toString() : String(priceInRON);
+  const safeCategoryName = typeof categoryName === "string" ? categoryName : "";
+  const safeOwnerName = typeof ownerName === "string" ? ownerName : "";
+  const safeOwnerLocation =
+    typeof ownerLocation === "string" ? ownerLocation : "";
+  const safePriceInRON =
+    typeof priceInRON === "number" ? priceInRON.toString() : String(priceInRON);
 
   return (
     <Card className="group relative overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border-0 rounded-2xl">
@@ -73,7 +109,10 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
             src={firstImage}
             alt={gearTitle}
             className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500 rounded-t-2xl"
-            onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop'; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src =
+                "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop";
+            }}
           />
         </Link>
         {/* Overlay gradient */}
@@ -91,7 +130,7 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
           </div>
         </div>
         {/* Status Overlay */}
-        {(gear.status as string) !== 'available' && (
+        {(gear.status as string) !== "available" && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-t-2xl flex items-center justify-center">
             <Badge className="bg-red-500 text-white border-0 px-4 py-2 rounded-full font-medium">
               Indisponibil
@@ -110,7 +149,9 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
           {averageRating !== null && (
             <div className="flex items-center space-x-1 bg-amber-100 px-2 py-1 rounded-full">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span className="text-xs font-medium text-amber-800">{String(averageRating)}</span>
+              <span className="text-xs font-medium text-amber-800">
+                {String(averageRating)}
+              </span>
             </div>
           )}
         </div>
@@ -124,10 +165,14 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 truncate">{ownerName}</p>
+            <p className="text-sm font-medium text-slate-900 truncate">
+              {ownerName}
+            </p>
             <div className="flex items-center space-x-1">
               <MapPin className="h-3 w-3 text-slate-400" />
-              <span className="text-xs text-slate-500 truncate">{safeOwnerLocation}</span>
+              <span className="text-xs text-slate-500 truncate">
+                {safeOwnerLocation}
+              </span>
             </div>
           </div>
         </div>
@@ -147,19 +192,21 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
         {/* Action Buttons */}
         <div className="flex space-x-2">
           <Link to={`/gear/${gearId}`} className="flex-1">
-            <Button 
-              size="sm" 
-              disabled={(gear.status as string) !== 'available'}
+            <Button
+              size="sm"
+              disabled={(gear.status as string) !== "available"}
               className={`w-full ${
-                (gear.status as string) === 'available' 
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl" 
+                (gear.status as string) === "available"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl"
                   : "bg-slate-100 text-slate-500"
               } rounded-xl font-semibold transition-all duration-300`}
             >
-              {(gear.status as string) === 'available' ? '🚀 Închiriază' : '❌ Indisponibil'}
+              {(gear.status as string) === "available"
+                ? "🚀 Închiriază"
+                : "❌ Indisponibil"}
             </Button>
           </Link>
-          
+
           {user && (gear.owner_id as string) !== user.id && (
             <Button
               size="sm"
@@ -188,11 +235,11 @@ export const FeaturedGear: React.FC = () => {
     ownerAvatar?: string;
   }>({
     isOpen: false,
-    gearId: '',
-    ownerId: '',
-    gearName: '',
-    ownerName: '',
-    ownerAvatar: ''
+    gearId: "",
+    ownerId: "",
+    gearName: "",
+    ownerName: "",
+    ownerAvatar: "",
   });
 
   // Get first 4 items for featured section
@@ -204,12 +251,13 @@ export const FeaturedGear: React.FC = () => {
       return;
     }
 
-    const ownerName = (gear.owner as Record<string, string>)?.full_name || 'Utilizator';
-    const ownerAvatar = (gear.owner as Record<string, string>)?.avatar_url 
-      ? (gear.owner as Record<string, string>).avatar_url.startsWith('http') 
-        ? (gear.owner as Record<string, string>).avatar_url 
+    const ownerName =
+      (gear.owner as Record<string, string>)?.full_name || "Utilizator";
+    const ownerAvatar = (gear.owner as Record<string, string>)?.avatar_url
+      ? (gear.owner as Record<string, string>).avatar_url.startsWith("http")
+        ? (gear.owner as Record<string, string>).avatar_url
         : `https://wnrbxwzeshgblkfidayb.supabase.co/storage/v1/object/public/avatars/${(gear.owner as Record<string, string>).avatar_url}`
-      : '';
+      : "";
 
     setConversationModal({
       isOpen: true,
@@ -217,7 +265,7 @@ export const FeaturedGear: React.FC = () => {
       ownerId: gear.owner_id as string,
       gearName: gear.title as string,
       ownerName,
-      ownerAvatar
+      ownerAvatar,
     });
   };
 
@@ -235,7 +283,10 @@ export const FeaturedGear: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[...Array(4)].map((_, i) => (
-              <Card key={i} className="animate-pulse bg-white rounded-2xl overflow-hidden">
+              <Card
+                key={i}
+                className="animate-pulse bg-white rounded-2xl overflow-hidden"
+              >
                 <div className="h-64 bg-slate-200"></div>
                 <CardContent className="p-6">
                   <div className="h-6 bg-slate-200 rounded mb-3"></div>
@@ -259,7 +310,9 @@ export const FeaturedGear: React.FC = () => {
             <h2 className="text-4xl sm:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Echipamente populare
             </h2>
-            <p className="text-xl text-slate-600 mb-8">A apărut o eroare la încărcarea echipamentelor</p>
+            <p className="text-xl text-slate-600 mb-8">
+              A apărut o eroare la încărcarea echipamentelor
+            </p>
           </div>
         </div>
       </section>
@@ -271,7 +324,7 @@ export const FeaturedGear: React.FC = () => {
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-blob"></div>
       <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
-      
+
       <div className="container mx-auto px-4 relative">
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -287,12 +340,15 @@ export const FeaturedGear: React.FC = () => {
             <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Camera className="h-12 w-12 text-blue-600" />
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-4">Nu există echipamente încă</h3>
+            <h3 className="text-2xl font-bold text-slate-900 mb-4">
+              Nu există echipamente încă
+            </h3>
             <p className="text-slate-600 mb-8 max-w-md mx-auto">
-              Fii primul care adaugă echipament și ajută la construirea comunității!
+              Fii primul care adaugă echipament și ajută la construirea
+              comunității!
             </p>
-            <Button 
-              onClick={() => window.location.href = '/add-gear'}
+            <Button
+              onClick={() => (window.location.href = "/add-gear")}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <Camera className="h-5 w-5 mr-2" />
@@ -302,9 +358,9 @@ export const FeaturedGear: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {featuredGear.map((gear) => (
-              <FeaturedGearCard 
-                key={typeof gear.id === 'string' ? gear.id : ''} 
-                gear={gear} 
+              <FeaturedGearCard
+                key={typeof gear.id === "string" ? gear.id : ""}
+                gear={gear}
                 onStartConversation={handleStartConversation}
               />
             ))}
@@ -313,8 +369,8 @@ export const FeaturedGear: React.FC = () => {
 
         {/* View All Button */}
         <div className="text-center mt-12">
-          <Button 
-            onClick={() => window.location.href = '/browse'}
+          <Button
+            onClick={() => (window.location.href = "/browse")}
             variant="outline"
             size="lg"
             className="border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 px-8 py-3 rounded-xl font-semibold transition-all duration-300"
@@ -327,7 +383,9 @@ export const FeaturedGear: React.FC = () => {
 
       <ConversationModal
         isOpen={conversationModal.isOpen}
-        onClose={() => setConversationModal({ ...conversationModal, isOpen: false })}
+        onClose={() =>
+          setConversationModal({ ...conversationModal, isOpen: false })
+        }
         gearId={conversationModal.gearId}
         ownerId={conversationModal.ownerId}
         gearName={conversationModal.gearName}

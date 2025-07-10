@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
 export interface RateLimitConfig {
   maxRequests: number;
@@ -21,55 +21,55 @@ class RateLimitService {
 
   private initializeDefaultConfigs(): void {
     // Booking creation: 5 per hour
-    this.configs.set('booking_create', {
+    this.configs.set("booking_create", {
       maxRequests: 5,
       windowMs: 60 * 60 * 1000, // 1 hour
     });
 
     // Message sending: 20 per hour
-    this.configs.set('message_send', {
+    this.configs.set("message_send", {
       maxRequests: 20,
       windowMs: 60 * 60 * 1000, // 1 hour
     });
 
     // Gear listing: 3 per day
-    this.configs.set('gear_create', {
+    this.configs.set("gear_create", {
       maxRequests: 3,
       windowMs: 24 * 60 * 60 * 1000, // 24 hours
     });
 
     // Review submission: 10 per day
-    this.configs.set('review_submit', {
+    this.configs.set("review_submit", {
       maxRequests: 10,
       windowMs: 24 * 60 * 60 * 1000, // 24 hours
     });
 
     // Payment attempts: 10 per hour
-    this.configs.set('payment_attempt', {
+    this.configs.set("payment_attempt", {
       maxRequests: 10,
       windowMs: 60 * 60 * 1000, // 1 hour
     });
 
     // Login attempts: 5 per 15 minutes
-    this.configs.set('login_attempt', {
+    this.configs.set("login_attempt", {
       maxRequests: 5,
       windowMs: 15 * 60 * 1000, // 15 minutes
     });
 
     // API requests: 100 per hour
-    this.configs.set('api_request', {
+    this.configs.set("api_request", {
       maxRequests: 100,
       windowMs: 60 * 60 * 1000, // 1 hour
     });
 
     // Photo uploads: 20 per hour
-    this.configs.set('photo_upload', {
+    this.configs.set("photo_upload", {
       maxRequests: 20,
       windowMs: 60 * 60 * 1000, // 1 hour
     });
 
     // Claim submissions: 3 per day
-    this.configs.set('claim_submit', {
+    this.configs.set("claim_submit", {
       maxRequests: 3,
       windowMs: 24 * 60 * 60 * 1000, // 24 hours
     });
@@ -78,7 +78,7 @@ class RateLimitService {
   async checkRateLimit(
     userId: string,
     action: string,
-    customConfig?: RateLimitConfig
+    customConfig?: RateLimitConfig,
   ): Promise<RateLimitResult> {
     try {
       const config = customConfig || this.configs.get(action);
@@ -96,15 +96,15 @@ class RateLimitService {
 
       // Get current rate limit data for this user and action
       const { data: rateLimitData, error } = await supabase
-        .from('rate_limits')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('action_type', action)
-        .gte('window_start', windowStart.toISOString())
+        .from("rate_limits")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("action_type", action)
+        .gte("window_start", windowStart.toISOString())
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking rate limit:', error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Error checking rate limit:", error);
         return {
           allowed: true, // Allow on error
           remaining: -1,
@@ -126,16 +126,24 @@ class RateLimitService {
       const resetTime = windowStartTime.getTime() + config.windowMs;
 
       // Update rate limit data
-      await this.updateRateLimitData(userId, action, currentCount, windowStartTime, allowed);
+      await this.updateRateLimitData(
+        userId,
+        action,
+        currentCount,
+        windowStartTime,
+        allowed,
+      );
 
       return {
         allowed,
         remaining,
         resetTime,
-        retryAfter: allowed ? undefined : Math.ceil((resetTime - now.getTime()) / 1000),
+        retryAfter: allowed
+          ? undefined
+          : Math.ceil((resetTime - now.getTime()) / 1000),
       };
     } catch (error) {
-      console.error('Error in rate limit check:', error);
+      console.error("Error in rate limit check:", error);
       return {
         allowed: true, // Allow on error
         remaining: -1,
@@ -149,29 +157,33 @@ class RateLimitService {
     actionType: string,
     count: number,
     windowStart: Date,
-    allowed: boolean
+    allowed: boolean,
   ): Promise<void> {
     try {
-      const windowEnd = new Date(windowStart.getTime() + this.configs.get(actionType)?.windowMs || 3600000);
-      
-      const { error } = await supabase
-        .from('rate_limits')
-        .upsert({
+      const windowEnd = new Date(
+        windowStart.getTime() + this.configs.get(actionType)?.windowMs ||
+          3600000,
+      );
+
+      const { error } = await supabase.from("rate_limits").upsert(
+        {
           user_id: userId,
           action_type: actionType,
           action_count: count,
           window_start: windowStart.toISOString(),
           window_end: windowEnd.toISOString(),
           created_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,action_type'
-        });
+        },
+        {
+          onConflict: "user_id,action_type",
+        },
+      );
 
       if (error) {
-        console.error('Error updating rate limit data:', error);
+        console.error("Error updating rate limit data:", error);
       }
     } catch (error) {
-      console.error('Error updating rate limit data:', error);
+      console.error("Error updating rate limit data:", error);
     }
   }
 
@@ -188,54 +200,54 @@ class RateLimitService {
   async resetRateLimit(userId: string, action: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('rate_limits')
+        .from("rate_limits")
         .delete()
-        .eq('user_id', userId)
-        .eq('action_type', action);
+        .eq("user_id", userId)
+        .eq("action_type", action);
 
       if (error) {
-        console.error('Error resetting rate limit:', error);
+        console.error("Error resetting rate limit:", error);
       }
     } catch (error) {
-      console.error('Error resetting rate limit:', error);
+      console.error("Error resetting rate limit:", error);
     }
   }
 
   // Utility methods for common rate limit checks
   async checkBookingCreation(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'booking_create');
+    return this.checkRateLimit(userId, "booking_create");
   }
 
   async checkMessageSending(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'message_send');
+    return this.checkRateLimit(userId, "message_send");
   }
 
   async checkGearCreation(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'gear_create');
+    return this.checkRateLimit(userId, "gear_create");
   }
 
   async checkReviewSubmission(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'review_submit');
+    return this.checkRateLimit(userId, "review_submit");
   }
 
   async checkPaymentAttempt(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'payment_attempt');
+    return this.checkRateLimit(userId, "payment_attempt");
   }
 
   async checkLoginAttempt(identifier: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(identifier, 'login_attempt');
+    return this.checkRateLimit(identifier, "login_attempt");
   }
 
   async checkApiRequest(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'api_request');
+    return this.checkRateLimit(userId, "api_request");
   }
 
   async checkPhotoUpload(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'photo_upload');
+    return this.checkRateLimit(userId, "photo_upload");
   }
 
   async checkClaimSubmission(userId: string): Promise<RateLimitResult> {
-    return this.checkRateLimit(userId, 'claim_submit');
+    return this.checkRateLimit(userId, "claim_submit");
   }
 }
 
@@ -245,18 +257,22 @@ const rateLimitService = new RateLimitService();
 // Higher-order function to wrap API calls with rate limiting
 export function withRateLimit(action: string) {
   return function <T extends unknown[], R>(
-    target: (...args: T) => Promise<R>
+    target: (...args: T) => Promise<R>,
   ): (...args: T) => Promise<R> {
     return async (...args: T): Promise<R> => {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
       const result = await rateLimitService.checkRateLimit(user.id, action);
       if (!result.allowed) {
-        throw new Error(`Rate limit exceeded for ${action}. Try again in ${result.retryAfter} seconds.`);
+        throw new Error(
+          `Rate limit exceeded for ${action}. Try again in ${result.retryAfter} seconds.`,
+        );
       }
 
       return target(...args);
@@ -285,4 +301,4 @@ export const useRateLimit = (action: string) => {
   return { checkLimit, isLimited, getRemaining, reset };
 };
 
-export default rateLimitService; 
+export default rateLimitService;

@@ -1,49 +1,51 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Star, Edit, X, Check } from 'lucide-react';
-import { useUserReviews, useUpdateReview } from '@/hooks/useUserData';
-import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { format } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Star, Edit, X, Check } from "lucide-react";
+import { useUserReviews, useUpdateReview } from "@/hooks/useUserData";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { ro } from "date-fns/locale";
 
 interface ReviewManagementProps {
   className?: string;
 }
 
-export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className }) => {
+export const ReviewManagement: React.FC<ReviewManagementProps> = ({
+  className,
+}) => {
   const { user } = useAuth();
   const { data: reviews = [], isLoading } = useUserReviews();
   const { mutate: updateReview, isLoading: isUpdating } = useUpdateReview();
-  
+
   const [editingReview, setEditingReview] = useState<string | null>(null);
   const [editRating, setEditRating] = useState(0);
-  const [editComment, setEditComment] = useState('');
+  const [editComment, setEditComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
 
   const handleEdit = (review: Record<string, unknown>) => {
     setEditingReview(review.id as string);
     setEditRating(review.rating as number);
-    setEditComment(review.comment as string || '');
+    setEditComment((review.comment as string) || "");
   };
 
   const handleCancelEdit = () => {
     setEditingReview(null);
     setEditRating(0);
-    setEditComment('');
+    setEditComment("");
     setHoveredRating(0);
   };
 
   const handleSaveEdit = () => {
     if (!editingReview || editRating === 0) {
       toast({
-        title: 'Rating obligatoriu',
-        description: 'Te rugăm să dai o notă înainte de a salva.',
-        variant: 'destructive',
+        title: "Rating obligatoriu",
+        description: "Te rugăm să dai o notă înainte de a salva.",
+        variant: "destructive",
       });
       return;
     }
@@ -52,13 +54,13 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
       reviewId: editingReview,
       updates: {
         rating: editRating,
-        comment: editComment.trim() || null
-      }
+        comment: editComment.trim() || null,
+      },
     });
-    
+
     toast({
-      title: 'Recenzie actualizată!',
-      description: 'Recenzia ta a fost actualizată cu succes.',
+      title: "Recenzie actualizată!",
+      description: "Recenzia ta a fost actualizată cu succes.",
     });
     handleCancelEdit();
   };
@@ -105,7 +107,9 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Nu ai încă nicio recenzie.</p>
+              <p className="text-muted-foreground">
+                Nu ai încă nicio recenzie.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -130,11 +134,16 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback>
-                            {review.reviewed?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                            {review.reviewed?.full_name
+                              ?.split(" ")
+                              .map((n: string) => n[0])
+                              .join("") || "U"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h4 className="font-medium">{review.reviewed?.full_name || 'Utilizator'}</h4>
+                          <h4 className="font-medium">
+                            {review.reviewed?.full_name || "Utilizator"}
+                          </h4>
                           <p className="text-sm text-muted-foreground">
                             Pentru {review.gear?.title}
                           </p>
@@ -174,12 +183,12 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
                             onMouseEnter={() => setHoveredRating(star)}
                             onMouseLeave={() => setHoveredRating(0)}
                           >
-                            <Star 
+                            <Star
                               className={`h-6 w-6 ${
-                                star <= (hoveredRating || editRating) 
-                                  ? 'fill-yellow-400 text-yellow-400' 
-                                  : 'text-gray-300'
-                              }`} 
+                                star <= (hoveredRating || editRating)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
                             />
                           </button>
                         ))}
@@ -205,17 +214,22 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback>
-                            {review.reviewed?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                            {review.reviewed?.full_name
+                              ?.split(" ")
+                              .map((n: string) => n[0])
+                              .join("") || "U"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h4 className="font-medium">{review.reviewed?.full_name || 'Utilizator'}</h4>
+                          <h4 className="font-medium">
+                            {review.reviewed?.full_name || "Utilizator"}
+                          </h4>
                           <p className="text-sm text-muted-foreground">
                             Pentru {review.gear?.title}
                           </p>
                         </div>
                       </div>
-                      
+
                       {canEditReview(review) && (
                         <div className="flex space-x-2">
                           <Button
@@ -236,9 +250,9 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
                           <Star
                             key={star}
                             className={`h-4 w-4 ${
-                              star <= review.rating 
-                                ? 'fill-yellow-400 text-yellow-400' 
-                                : 'text-gray-300'
+                              star <= review.rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-gray-300"
                             }`}
                           />
                         ))}
@@ -250,12 +264,16 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
 
                     {/* Comment */}
                     {review.comment && (
-                      <p className="text-sm text-gray-600 mb-2">{review.comment}</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {review.comment}
+                      </p>
                     )}
 
                     {/* Date */}
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(review.created_at), 'dd MMMM yyyy', { locale: ro })}
+                      {format(new Date(review.created_at), "dd MMMM yyyy", {
+                        locale: ro,
+                      })}
                     </p>
                   </div>
                 )}
@@ -266,4 +284,4 @@ export const ReviewManagement: React.FC<ReviewManagementProps> = ({ className })
       </Card>
     </div>
   );
-}; 
+};

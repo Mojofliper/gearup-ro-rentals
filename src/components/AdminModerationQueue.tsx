@@ -1,30 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Eye,
   Clock,
   User,
   Package,
   MessageSquare,
-  Flag
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+  Flag,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ModerationItem {
   id: string;
-  type: 'gear' | 'review' | 'message' | 'user';
-  status: 'pending' | 'approved' | 'rejected';
+  type: "gear" | "review" | "message" | "user";
+  status: "pending" | "approved" | "rejected";
   reason?: string;
   reported_by?: string;
   created_at: string;
@@ -38,12 +50,12 @@ interface ModerationQueueProps {
 
 export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
   isOpen,
-  onClose
+  onClose,
 }) => {
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<ModerationItem | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const { toast } = useToast();
 
@@ -56,19 +68,21 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
   const loadModerationQueue = async () => {
     try {
       setLoading(true);
-      
+
       // Load pending moderation items
       const { data, error } = await supabase
-        .from('moderation_queue')
-        .select(`
+        .from("moderation_queue")
+        .select(
+          `
           *,
           reported_by_user:reported_by(email, first_name, last_name)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error loading moderation queue:', error);
+        console.error("Error loading moderation queue:", error);
         toast({
           title: "Error",
           description: "Failed to load moderation queue.",
@@ -79,7 +93,7 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
 
       setItems(data || []);
     } catch (error) {
-      console.error('Error loading moderation queue:', error);
+      console.error("Error loading moderation queue:", error);
     } finally {
       setLoading(false);
     }
@@ -88,20 +102,20 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
   const handleApprove = async (item: ModerationItem) => {
     try {
       const { error } = await supabase
-        .from('moderation_queue')
+        .from("moderation_queue")
         .update({
-          status: 'approved',
+          status: "approved",
           moderated_at: new Date().toISOString(),
-          moderated_by: (await supabase.auth.getUser()).data.user?.id
+          moderated_by: (await supabase.auth.getUser()).data.user?.id,
         })
-        .eq('id', item.id);
+        .eq("id", item.id);
 
       if (error) {
         throw error;
       }
 
       // Update the item in the original table based on type
-      await updateOriginalItem(item, 'approved');
+      await updateOriginalItem(item, "approved");
 
       toast({
         title: "Item approved",
@@ -110,7 +124,7 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
 
       loadModerationQueue();
     } catch (error) {
-      console.error('Error approving item:', error);
+      console.error("Error approving item:", error);
       toast({
         title: "Error",
         description: "Failed to approve item.",
@@ -131,33 +145,33 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
 
     try {
       const { error } = await supabase
-        .from('moderation_queue')
+        .from("moderation_queue")
         .update({
-          status: 'rejected',
+          status: "rejected",
           rejection_reason: rejectionReason,
           moderated_at: new Date().toISOString(),
-          moderated_by: (await supabase.auth.getUser()).data.user?.id
+          moderated_by: (await supabase.auth.getUser()).data.user?.id,
         })
-        .eq('id', item.id);
+        .eq("id", item.id);
 
       if (error) {
         throw error;
       }
 
       // Update the item in the original table based on type
-      await updateOriginalItem(item, 'rejected');
+      await updateOriginalItem(item, "rejected");
 
       toast({
         title: "Item rejected",
         description: "The item has been rejected successfully.",
       });
 
-      setRejectionReason('');
+      setRejectionReason("");
       setShowRejectionDialog(false);
       setSelectedItem(null);
       loadModerationQueue();
     } catch (error) {
-      console.error('Error rejecting item:', error);
+      console.error("Error rejecting item:", error);
       toast({
         title: "Error",
         description: "Failed to reject item.",
@@ -166,63 +180,66 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
     }
   };
 
-  const updateOriginalItem = async (item: ModerationItem, status: 'approved' | 'rejected') => {
+  const updateOriginalItem = async (
+    item: ModerationItem,
+    status: "approved" | "rejected",
+  ) => {
     try {
       switch (item.type) {
-        case 'gear':
+        case "gear":
           await supabase
-            .from('gear')
-            .update({ 
-              status: status === 'approved' ? 'available' : 'suspended',
-              moderation_status: status
+            .from("gear")
+            .update({
+              status: status === "approved" ? "available" : "suspended",
+              moderation_status: status,
             })
-            .eq('id', item.data.gear_id);
+            .eq("id", item.data.gear_id);
           break;
 
-        case 'review':
+        case "review":
           await supabase
-            .from('reviews')
-            .update({ 
-              status: status === 'approved' ? 'published' : 'hidden',
-              moderation_status: status
+            .from("reviews")
+            .update({
+              status: status === "approved" ? "published" : "hidden",
+              moderation_status: status,
             })
-            .eq('id', item.data.review_id);
+            .eq("id", item.data.review_id);
           break;
 
-        case 'message':
+        case "message":
           await supabase
-            .from('messages')
-            .update({ 
-              status: status === 'approved' ? 'delivered' : 'blocked',
-              moderation_status: status
+            .from("messages")
+            .update({
+              status: status === "approved" ? "delivered" : "blocked",
+              moderation_status: status,
             })
-            .eq('id', item.data.message_id);
+            .eq("id", item.data.message_id);
           break;
 
-        case 'user':
+        case "user":
           await supabase
-            .from('profiles')
-            .update({ 
-              status: status === 'approved' ? 'active' : 'suspended',
-              moderation_status: status
+            .from("profiles")
+            .update({
+              status: status === "approved" ? "active" : "suspended",
+              moderation_status: status,
             })
-            .eq('id', item.data.user_id);
+            .eq("id", item.data.user_id);
           break;
       }
     } catch (error) {
-      console.error('Error updating original item:', error);
+      console.error("Error updating original item:", error);
     }
   };
 
   const getItemIcon = (type: string) => {
     switch (type) {
-      case 'gear':
+      case "gear":
         return <Package className="h-4 w-4" />;
-      case 'review':
+      case "review":
         return <MessageSquare className="h-4 w-4" />;
-      case 'message':
+      case "message":
         return <MessageSquare className="h-4 w-4" />;
-      case 'user':
+      case "user":
         return <User className="h-4 w-4" />;
       default:
         return <Flag className="h-4 w-4" />;
@@ -231,39 +248,39 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
 
   const getItemTitle = (item: ModerationItem) => {
     switch (item.type) {
-      case 'gear':
-        return `Gear: ${item.data.title || 'Untitled'}`;
-      case 'review':
-        return `Review for: ${item.data.gear_title || 'Unknown gear'}`;
-      case 'message':
+      case "gear":
+        return `Gear: ${item.data.title || "Untitled"}`;
+      case "review":
+        return `Review for: ${item.data.gear_title || "Unknown gear"}`;
+      case "message":
         return `Message in booking: ${item.data.booking_id}`;
-      case 'user':
-        return `User: ${item.data.email || 'Unknown user'}`;
+      case "user":
+        return `User: ${item.data.email || "Unknown user"}`;
       default:
-        return 'Unknown item';
+        return "Unknown item";
     }
   };
 
   const getItemDescription = (item: ModerationItem) => {
     switch (item.type) {
-      case 'gear':
-        return item.data.description || 'No description provided';
-      case 'review':
-        return item.data.comment || 'No comment provided';
-      case 'message':
-        return item.data.content || 'No content provided';
-      case 'user':
-        return `Reported for: ${item.reason || 'No reason provided'}`;
+      case "gear":
+        return item.data.description || "No description provided";
+      case "review":
+        return item.data.comment || "No comment provided";
+      case "message":
+        return item.data.content || "No content provided";
+      case "user":
+        return `Reported for: ${item.reason || "No reason provided"}`;
       default:
-        return 'No description available';
+        return "No description available";
     }
   };
 
   const groupedItems = {
-    gear: items.filter(item => item.type === 'gear'),
-    reviews: items.filter(item => item.type === 'review'),
-    messages: items.filter(item => item.type === 'message'),
-    users: items.filter(item => item.type === 'user')
+    gear: items.filter((item) => item.type === "gear"),
+    reviews: items.filter((item) => item.type === "review"),
+    messages: items.filter((item) => item.type === "message"),
+    users: items.filter((item) => item.type === "user"),
   };
 
   return (
@@ -286,9 +303,7 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
         ) : (
           <Tabs defaultValue="all" className="space-y-4">
             <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="all">
-                All ({items.length})
-              </TabsTrigger>
+              <TabsTrigger value="all">All ({items.length})</TabsTrigger>
               <TabsTrigger value="gear">
                 Gear ({groupedItems.gear.length})
               </TabsTrigger>
@@ -436,7 +451,10 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
         )}
 
         {/* Rejection Dialog */}
-        <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+        <Dialog
+          open={showRejectionDialog}
+          onOpenChange={setShowRejectionDialog}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Reject Item</DialogTitle>
@@ -457,7 +475,7 @@ export const AdminModerationQueue: React.FC<ModerationQueueProps> = ({
                   onClick={() => {
                     setShowRejectionDialog(false);
                     setSelectedItem(null);
-                    setRejectionReason('');
+                    setRejectionReason("");
                   }}
                 >
                   Cancel
@@ -488,7 +506,7 @@ const ModerationItemCard: React.FC<ModerationItemCardProps> = ({
   item,
   onApprove,
   onReject,
-  onView
+  onView,
 }) => {
   return (
     <Card>
@@ -504,9 +522,7 @@ const ModerationItemCard: React.FC<ModerationItemCardProps> = ({
             {new Date(item.created_at).toLocaleDateString()}
           </div>
         </div>
-        <CardDescription>
-          {getItemDescription(item)}
-        </CardDescription>
+        <CardDescription>{getItemDescription(item)}</CardDescription>
         {item.reason && (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
@@ -534,4 +550,4 @@ const ModerationItemCard: React.FC<ModerationItemCardProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

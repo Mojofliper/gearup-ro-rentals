@@ -11,21 +11,25 @@ This guide provides solutions for common issues users may encounter while using 
 ### 1. Login Problems
 
 #### "Invalid email or password"
+
 **Problem**: Unable to log in with correct credentials
 
 **Causes**:
+
 - Typo in email or password
 - Account not verified
 - Account suspended
 - Browser cache issues
 
 **Solutions**:
+
 1. **Check Credentials**:
    - Verify email spelling
    - Ensure caps lock is off
    - Check for extra spaces
 
 2. **Reset Password**:
+
    ```
    1. Click "Forgot Password"
    2. Enter your email address
@@ -34,6 +38,7 @@ This guide provides solutions for common issues users may encounter while using 
    ```
 
 3. **Clear Browser Cache**:
+
    ```
    Chrome: Ctrl+Shift+Delete
    Firefox: Ctrl+Shift+Delete
@@ -45,14 +50,17 @@ This guide provides solutions for common issues users may encounter while using 
    - Try different browser entirely
 
 #### "Account not verified"
+
 **Problem**: Email verification required
 
 **Solutions**:
+
 1. **Check Email**:
    - Look in spam/junk folder
    - Check email address is correct
 
 2. **Resend Verification**:
+
    ```
    1. Go to login page
    2. Click "Resend verification email"
@@ -66,9 +74,11 @@ This guide provides solutions for common issues users may encounter while using 
 ### 2. Registration Issues
 
 #### "Email already exists"
+
 **Problem**: Cannot register with existing email
 
 **Solutions**:
+
 1. **Try Login Instead**:
    - Use existing account login
    - Reset password if needed
@@ -78,9 +88,11 @@ This guide provides solutions for common issues users may encounter while using 
    - Update email later in profile
 
 #### "Weak password"
+
 **Problem**: Password doesn't meet requirements
 
 **Password Requirements**:
+
 - Minimum 8 characters
 - At least one uppercase letter
 - At least one lowercase letter
@@ -88,6 +100,7 @@ This guide provides solutions for common issues users may encounter while using 
 - At least one special character
 
 **Example Strong Password**:
+
 ```
 GearUp2024!
 ```
@@ -99,26 +112,31 @@ GearUp2024!
 ### 1. Page Loading Problems
 
 #### "Page not loading"
+
 **Problem**: Website won't load or loads slowly
 
 **Causes**:
+
 - Internet connection issues
 - Browser problems
 - Server maintenance
 - DNS issues
 
 **Solutions**:
+
 1. **Check Internet Connection**:
    - Test other websites
    - Restart router if needed
 
 2. **Refresh Page**:
+
    ```
    F5 or Ctrl+R (Windows)
    Cmd+R (Mac)
    ```
 
 3. **Clear Browser Data**:
+
    ```
    1. Open browser settings
    2. Clear browsing data
@@ -135,10 +153,13 @@ GearUp2024!
    - Check for maintenance
 
 #### "White screen"
+
 **Problem**: Page loads but shows blank screen
 
 **Solutions**:
+
 1. **Hard Refresh**:
+
    ```
    Ctrl+Shift+R (Windows)
    Cmd+Shift+R (Mac)
@@ -156,19 +177,22 @@ GearUp2024!
 ### 2. Mobile App Issues
 
 #### "App crashes"
+
 **Problem**: Mobile app closes unexpectedly
 
 **Solutions**:
+
 1. **Restart App**:
    - Close app completely
    - Reopen from app drawer
 
 2. **Clear App Data**:
+
    ```
    Android:
    1. Settings > Apps > GearUp
    2. Storage > Clear Data
-   
+
    iOS:
    1. Settings > General > iPhone Storage
    2. Find GearUp > Offload App
@@ -183,9 +207,11 @@ GearUp2024!
    - Download fresh copy
 
 #### "Slow performance"
+
 **Problem**: App runs slowly or freezes
 
 **Solutions**:
+
 1. **Close Other Apps**:
    - Free up device memory
    - Close background apps
@@ -205,15 +231,18 @@ GearUp2024!
 ### 1. Payment Processing
 
 #### "Payment failed"
+
 **Problem**: Payment declined or failed
 
 **Causes**:
+
 - Insufficient funds
 - Card expired
 - Bank declined transaction
 - Incorrect card details
 
 **Solutions**:
+
 1. **Check Card Details**:
    - Verify card number
    - Check expiry date
@@ -234,9 +263,11 @@ GearUp2024!
    - Check currency (RON)
 
 #### "Payment pending"
+
 **Problem**: Payment shows as pending
 
 **Solutions**:
+
 1. **Wait for Processing**:
    - Payments can take 1-2 hours
    - Check bank statement
@@ -252,9 +283,11 @@ GearUp2024!
 ### 2. Refund Issues
 
 #### "Refund not received"
+
 **Problem**: Deposit not refunded after rental
 
 **Solutions**:
+
 1. **Check Timeline**:
    - Refunds take 3-5 business days
    - Weekends/holidays excluded
@@ -278,15 +311,18 @@ GearUp2024!
 ### 1. Upload Problems
 
 #### "Photo won't upload"
+
 **Problem**: Images fail to upload
 
 **Causes**:
+
 - File too large
 - Wrong format
 - Network issues
 - Browser problems
 
 **Solutions**:
+
 1. **Check File Size**:
    - Maximum 10MB per photo
    - Compress large images
@@ -296,6 +332,7 @@ GearUp2024!
    - Convert if needed
 
 3. **Compress Images**:
+
    ```
    Online tools:
    - TinyPNG.com
@@ -308,9 +345,11 @@ GearUp2024!
    - Try different browser
 
 #### "Upload stuck"
+
 **Problem**: Upload progress bar stops
 
 **Solutions**:
+
 1. **Wait Longer**:
    - Large files take time
    - Don't close browser
@@ -326,9 +365,11 @@ GearUp2024!
 ### 2. Photo Quality Issues
 
 #### "Photos look blurry"
+
 **Problem**: Uploaded photos are low quality
 
 **Solutions**:
+
 1. **Check Original Quality**:
    - Use high-resolution photos
    - Minimum 800x600 pixels
@@ -348,14 +389,17 @@ GearUp2024!
 ### 1. Message Problems
 
 #### "Can't send message"
+
 **Problem**: Unable to send messages
 
 **Causes**:
+
 - Booking not confirmed
 - User blocked
 - System issues
 
 **Solutions**:
+
 1. **Check Booking Status**:
    - Ensure booking is confirmed
    - Wait for owner acceptance
@@ -369,9 +413,11 @@ GearUp2024!
    - Try again in few minutes
 
 #### "Messages not loading"
+
 **Problem**: Message history not appearing
 
 **Solutions**:
+
 1. **Refresh Page**:
    - Reload messaging page
    - Check internet connection
@@ -387,9 +433,11 @@ GearUp2024!
 ### 2. Notification Issues
 
 #### "No message notifications"
+
 **Problem**: Not receiving message alerts
 
 **Solutions**:
+
 1. **Check Browser Settings**:
    - Enable notifications
    - Allow pop-ups
@@ -409,15 +457,18 @@ GearUp2024!
 ### 1. Booking Problems
 
 #### "Can't create booking"
+
 **Problem**: Unable to submit booking request
 
 **Causes**:
+
 - Equipment not available
 - Invalid dates
 - Payment issues
 - Account problems
 
 **Solutions**:
+
 1. **Check Availability**:
    - Verify equipment available
    - Check calendar dates
@@ -432,9 +483,11 @@ GearUp2024!
    - Complete profile information
 
 #### "Booking not confirmed"
+
 **Problem**: Owner hasn't responded to booking
 
 **Solutions**:
+
 1. **Wait for Response**:
    - Owners have 24 hours
    - Check message center
@@ -454,9 +507,11 @@ GearUp2024!
 ### 2. Cancellation Issues
 
 #### "Can't cancel booking"
+
 **Problem**: Unable to cancel confirmed booking
 
 **Solutions**:
+
 1. **Check Cancellation Policy**:
    - Review cancellation terms
    - Check time restrictions
@@ -470,9 +525,11 @@ GearUp2024!
    - Include booking reference
 
 #### "Cancellation fee charged"
+
 **Problem**: Unexpected cancellation fee
 
 **Solutions**:
+
 1. **Review Policy**:
    - Check cancellation terms
    - Understand fee structure
@@ -488,9 +545,11 @@ GearUp2024!
 ### 1. Search Problems
 
 #### "Search not working"
+
 **Problem**: Search results not appearing
 
 **Solutions**:
+
 1. **Check Search Terms**:
    - Use specific keywords
    - Try different terms
@@ -504,9 +563,11 @@ GearUp2024!
    - Try different location
 
 #### "No results found"
+
 **Problem**: Search returns no equipment
 
 **Solutions**:
+
 1. **Broaden Search**:
    - Use fewer keywords
    - Try different categories
@@ -523,9 +584,11 @@ GearUp2024!
 ### 2. Filter Issues
 
 #### "Filters not working"
+
 **Problem**: Filter options not functioning
 
 **Solutions**:
+
 1. **Refresh Page**:
    - Reload search page
    - Clear browser cache
@@ -545,9 +608,11 @@ GearUp2024!
 ### 1. Mobile Display Issues
 
 #### "Page looks wrong on mobile"
+
 **Problem**: Website not displaying properly on mobile
 
 **Solutions**:
+
 1. **Rotate Device**:
    - Try landscape mode
    - Check both orientations
@@ -561,9 +626,11 @@ GearUp2024!
    - Better mobile experience
 
 #### "Buttons too small"
+
 **Problem**: Touch targets too small on mobile
 
 **Solutions**:
+
 1. **Zoom In**:
    - Pinch to zoom in
    - Make buttons larger
@@ -583,9 +650,11 @@ GearUp2024!
 ### 1. Common Error Messages
 
 #### "Something went wrong"
+
 **Problem**: Generic error message
 
 **Solutions**:
+
 1. **Refresh Page**:
    - Reload current page
    - Try again
@@ -599,9 +668,11 @@ GearUp2024!
    - Remove cookies
 
 #### "Network error"
+
 **Problem**: Connection problems
 
 **Solutions**:
+
 1. **Check WiFi**:
    - Verify internet connection
    - Try mobile data
@@ -615,9 +686,11 @@ GearUp2024!
    - Try again later
 
 #### "Session expired"
+
 **Problem**: Login session ended
 
 **Solutions**:
+
 1. **Login Again**:
    - Re-enter credentials
    - Check "Remember me"
@@ -633,7 +706,9 @@ GearUp2024!
 ### 2. Technical Error Codes
 
 #### Error 404 - "Page not found"
+
 **Solutions**:
+
 1. **Check URL**:
    - Verify correct address
    - Remove typos
@@ -647,7 +722,9 @@ GearUp2024!
    - Include error details
 
 #### Error 500 - "Server error"
+
 **Solutions**:
+
 1. **Try Again**:
    - Wait few minutes
    - Retry action
@@ -667,12 +744,14 @@ GearUp2024!
 ### 1. Self-Service Options
 
 #### Help Resources
+
 - **FAQ Section**: Common questions
 - **Video Tutorials**: Step-by-step guides
 - **Help Articles**: Detailed documentation
 - **Community Forum**: User discussions
 
 #### Before Contacting Support
+
 1. **Check This Guide**: Look for your issue
 2. **Search FAQ**: Common solutions
 3. **Try Solutions**: Follow troubleshooting steps
@@ -681,12 +760,14 @@ GearUp2024!
 ### 2. Contacting Support
 
 #### Support Channels
+
 - **Email**: support@gearup.ro
 - **Live Chat**: In-app chat support
 - **Phone**: +40 XXX XXX XXX (future)
 - **Response Time**: Within 24 hours
 
 #### Information to Provide
+
 - **User ID**: Your account email
 - **Error Message**: Exact error text
 - **Steps Taken**: What you tried
@@ -696,12 +777,14 @@ GearUp2024!
 ### 3. Escalation Process
 
 #### When to Escalate
+
 - **No Response**: After 48 hours
 - **Urgent Issue**: Payment or security
 - **Complex Problem**: Technical issues
 - **Repeated Problem**: Same issue persists
 
 #### Escalation Steps
+
 1. **Follow Up**: Send reminder email
 2. **Provide Details**: Include all information
 3. **Be Patient**: Allow time for response
@@ -712,22 +795,25 @@ GearUp2024!
 ## 📋 Quick Reference
 
 ### Common Solutions
-| Problem | Quick Fix |
-|---------|-----------|
-| Can't login | Reset password, clear cache |
-| Payment failed | Check card, try different card |
-| Photos won't upload | Compress images, check format |
-| Messages not sending | Check booking status, refresh |
-| Search no results | Clear filters, try different terms |
-| Page not loading | Refresh, check internet |
+
+| Problem              | Quick Fix                          |
+| -------------------- | ---------------------------------- |
+| Can't login          | Reset password, clear cache        |
+| Payment failed       | Check card, try different card     |
+| Photos won't upload  | Compress images, check format      |
+| Messages not sending | Check booking status, refresh      |
+| Search no results    | Clear filters, try different terms |
+| Page not loading     | Refresh, check internet            |
 
 ### Contact Information
+
 - **General Support**: support@gearup.ro
 - **Payment Issues**: payments@gearup.ro
 - **Technical Problems**: tech@gearup.ro
 - **Emergency**: +40 XXX XXX XXX
 
 ### Response Times
+
 - **Email**: 24 hours
 - **Live Chat**: Immediate
 - **Urgent Issues**: 4 hours
@@ -735,4 +821,4 @@ GearUp2024!
 
 ---
 
-This comprehensive troubleshooting guide helps users resolve common issues and get back to using the GearUp platform quickly and efficiently. 
+This comprehensive troubleshooting guide helps users resolve common issues and get back to using the GearUp platform quickly and efficiently.

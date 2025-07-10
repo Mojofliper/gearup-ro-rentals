@@ -28,11 +28,13 @@ class ErrorReportingService {
   private initialize() {
     this.reportingUrl = import.meta.env.VITE_ERROR_REPORTING_URL;
     this.apiKey = import.meta.env.VITE_ERROR_REPORTING_API_KEY;
-    
+
     this.isConfigured = !!(this.reportingUrl && this.apiKey);
-    
+
     if (!this.isConfigured) {
-      console.log('Error reporting service not configured - set VITE_ERROR_REPORTING_URL and VITE_ERROR_REPORTING_API_KEY');
+      console.log(
+        "Error reporting service not configured - set VITE_ERROR_REPORTING_URL and VITE_ERROR_REPORTING_API_KEY",
+      );
     }
   }
 
@@ -43,7 +45,7 @@ class ErrorReportingService {
 
     try {
       const errorReport: ErrorReport = {
-        message: typeof error === 'string' ? error : error.message,
+        message: typeof error === "string" ? error : error.message,
         stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString(),
         url: window.location.href,
@@ -52,16 +54,16 @@ class ErrorReportingService {
       };
 
       await fetch(this.reportingUrl!, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(errorReport),
       });
     } catch (reportingError) {
       // Don't log reporting errors to avoid infinite loops
-      console.debug('Failed to report error:', reportingError);
+      console.debug("Failed to report error:", reportingError);
     }
   }
 
@@ -80,15 +82,15 @@ class ErrorReportingService {
       };
 
       await fetch(this.reportingUrl!, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(warningReport),
       });
     } catch (reportingError) {
-      console.debug('Failed to report warning:', reportingError);
+      console.debug("Failed to report warning:", reportingError);
     }
   }
 
@@ -101,34 +103,40 @@ class ErrorReportingService {
 export const errorReporting = ErrorReportingService.getInstance();
 
 // Utility function to report errors
-export const reportError = (error: Error | string, context?: Record<string, unknown>) => {
+export const reportError = (
+  error: Error | string,
+  context?: Record<string, unknown>,
+) => {
   errorReporting.reportError(error, context);
 };
 
 // Utility function to report warnings
-export const reportWarning = (message: string, context?: Record<string, unknown>) => {
+export const reportWarning = (
+  message: string,
+  context?: Record<string, unknown>,
+) => {
   errorReporting.reportWarning(message, context);
 };
 
 // Global error handler
 export const setupGlobalErrorHandler = () => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   // Handle unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
+  window.addEventListener("unhandledrejection", (event) => {
     reportError(new Error(`Unhandled Promise Rejection: ${event.reason}`), {
-      type: 'unhandledrejection',
+      type: "unhandledrejection",
       reason: event.reason,
     });
   });
 
   // Handle global errors
-  window.addEventListener('error', (event) => {
+  window.addEventListener("error", (event) => {
     reportError(event.error || new Error(event.message), {
-      type: 'global',
+      type: "global",
       filename: event.filename,
       lineno: event.lineno,
       colno: event.colno,
     });
   });
-}; 
+};

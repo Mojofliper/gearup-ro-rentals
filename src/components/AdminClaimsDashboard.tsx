@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { useNotifications } from '@/hooks/useNotifications';
+import React, { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface Claim {
   id: string;
@@ -22,7 +22,10 @@ export const AdminClaimsDashboard: React.FC = () => {
   const [claims, setClaims] = useState<Claim[]>([]);
 
   const fetchClaims = async () => {
-    const { data, error } = await supabase.from('claims').select('*').eq('claim_status', 'pending');
+    const { data, error } = await supabase
+      .from("claims")
+      .select("*")
+      .eq("claim_status", "pending");
     if (error) console.error(error);
     else setClaims(data || []);
   };
@@ -33,76 +36,86 @@ export const AdminClaimsDashboard: React.FC = () => {
 
   const handleDecision = async (claimId: string, approve: boolean) => {
     const { error } = await supabase
-      .from('claims')
-      .update({ claim_status: approve ? 'approved' : 'rejected' })
-      .eq('id', claimId);
+      .from("claims")
+      .update({ claim_status: approve ? "approved" : "rejected" })
+      .eq("id", claimId);
     if (error) {
-      toast.error('Eroare la actualizarea revendicării');
+      toast.error("Eroare la actualizarea revendicării");
       console.error(error);
       return;
     }
 
     // Send notification about claim resolution
     try {
-      const claim = claims.find(c => c.id === claimId);
+      const claim = claims.find((c) => c.id === claimId);
       if (claim) {
         await notifyClaimResolved(
           claim.booking_id,
-          approve ? 'approved' : 'rejected',
-          approve ? 'Reclamarea a fost aprobată' : 'Reclamarea a fost respinsă'
+          approve ? "approved" : "rejected",
+          approve ? "Reclamarea a fost aprobată" : "Reclamarea a fost respinsă",
         );
       }
     } catch (notificationError) {
-      console.error('Error sending claim resolution notification:', notificationError);
+      console.error(
+        "Error sending claim resolution notification:",
+        notificationError,
+      );
     }
 
     // Broadcast status change
-    await fetch('/functions/v1/claim-status-broadcast', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ booking_id: claims.find(c => c.id === claimId)?.booking_id, claim_status: approve ? 'approved' : 'rejected' }),
+    await fetch("/functions/v1/claim-status-broadcast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        booking_id: claims.find((c) => c.id === claimId)?.booking_id,
+        claim_status: approve ? "approved" : "rejected",
+      }),
     });
 
     // Only trigger escrow release if claim is APPROVED
     if (approve) {
       try {
-        const claim = claims.find(c => c.id === claimId);
+        const claim = claims.find((c) => c.id === claimId);
         if (claim) {
           const bookingId = claim.booking_id;
-          
+
           // Get the booking to determine who filed the claim
           const { data: bookingData } = await supabase
-            .from('bookings')
-            .select('owner_id, renter_id')
-            .eq('id', bookingId)
+            .from("bookings")
+            .select("owner_id, renter_id")
+            .eq("id", bookingId)
             .single();
 
           if (bookingData) {
             // Determine who filed the claim by checking claimant_id against owner_id and renter_id
             const isOwnerClaim = claim.claimant_id === bookingData.owner_id;
             const isRenterClaim = claim.claimant_id === bookingData.renter_id;
-            
+
             // Determine the correct release type based on who filed the claim
             let releaseType: string;
-            
+
             if (isOwnerClaim) {
               // Owner filed the claim and it was approved
-              releaseType = 'claim_owner';
+              releaseType = "claim_owner";
             } else if (isRenterClaim) {
               // Renter filed the claim and it was approved
-              releaseType = 'claim_renter_approved';
+              releaseType = "claim_renter_approved";
             } else {
               // Fallback: use the old logic if claimant_id doesn't match either
-              console.warn('Claimant ID does not match owner or renter ID, using fallback logic');
-              releaseType = 'claim_owner';
+              console.warn(
+                "Claimant ID does not match owner or renter ID, using fallback logic",
+              );
+              releaseType = "claim_owner";
             }
 
-            console.log(`Claim approved: ${isOwnerClaim ? 'Owner' : isRenterClaim ? 'Renter' : 'Unknown'} filed claim, Release type: ${releaseType}`);
+            console.log(
+              `Claim approved: ${isOwnerClaim ? "Owner" : isRenterClaim ? "Renter" : "Unknown"} filed claim, Release type: ${releaseType}`,
+            );
 
             // Trigger escrow release accordingly
-            await fetch('/functions/v1/escrow-release', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+            await fetch("/functions/v1/escrow-release", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 booking_id: bookingId,
                 release_type: releaseType,
@@ -111,13 +124,13 @@ export const AdminClaimsDashboard: React.FC = () => {
           }
         }
       } catch (escrowError) {
-        console.error('Error determining claim release type:', escrowError);
-        toast.error('Eroare la determinarea tipului de eliberare');
+        console.error("Error determining claim release type:", escrowError);
+        toast.error("Eroare la determinarea tipului de eliberare");
       }
     }
     // If claim is rejected, no escrow release - funds stay in escrow for normal rental flow
 
-    toast.success('Status revendicare actualizat');
+    toast.success("Status revendicare actualizat");
     fetchClaims();
   };
 
@@ -133,11 +146,18 @@ export const AdminClaimsDashboard: React.FC = () => {
             <img key={url} src={url} alt="evidence" className="h-32 mb-2" />
           ))}
           <div className="flex gap-2">
-            <Button onClick={() => handleDecision(claim.id, true)}>Approve</Button>
-            <Button variant="outline" onClick={() => handleDecision(claim.id, false)}>Reject</Button>
+            <Button onClick={() => handleDecision(claim.id, true)}>
+              Approve
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleDecision(claim.id, false)}
+            >
+              Reject
+            </Button>
           </div>
         </div>
       ))}
     </div>
   );
-}; 
+};

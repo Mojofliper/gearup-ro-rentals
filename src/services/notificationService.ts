@@ -1,29 +1,34 @@
-import { supabase } from '@/integrations/supabase/client';
-import { PushNotificationService } from './pushNotificationService';
+import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
+import { PushNotificationService } from "./pushNotificationService";
 
 // Create a service role client for notifications
 const createServiceRoleClient = () => {
   const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
-    console.error('VITE_SUPABASE_SERVICE_ROLE_KEY not found in environment variables');
+    console.error(
+      "VITE_SUPABASE_SERVICE_ROLE_KEY not found in environment variables",
+    );
     return null;
   }
-  
-  const { createClient } = require('@supabase/supabase-js');
-  return createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
+
+  return createClient(import.meta.env.VITE_SUPABASE_URL, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 };
 
 export interface NotificationData {
-  type: 'booking' | 'payment' | 'message' | 'claim' | 'gear' | 'system' | 'review';
+  type:
+    | "booking"
+    | "payment"
+    | "message"
+    | "claim"
+    | "gear"
+    | "system"
+    | "review";
   bookingId?: string;
   gearId?: string;
   amount?: number;
@@ -35,6 +40,7 @@ export interface NotificationData {
 
 class NotificationService {
   private pushService: PushNotificationService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private serviceRoleClient: any;
 
   constructor() {
@@ -43,146 +49,208 @@ class NotificationService {
   }
 
   // Booking notifications
-  async notifyBookingCreated(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+  async notifyBookingCreated(
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Rezervare nouă',
+      title: "Rezervare nouă",
       body: `Ai o rezervare nouă pentru "${gearTitle}"`,
-      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+      data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
 
     await this.sendToUser(ownerId, notification);
   }
 
-  async notifyBookingConfirmed(bookingId: string, gearTitle: string, renterId: string) {
+  async notifyBookingConfirmed(
+    bookingId: string,
+    gearTitle: string,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Rezervare confirmată',
+      title: "Rezervare confirmată",
       body: `Rezervarea pentru "${gearTitle}" a fost confirmată`,
-      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+      data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
 
     await this.sendToUser(renterId, notification);
   }
 
-  async notifyBookingConfirmedOwner(bookingId: string, gearTitle: string, ownerId: string) {
+  async notifyBookingConfirmedOwner(
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string,
+  ) {
     const notification = {
-      title: 'Rezervare confirmată',
+      title: "Rezervare confirmată",
       body: `Rezervarea pentru "${gearTitle}" a fost confirmată de către chiriaș.`,
-      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+      data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
     await this.sendToUser(ownerId, notification);
   }
 
-  async notifyBookingCancelled(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+  async notifyBookingCancelled(
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Rezervare anulată',
+      title: "Rezervare anulată",
       body: `Rezervarea pentru "${gearTitle}" a fost anulată`,
-      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+      data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
 
     await Promise.all([
       this.sendToUser(ownerId, notification),
-      this.sendToUser(renterId, notification)
+      this.sendToUser(renterId, notification),
     ]);
   }
 
   // Payment notifications
-  async notifyPaymentReceived(bookingId: string, amount: number, ownerId: string) {
+  async notifyPaymentReceived(
+    bookingId: string,
+    amount: number,
+    ownerId: string,
+  ) {
     const notification = {
-      title: 'Plată primită',
+      title: "Plată primită",
       body: `Ai primit o plată de ${amount} RON pentru închiriere`,
-      data: { type: 'payment', bookingId, amount } as NotificationData
+      data: { type: "payment", bookingId, amount } as NotificationData,
     };
 
     await this.sendToUser(ownerId, notification);
   }
 
-  async notifyPaymentCompleted(bookingId: string, amount: number, renterId: string) {
+  async notifyPaymentCompleted(
+    bookingId: string,
+    amount: number,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Plată finalizată',
+      title: "Plată finalizată",
       body: `Plata de ${amount} RON pentru închiriere a fost finalizată cu succes`,
-      data: { type: 'payment', bookingId, amount } as NotificationData
+      data: { type: "payment", bookingId, amount } as NotificationData,
     };
 
     await this.sendToUser(renterId, notification);
   }
 
-  async notifyEscrowReleased(bookingId: string, amount: number, ownerId: string) {
+  async notifyEscrowReleased(
+    bookingId: string,
+    amount: number,
+    ownerId: string,
+  ) {
     const notification = {
-      title: 'Fonduri eliberate din escrow',
+      title: "Fonduri eliberate din escrow",
       body: `Fondurile de ${amount} RON au fost eliberate din escrow`,
-      data: { type: 'payment', bookingId, amount } as NotificationData
+      data: { type: "payment", bookingId, amount } as NotificationData,
     };
 
     await this.sendToUser(ownerId, notification);
   }
 
   // Message notifications
-  async notifyNewMessage(bookingId: string, senderName: string, recipientId: string) {
+  async notifyNewMessage(
+    bookingId: string,
+    senderName: string,
+    recipientId: string,
+  ) {
     const notification = {
-      title: 'Mesaj nou',
+      title: "Mesaj nou",
       body: `Ai primit un mesaj nou de la ${senderName}`,
-      data: { type: 'message', bookingId, senderName } as NotificationData
+      data: { type: "message", bookingId, senderName } as NotificationData,
     };
 
     await this.sendToUser(recipientId, notification);
   }
 
   // Claim notifications
-  async notifyClaimSubmitted(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+  async notifyClaimSubmitted(
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Reclamare depusă',
+      title: "Reclamare depusă",
       body: `O reclamare a fost depusă pentru "${gearTitle}"`,
-      data: { type: 'claim', bookingId, gearTitle } as NotificationData
+      data: { type: "claim", bookingId, gearTitle } as NotificationData,
     };
 
     await Promise.all([
       this.sendToUser(ownerId, notification),
-      this.sendToUser(renterId, notification)
+      this.sendToUser(renterId, notification),
     ]);
   }
 
-  async notifyClaimUpdated(bookingId: string, gearTitle: string, status: string, claimantId: string) {
+  async notifyClaimUpdated(
+    bookingId: string,
+    gearTitle: string,
+    status: string,
+    claimantId: string,
+  ) {
     const notification = {
-      title: 'Reclamare actualizată',
+      title: "Reclamare actualizată",
       body: `Reclamarea pentru "${gearTitle}" a fost ${status}`,
-      data: { type: 'claim', bookingId, gearTitle, action: status } as NotificationData
+      data: {
+        type: "claim",
+        bookingId,
+        gearTitle,
+        action: status,
+      } as NotificationData,
     };
 
     await this.sendToUser(claimantId, notification);
   }
 
-  async notifyClaimResolved(bookingId: string, status: string, resolution: string) {
+  async notifyClaimResolved(
+    bookingId: string,
+    status: string,
+    resolution: string,
+  ) {
     const notification = {
-      title: status === 'approved' ? 'Reclamare aprobată' : 'Reclamare respinsă',
-      body: `Reclamarea a fost ${status === 'approved' ? 'aprobată' : 'respină'}. ${resolution}`,
-      data: { type: 'claim', bookingId, action: status, resolution } as NotificationData
+      title:
+        status === "approved" ? "Reclamare aprobată" : "Reclamare respinsă",
+      body: `Reclamarea a fost ${status === "approved" ? "aprobată" : "respină"}. ${resolution}`,
+      data: {
+        type: "claim",
+        bookingId,
+        action: status,
+        resolution,
+      } as NotificationData,
     };
 
     // Get booking details to notify both parties
     try {
       const { data: booking } = await supabase
-        .from('bookings')
-        .select('owner_id, renter_id')
-        .eq('id', bookingId)
+        .from("bookings")
+        .select("owner_id, renter_id")
+        .eq("id", bookingId)
         .single();
 
       if (booking) {
         await Promise.all([
           this.sendToUser(booking.owner_id, notification),
-          this.sendToUser(booking.renter_id, notification)
+          this.sendToUser(booking.renter_id, notification),
         ]);
       }
     } catch (error) {
-      console.error('Error getting booking details for claim resolution notification:', error);
+      console.error(
+        "Error getting booking details for claim resolution notification:",
+        error,
+      );
     }
   }
 
   // Gear notifications
   async notifyGearAdded(gearId: string, gearTitle: string, ownerId: string) {
     const notification = {
-      title: 'Echipament adăugat',
+      title: "Echipament adăugat",
       body: `Echipamentul "${gearTitle}" a fost adăugat cu succes`,
-      data: { type: 'gear', gearId, gearTitle } as NotificationData
+      data: { type: "gear", gearId, gearTitle } as NotificationData,
     };
 
     await this.sendToUser(ownerId, notification);
@@ -190,9 +258,9 @@ class NotificationService {
 
   async notifyGearUpdated(gearId: string, gearTitle: string, ownerId: string) {
     const notification = {
-      title: 'Echipament actualizat',
+      title: "Echipament actualizat",
       body: `Echipamentul "${gearTitle}" a fost actualizat`,
-      data: { type: 'gear', gearId, gearTitle } as NotificationData
+      data: { type: "gear", gearId, gearTitle } as NotificationData,
     };
 
     await this.sendToUser(ownerId, notification);
@@ -200,78 +268,122 @@ class NotificationService {
 
   async notifyGearDeleted(gearTitle: string, ownerId: string) {
     const notification = {
-      title: 'Echipament șters',
+      title: "Echipament șters",
       body: `Echipamentul "${gearTitle}" a fost șters`,
-      data: { type: 'gear', gearTitle } as NotificationData
+      data: { type: "gear", gearTitle } as NotificationData,
     };
 
     await this.sendToUser(ownerId, notification);
   }
 
   // Pickup/Return notifications
-  async notifyPickupLocationSet(bookingId: string, gearTitle: string, renterId: string) {
+  async notifyPickupLocationSet(
+    bookingId: string,
+    gearTitle: string,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Locație pickup setată',
+      title: "Locație pickup setată",
       body: `Locația de pickup pentru "${gearTitle}" a fost setată`,
-      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+      data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
 
     await this.sendToUser(renterId, notification);
   }
 
-  async notifyPickupConfirmed(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+  async notifyPickupConfirmed(
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string,
+    renterId: string,
+  ) {
     const ownerNotification = {
-      title: 'Ridicare confirmată',
+      title: "Ridicare confirmată",
       body: `Ridicarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
-      data: { type: 'booking', bookingId, gearTitle, action: 'pickup_confirmed' } as NotificationData
+      data: {
+        type: "booking",
+        bookingId,
+        gearTitle,
+        action: "pickup_confirmed",
+      } as NotificationData,
     };
 
     const renterNotification = {
-      title: 'Ridicare confirmată',
+      title: "Ridicare confirmată",
       body: `Ridicarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
-      data: { type: 'booking', bookingId, gearTitle, action: 'pickup_confirmed' } as NotificationData
+      data: {
+        type: "booking",
+        bookingId,
+        gearTitle,
+        action: "pickup_confirmed",
+      } as NotificationData,
     };
 
     await Promise.all([
       this.sendToUser(ownerId, ownerNotification),
-      this.sendToUser(renterId, renterNotification)
+      this.sendToUser(renterId, renterNotification),
     ]);
   }
 
-  async notifyReturnConfirmed(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+  async notifyReturnConfirmed(
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string,
+    renterId: string,
+  ) {
     const ownerNotification = {
-      title: 'Returnare confirmată',
+      title: "Returnare confirmată",
       body: `Returnarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
-      data: { type: 'booking', bookingId, gearTitle, action: 'return_confirmed' } as NotificationData
+      data: {
+        type: "booking",
+        bookingId,
+        gearTitle,
+        action: "return_confirmed",
+      } as NotificationData,
     };
 
     const renterNotification = {
-      title: 'Returnare confirmată',
+      title: "Returnare confirmată",
       body: `Returnarea echipamentului "${gearTitle}" a fost confirmată de ambele părți`,
-      data: { type: 'booking', bookingId, gearTitle, action: 'return_confirmed' } as NotificationData
+      data: {
+        type: "booking",
+        bookingId,
+        gearTitle,
+        action: "return_confirmed",
+      } as NotificationData,
     };
 
     await Promise.all([
       this.sendToUser(ownerId, ownerNotification),
-      this.sendToUser(renterId, renterNotification)
+      this.sendToUser(renterId, renterNotification),
     ]);
   }
 
-  async notifyPickupReminder(bookingId: string, gearTitle: string, startDate: string, renterId: string) {
+  async notifyPickupReminder(
+    bookingId: string,
+    gearTitle: string,
+    startDate: string,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Reminder pickup',
+      title: "Reminder pickup",
       body: `Închirierea pentru "${gearTitle}" începe mâine`,
-      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+      data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
 
     await this.sendToUser(renterId, notification);
   }
 
-  async notifyReturnReminder(bookingId: string, gearTitle: string, endDate: string, renterId: string) {
+  async notifyReturnReminder(
+    bookingId: string,
+    gearTitle: string,
+    endDate: string,
+    renterId: string,
+  ) {
     const notification = {
-      title: 'Reminder returnare',
+      title: "Reminder returnare",
       body: `Închirierea pentru "${gearTitle}" se termină mâine`,
-      data: { type: 'booking', bookingId, gearTitle } as NotificationData
+      data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
 
     await this.sendToUser(renterId, notification);
@@ -280,11 +392,14 @@ class NotificationService {
   // System notifications
   async notifyStripeConnectSetup(userId: string, success: boolean) {
     const notification = {
-      title: success ? 'Cont de plată configurat' : 'Eroare configurare plată',
-      body: success 
-        ? 'Contul tău de plată a fost configurat cu succes'
-        : 'A apărut o eroare la configurarea contului de plată',
-      data: { type: 'system', action: success ? 'stripe_success' : 'stripe_error' } as NotificationData
+      title: success ? "Cont de plată configurat" : "Eroare configurare plată",
+      body: success
+        ? "Contul tău de plată a fost configurat cu succes"
+        : "A apărut o eroare la configurarea contului de plată",
+      data: {
+        type: "system",
+        action: success ? "stripe_success" : "stripe_error",
+      } as NotificationData,
     };
 
     await this.sendToUser(userId, notification);
@@ -292,67 +407,95 @@ class NotificationService {
 
   async notifyAccountVerified(userId: string) {
     const notification = {
-      title: 'Cont verificat',
-      body: 'Contul tău a fost verificat cu succes',
-      data: { type: 'system', action: 'account_verified' } as NotificationData
+      title: "Cont verificat",
+      body: "Contul tău a fost verificat cu succes",
+      data: { type: "system", action: "account_verified" } as NotificationData,
     };
 
     await this.sendToUser(userId, notification);
   }
 
   // Review notifications
-  async notifyReviewReceived(bookingId: string, gearTitle: string, reviewerName: string, reviewedId: string) {
+  async notifyReviewReceived(
+    bookingId: string,
+    gearTitle: string,
+    reviewerName: string,
+    reviewedId: string,
+  ) {
     const notification = {
-      title: 'Recenzie primită',
+      title: "Recenzie primită",
       body: `Ai primit o recenzie de la ${reviewerName} pentru "${gearTitle}"`,
-      data: { type: 'review', bookingId, gearTitle, reviewerName } as NotificationData
+      data: {
+        type: "review",
+        bookingId,
+        gearTitle,
+        reviewerName,
+      } as NotificationData,
     };
 
     await this.sendToUser(reviewedId, notification);
   }
 
   // Rental completion notifications
-  async notifyRentalCompleted(bookingId: string, gearTitle: string, ownerId: string, renterId: string) {
+  async notifyRentalCompleted(
+    bookingId: string,
+    gearTitle: string,
+    ownerId: string,
+    renterId: string,
+  ) {
     const ownerNotification = {
-      title: 'Închiriere finalizată',
+      title: "Închiriere finalizată",
       body: `Închirierea pentru "${gearTitle}" a fost finalizată cu succes`,
-      data: { type: 'booking', bookingId, gearTitle, action: 'completed' } as NotificationData
+      data: {
+        type: "booking",
+        bookingId,
+        gearTitle,
+        action: "completed",
+      } as NotificationData,
     };
 
     const renterNotification = {
-      title: 'Închiriere finalizată',
+      title: "Închiriere finalizată",
       body: `Închirierea pentru "${gearTitle}" a fost finalizată cu succes`,
-      data: { type: 'booking', bookingId, gearTitle, action: 'completed' } as NotificationData
+      data: {
+        type: "booking",
+        bookingId,
+        gearTitle,
+        action: "completed",
+      } as NotificationData,
     };
 
     await Promise.all([
       this.sendToUser(ownerId, ownerNotification),
-      this.sendToUser(renterId, renterNotification)
+      this.sendToUser(renterId, renterNotification),
     ]);
   }
 
   // Helper method to send notification to a user
-  private async sendToUser(userId: string, notification: { title: string; body: string; data: NotificationData }) {
+  private async sendToUser(
+    userId: string,
+    notification: { title: string; body: string; data: NotificationData },
+  ) {
     try {
       // Map notification type to database enum
       const getNotificationType = (type: string): string => {
         switch (type) {
-          case 'booking':
-            return 'booking_confirmed';
-          case 'payment':
-            return 'payment_received';
-          case 'message':
-            return 'admin_message';
-          case 'claim':
-            return 'claim_submitted';
-          case 'gear':
-            return 'admin_message';
-          case 'system':
-            return 'admin_message';
-          case 'review':
-            return 'admin_message';
+          case "booking":
+            return "booking_confirmed";
+          case "payment":
+            return "payment_received";
+          case "message":
+            return "admin_message";
+          case "claim":
+            return "claim_submitted";
+          case "gear":
+            return "admin_message";
+          case "system":
+            return "admin_message";
+          case "review":
+            return "admin_message";
           default:
-            return 'admin_message';
+            return "admin_message";
         }
       };
 
@@ -360,39 +503,40 @@ class NotificationService {
       const client = this.serviceRoleClient || supabase;
 
       // Save to database
-      const { error } = await client
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          title: notification.title,
-          message: notification.body,
-          type: getNotificationType(notification.data.type),
-          data: notification.data,
-          is_read: false
-        });
+      const { error } = await client.from("notifications").insert({
+        user_id: userId,
+        title: notification.title,
+        message: notification.body,
+        type: getNotificationType(notification.data.type),
+        data: notification.data,
+        is_read: false,
+      });
 
       if (error) {
-        console.error('Error saving notification:', error);
+        console.error("Error saving notification:", error);
         // Fallback to regular client if service role fails
         if (this.serviceRoleClient) {
-          console.log('Falling back to regular client for notification');
+          console.log("Falling back to regular client for notification");
           const { error: fallbackError } = await supabase
-            .from('notifications')
+            .from("notifications")
             .insert({
               user_id: userId,
               title: notification.title,
               message: notification.body,
               type: getNotificationType(notification.data.type),
               data: notification.data,
-              is_read: false
+              is_read: false,
             });
-          
+
           if (fallbackError) {
-            console.error('Fallback notification save also failed:', fallbackError);
+            console.error(
+              "Fallback notification save also failed:",
+              fallbackError,
+            );
           }
         }
       } else {
-        console.log('Notification saved successfully for user:', userId);
+        console.log("Notification saved successfully for user:", userId);
       }
 
       // Send push notification
@@ -400,12 +544,12 @@ class NotificationService {
         id: crypto.randomUUID(),
         title: notification.title,
         body: notification.body,
-        data: notification.data as unknown as Record<string, unknown>
+        data: notification.data as unknown as Record<string, unknown>,
       };
-      
+
       await this.pushService.sendNotificationToUser(userId, pushNotification);
     } catch (error) {
-      console.error('Error sending notification:', error);
+      console.error("Error sending notification:", error);
     }
   }
 
@@ -413,19 +557,19 @@ class NotificationService {
   async getUnreadCount(userId: string): Promise<number> {
     try {
       const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_read', false);
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("is_read", false);
 
       if (error) {
-        console.error('Error getting unread count:', error);
+        console.error("Error getting unread count:", error);
         return 0;
       }
 
       return count || 0;
     } catch (error) {
-      console.error('Error getting unread count:', error);
+      console.error("Error getting unread count:", error);
       return 0;
     }
   }
@@ -434,15 +578,15 @@ class NotificationService {
   async markAsRead(notificationId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('notifications')
+        .from("notifications")
         .update({ is_read: true })
-        .eq('id', notificationId);
+        .eq("id", notificationId);
 
       if (error) {
-        console.error('Error marking notification as read:', error);
+        console.error("Error marking notification as read:", error);
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error("Error marking notification as read:", error);
     }
   }
 
@@ -450,18 +594,18 @@ class NotificationService {
   async markAllAsRead(userId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('notifications')
+        .from("notifications")
         .update({ is_read: true })
-        .eq('user_id', userId)
-        .eq('is_read', false);
+        .eq("user_id", userId)
+        .eq("is_read", false);
 
       if (error) {
-        console.error('Error marking all notifications as read:', error);
+        console.error("Error marking all notifications as read:", error);
       }
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error("Error marking all notifications as read:", error);
     }
   }
 }
 
-export const notificationService = new NotificationService(); 
+export const notificationService = new NotificationService();

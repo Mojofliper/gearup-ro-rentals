@@ -1,14 +1,13 @@
-
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export const RentOfferToggle: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   // Determină pagina activă
-  const active = location.pathname.startsWith('/add-gear') ? 'offer' : 'rent';
+  const active = location.pathname.startsWith("/add-gear") ? "offer" : "rent";
 
   return (
     <div className="flex justify-center mb-8">
@@ -21,12 +20,14 @@ export const RentOfferToggle: React.FC = () => {
           value="rent"
           aria-label="Închiriază echipament"
           className={`rounded-full px-6 py-2 text-base font-semibold transition-all duration-300
-            ${active === 'rent'
-              ? 'bg-gradient-to-r from-blue-600 to-blue-700 !text-white shadow-md'
-              : 'text-black bg-transparent'}
+            ${
+              active === "rent"
+                ? "bg-gradient-to-r from-blue-600 to-blue-700 !text-white shadow-md"
+                : "text-black bg-transparent"
+            }
           `}
           style={{ minWidth: 170 }}
-          onClick={() => navigate('/browse')}
+          onClick={() => navigate("/browse")}
         >
           Închiriază echipament
         </ToggleGroupItem>
@@ -34,12 +35,14 @@ export const RentOfferToggle: React.FC = () => {
           value="offer"
           aria-label="Oferă spre închiriere"
           className={`rounded-full px-6 py-2 text-base font-semibold transition-all duration-300
-            ${active === 'offer'
-              ? 'bg-gradient-to-r from-blue-600 to-blue-700 !text-white shadow-md'
-              : 'text-black bg-transparent'}
+            ${
+              active === "offer"
+                ? "bg-gradient-to-r from-blue-600 to-blue-700 !text-white shadow-md"
+                : "text-black bg-transparent"
+            }
           `}
           style={{ minWidth: 170 }}
-          onClick={() => navigate('/add-gear')}
+          onClick={() => navigate("/add-gear")}
         >
           Oferă spre închiriere
         </ToggleGroupItem>

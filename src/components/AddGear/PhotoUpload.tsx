@@ -1,16 +1,18 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, X, AlertTriangle } from 'lucide-react';
-import { validateImageFile } from '@/utils/validation';
-import { toast } from '@/hooks/use-toast';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Upload, X, AlertTriangle } from "lucide-react";
+import { validateImageFile } from "@/utils/validation";
+import { toast } from "@/hooks/use-toast";
 
 interface PhotoUploadProps {
   images: string[];
   setImages: (images: string[]) => void;
 }
 
-export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, setImages }) => {
+export const PhotoUpload: React.FC<PhotoUploadProps> = ({
+  images,
+  setImages,
+}) => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -19,9 +21,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, setImages }) =
         const validationError = validateImageFile(file);
         if (validationError) {
           toast({
-            title: 'Fișier invalid',
+            title: "Fișier invalid",
             description: validationError,
-            variant: 'destructive',
+            variant: "destructive",
           });
           return;
         }
@@ -29,9 +31,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, setImages }) =
         // Check total number of images
         if (images.length >= 10) {
           toast({
-            title: 'Prea multe imagini',
-            description: 'Poți adăuga maximum 10 imagini.',
-            variant: 'destructive',
+            title: "Prea multe imagini",
+            description: "Poți adăuga maximum 10 imagini.",
+            variant: "destructive",
           });
           return;
         }
@@ -44,9 +46,10 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, setImages }) =
         };
         reader.onerror = () => {
           toast({
-            title: 'Eroare la încărcare',
-            description: 'Nu am putut încărca imaginea. Te rugăm să încerci din nou.',
-            variant: 'destructive',
+            title: "Eroare la încărcare",
+            description:
+              "Nu am putut încărca imaginea. Te rugăm să încerci din nou.",
+            variant: "destructive",
           });
         };
         reader.readAsDataURL(file);
@@ -87,11 +90,13 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, setImages }) =
                 )}
               </div>
             ))}
-            
+
             {images.length < 10 && (
               <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:bg-purple-50 bg-gradient-to-br from-purple-25 to-pink-25 transition-colors">
                 <Upload className="h-6 w-6 text-purple-500" />
-                <span className="text-xs text-purple-600 mt-1 font-medium">Adaugă foto</span>
+                <span className="text-xs text-purple-600 mt-1 font-medium">
+                  Adaugă foto
+                </span>
                 <input
                   type="file"
                   multiple
@@ -102,12 +107,14 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, setImages }) =
               </label>
             )}
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-start space-x-2">
               <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Instrucțiuni pentru fotografii:</p>
+                <p className="font-medium mb-1">
+                  Instrucțiuni pentru fotografii:
+                </p>
                 <ul className="space-y-1 text-xs">
                   <li>• Folosește doar imagini JPG, PNG sau WebP</li>
                   <li>• Dimensiunea maximă: 5MB per imagine</li>
@@ -118,10 +125,11 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ images, setImages }) =
               </div>
             </div>
           </div>
-          
+
           {images.length === 0 && (
             <p className="text-sm text-gray-600">
-              Adaugă fotografii clare ale echipamentului. Prima fotografie va fi folosită ca imagine principală.
+              Adaugă fotografii clare ale echipamentului. Prima fotografie va fi
+              folosită ca imagine principală.
             </p>
           )}
         </div>

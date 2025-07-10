@@ -1,33 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Loader2, 
-  CreditCard, 
-  CheckCircle, 
-  XCircle, 
-  Info, 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Loader2,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  Info,
   Shield,
   Banknote,
   UserCheck,
-  Settings
-} from 'lucide-react';
-import { useEscrowPayments } from '@/hooks/useEscrowPayments';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+  Settings,
+} from "lucide-react";
+import { useEscrowPayments } from "@/hooks/useEscrowPayments";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface StripeConnectOnboardingProps {
   onComplete?: () => void;
   showAsModal?: boolean;
 }
 
-export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
-  onComplete,
-  showAsModal = false
-}) => {
+export const StripeConnectOnboarding: React.FC<
+  StripeConnectOnboardingProps
+> = ({ onComplete, showAsModal = false }) => {
   const { user } = useAuth();
   const {
     loading,
@@ -35,7 +40,7 @@ export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = (
     getConnectedAccountStatus,
     setupStripeConnect,
     canReceivePayments,
-    needsOnboarding
+    needsOnboarding,
   } = useEscrowPayments();
 
   const [isChecking, setIsChecking] = useState(true);
@@ -46,12 +51,12 @@ export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = (
 
   const checkAccountStatus = async () => {
     if (!user) return;
-    
+
     setIsChecking(true);
     try {
       await getConnectedAccountStatus();
     } catch (error) {
-      console.error('Error checking account status:', error);
+      console.error("Error checking account status:", error);
     } finally {
       setIsChecking(false);
     }
@@ -59,15 +64,17 @@ export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = (
 
   const handleSetup = async () => {
     if (!user?.email) {
-      toast.error('Adresa de email este obligatorie pentru configurarea plății');
+      toast.error(
+        "Adresa de email este obligatorie pentru configurarea plății",
+      );
       return;
     }
 
     try {
-      await setupStripeConnect(user.email, 'RO');
+      await setupStripeConnect(user.email, "RO");
     } catch (error) {
-      console.error('Setup error:', error);
-      toast.error('Failed to setup payment account');
+      console.error("Setup error:", error);
+      toast.error("Failed to setup payment account");
     }
   };
 
@@ -144,14 +151,16 @@ export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = (
           Configurare cont de plată
         </CardTitle>
         <CardDescription>
-          Pentru a primi plăți pentru închirierea echipamentului, trebuie să vă configurați contul de plată.
+          Pentru a primi plăți pentru închirierea echipamentului, trebuie să vă
+          configurați contul de plată.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            Procesul de configurare este securizat și gestionat de Stripe, liderul mondial în procesarea plăților.
+            Procesul de configurare este securizat și gestionat de Stripe,
+            liderul mondial în procesarea plăților.
           </AlertDescription>
         </Alert>
 
@@ -180,37 +189,53 @@ export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = (
             <h4 className="font-medium">Status actual:</h4>
             <div className="flex justify-between text-sm">
               <span>Status cont:</span>
-              <Badge variant={connectedAccount.account_status === 'active' ? 'default' : 'secondary'}>
-                {connectedAccount.account_status === 'active' ? 'Activ' : 'În procesare'}
+              <Badge
+                variant={
+                  connectedAccount.account_status === "active"
+                    ? "default"
+                    : "secondary"
+                }
+              >
+                {connectedAccount.account_status === "active"
+                  ? "Activ"
+                  : "În procesare"}
               </Badge>
             </div>
             <div className="flex justify-between text-sm">
               <span>Plăți:</span>
-              <Badge variant={connectedAccount.charges_enabled ? 'default' : 'secondary'}>
-                {connectedAccount.charges_enabled ? 'Activate' : 'În procesare'}
+              <Badge
+                variant={
+                  connectedAccount.charges_enabled ? "default" : "secondary"
+                }
+              >
+                {connectedAccount.charges_enabled ? "Activate" : "În procesare"}
               </Badge>
             </div>
             <div className="flex justify-between text-sm">
               <span>Transferuri:</span>
-              <Badge variant={connectedAccount.payouts_enabled ? 'default' : 'secondary'}>
-                {connectedAccount.payouts_enabled ? 'Activate' : 'În procesare'}
+              <Badge
+                variant={
+                  connectedAccount.payouts_enabled ? "default" : "secondary"
+                }
+              >
+                {connectedAccount.payouts_enabled ? "Activate" : "În procesare"}
               </Badge>
             </div>
           </div>
         )}
 
         <div className="flex space-x-2">
-          <Button 
-            onClick={handleSetup} 
-            disabled={loading}
-            className="flex-1"
-          >
-            {loading ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
-            {connectedAccount ? 'Continuă configurarea' : 'Începe configurarea'}
+          <Button onClick={handleSetup} disabled={loading} className="flex-1">
+            {loading ? (
+              <Loader2 className="animate-spin mr-2" />
+            ) : (
+              <CreditCard className="mr-2" />
+            )}
+            {connectedAccount ? "Continuă configurarea" : "Începe configurarea"}
           </Button>
           {connectedAccount && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleRefresh}
               disabled={loading}
             >
@@ -220,12 +245,15 @@ export const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = (
         </div>
 
         <div className="text-xs text-muted-foreground text-center">
-          Prin continuare, sunteți de acord cu{' '}
-          <a href="#" className="underline">Termenii și Condițiile</a> Stripe.
+          Prin continuare, sunteți de acord cu{" "}
+          <a href="#" className="underline">
+            Termenii și Condițiile
+          </a>{" "}
+          Stripe.
         </div>
       </CardContent>
     </Card>
   );
 };
 
-export default StripeConnectOnboarding; 
+export default StripeConnectOnboarding;

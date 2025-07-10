@@ -5,6 +5,7 @@
 This document provides comprehensive API endpoints for the redesigned GearUp platform, supporting all planned features including escrow system, admin dashboard, photo documentation, and notifications.
 
 **✅ IMPLEMENTATION STATUS: COMPLETE**
+
 - All API endpoints are implemented in `src/services/apiService.ts`
 - React hooks available in `src/hooks/useApi.ts`
 - Full TypeScript support with proper error handling
@@ -16,6 +17,7 @@ This document provides comprehensive API endpoints for the redesigned GearUp pla
 ## 🔐 Authentication
 
 ### Base Headers
+
 ```http
 Authorization: Bearer <jwt_token>
 apikey: <supabase_anon_key>
@@ -29,11 +31,13 @@ Content-Type: application/json
 ### User Profile Management
 
 #### Get Current User Profile
+
 ```http
 GET /profiles?id=eq.{user_id}&select=*
 ```
 
 #### Update Profile (Popup)
+
 ```http
 PATCH /profiles?id=eq.{user_id}
 Content-Type: application/json
@@ -50,21 +54,25 @@ Content-Type: application/json
 ### Dashboard Data
 
 #### Get Dashboard Overview
+
 ```http
 GET /rpc/get_dashboard_overview?user_id={user_id}
 ```
 
 #### Get My Equipment (Owner)
+
 ```http
 GET /gear?owner_id=eq.{user_id}&select=*,bookings(status,renter_id,start_date,end_date),profiles!bookings!renter_id(full_name)&order=created_at.desc
 ```
 
 #### Get My Bookings (Renter)
+
 ```http
 GET /bookings?renter_id=eq.{user_id}&select=*,gear(name,gear_images),profiles!owner_id(full_name)&order=created_at.desc
 ```
 
 #### Update User Profile
+
 ```http
 PATCH /profiles?id=eq.{user_id}
 Content-Type: application/json
@@ -78,6 +86,7 @@ Content-Type: application/json
 ```
 
 #### Upload Verification Document
+
 ```http
 POST /verification_documents
 Content-Type: application/json
@@ -89,6 +98,7 @@ Content-Type: application/json
 ```
 
 #### Get User Verification Status
+
 ```http
 GET /verification_documents?user_id=eq.{user_id}&select=*
 ```
@@ -100,16 +110,19 @@ GET /verification_documents?user_id=eq.{user_id}&select=*
 ### Gear Listings
 
 #### Get All Available Gear
+
 ```http
 GET /gear?select=*,categories(name,slug),profiles!owner_id(full_name,rating)&is_available=eq.true&status=eq.active&order=created_at.desc
 ```
 
 #### Get Single Gear Item
+
 ```http
 GET /gear?id=eq.{gear_id}&select=*,categories(name,slug),profiles!owner_id(*),gear_images(*)
 ```
 
 #### Create Gear Listing
+
 ```http
 POST /gear
 Content-Type: application/json
@@ -133,6 +146,7 @@ Content-Type: application/json
 ```
 
 #### Update Gear Listing
+
 ```http
 PATCH /gear?id=eq.{gear_id}
 Content-Type: application/json
@@ -145,6 +159,7 @@ Content-Type: application/json
 ```
 
 #### Delete Gear Listing
+
 ```http
 DELETE /gear?id=eq.{gear_id}
 ```
@@ -152,6 +167,7 @@ DELETE /gear?id=eq.{gear_id}
 ### Gear Images
 
 #### Upload Gear Images
+
 ```http
 POST /gear_images
 Content-Type: application/json
@@ -166,11 +182,13 @@ Content-Type: application/json
 ```
 
 #### Get Gear Images
+
 ```http
 GET /gear_images?gear_id=eq.{gear_id}&order=sort_order.asc
 ```
 
 #### Delete Gear Image
+
 ```http
 DELETE /gear_images?id=eq.{image_id}
 ```
@@ -182,6 +200,7 @@ DELETE /gear_images?id=eq.{image_id}
 ### Booking Operations
 
 #### Create Booking
+
 ```http
 POST /bookings
 Content-Type: application/json
@@ -196,6 +215,7 @@ Content-Type: application/json
 ```
 
 #### Accept Booking & Set Pickup Location
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -208,11 +228,13 @@ Content-Type: application/json
 ```
 
 #### Get Rental Dashboard Data
+
 ```http
 GET /bookings?id=eq.{booking_id}&select=*,gear(name,gear_images),profiles!renter_id(full_name),profiles!owner_id(full_name),transactions(escrow_status,rental_amount,deposit_amount)
 ```
 
 #### Confirm Return (Renter)
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -224,6 +246,7 @@ Content-Type: application/json
 ```
 
 #### Confirm Return (Owner)
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -235,11 +258,13 @@ Content-Type: application/json
 ```
 
 #### Get User Bookings
+
 ```http
 GET /bookings?select=*,gear(name,gear_images),profiles!renter_id(full_name),profiles!owner_id(full_name)&or=(renter_id.eq.{user_id},owner_id.eq.{user_id})&order=created_at.desc
 ```
 
 #### Update Booking Status
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -250,6 +275,7 @@ Content-Type: application/json
 ```
 
 #### Cancel Booking
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -261,6 +287,7 @@ Content-Type: application/json
 ```
 
 #### Confirm Pickup
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -272,6 +299,7 @@ Content-Type: application/json
 ```
 
 #### Confirm Return
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -289,6 +317,7 @@ Content-Type: application/json
 ### Stripe Connect Setup
 
 #### Create Connected Account
+
 ```http
 POST /connected_accounts
 Content-Type: application/json
@@ -299,6 +328,7 @@ Content-Type: application/json
 ```
 
 #### Get Connected Account Status
+
 ```http
 GET /connected_accounts?owner_id=eq.{owner_id}&select=*
 ```
@@ -306,6 +336,7 @@ GET /connected_accounts?owner_id=eq.{owner_id}&select=*
 ### Transactions
 
 #### Create Payment Intent
+
 ```http
 POST /transactions
 Content-Type: application/json
@@ -320,11 +351,13 @@ Content-Type: application/json
 ```
 
 #### Get Transaction Details
+
 ```http
 GET /transactions?booking_id=eq.{booking_id}&select=*
 ```
 
 #### Process Refund
+
 ```http
 PATCH /transactions?id=eq.{transaction_id}
 Content-Type: application/json
@@ -339,6 +372,7 @@ Content-Type: application/json
 ### Escrow Management
 
 #### Release Escrow Funds
+
 ```http
 POST /escrow_releases
 Content-Type: application/json
@@ -353,6 +387,7 @@ Content-Type: application/json
 ```
 
 #### Get Escrow Status
+
 ```http
 GET /escrow_releases?transaction_id=eq.{transaction_id}&select=*
 ```
@@ -364,11 +399,13 @@ GET /escrow_releases?transaction_id=eq.{transaction_id}&select=*
 ### Conversations
 
 #### Get User Conversations
+
 ```http
 GET /conversations?or=(participant1_id.eq.{user_id},participant2_id.eq.{user_id})&order=last_message_at.desc
 ```
 
 #### Create Conversation
+
 ```http
 POST /conversations
 Content-Type: application/json
@@ -383,6 +420,7 @@ Content-Type: application/json
 ### Messages
 
 #### Send Message
+
 ```http
 POST /messages
 Content-Type: application/json
@@ -395,11 +433,13 @@ Content-Type: application/json
 ```
 
 #### Get Conversation Messages
+
 ```http
 GET /messages?conversation_id=eq.{conversation_id}&order=created_at.asc
 ```
 
 #### Mark Message as Read
+
 ```http
 PATCH /messages?id=eq.{message_id}
 Content-Type: application/json
@@ -411,6 +451,7 @@ Content-Type: application/json
 ```
 
 #### Get Unread Message Count
+
 ```http
 GET /messages?conversation_id=eq.{conversation_id}&is_read=eq.false&count=exact
 ```
@@ -422,6 +463,7 @@ GET /messages?conversation_id=eq.{conversation_id}&is_read=eq.false&count=exact
 ### Review Management
 
 #### Create Review
+
 ```http
 POST /reviews
 Content-Type: application/json
@@ -437,16 +479,19 @@ Content-Type: application/json
 ```
 
 #### Get Gear Reviews
+
 ```http
 GET /reviews?gear_id=eq.{gear_id}&select=*,profiles!reviewer_id(full_name,avatar_url)&order=created_at.desc
 ```
 
 #### Get User Reviews
+
 ```http
 GET /reviews?reviewed_id=eq.{user_id}&select=*,gear(name,gear_images),profiles!reviewer_id(full_name)&order=created_at.desc
 ```
 
 #### Update Review
+
 ```http
 PATCH /reviews?id=eq.{review_id}
 Content-Type: application/json
@@ -464,6 +509,7 @@ Content-Type: application/json
 ### Claims Management
 
 #### Create Claim
+
 ```http
 POST /claims
 Content-Type: application/json
@@ -479,11 +525,13 @@ Content-Type: application/json
 ```
 
 #### Get Claims for Booking
+
 ```http
 GET /claims?booking_id=eq.{booking_id}&select=*,profiles!claimant_id(full_name),claim_evidence(*)
 ```
 
 #### Update Claim Status (Admin)
+
 ```http
 PATCH /claims?id=eq.{claim_id}
 Content-Type: application/json
@@ -499,6 +547,7 @@ Content-Type: application/json
 ### Claim Evidence
 
 #### Upload Evidence
+
 ```http
 POST /claim_evidence
 Content-Type: application/json
@@ -513,6 +562,7 @@ Content-Type: application/json
 ```
 
 #### Get Claim Evidence
+
 ```http
 GET /claim_evidence?claim_id=eq.{claim_id}&select=*
 ```
@@ -524,6 +574,7 @@ GET /claim_evidence?claim_id=eq.{claim_id}&select=*
 ### Handover Photos
 
 #### Upload Handover Photo
+
 ```http
 POST /handover_photos
 Content-Type: application/json
@@ -543,11 +594,13 @@ Content-Type: application/json
 ```
 
 #### Get Handover Photos
+
 ```http
 GET /handover_photos?booking_id=eq.{booking_id}&select=*
 ```
 
 #### Get Photos by Type
+
 ```http
 GET /handover_photos?booking_id=eq.{booking_id}&photo_type=eq.pickup_renter&select=*
 ```
@@ -559,11 +612,13 @@ GET /handover_photos?booking_id=eq.{booking_id}&photo_type=eq.pickup_renter&sele
 ### Notification Preferences
 
 #### Get User Preferences
+
 ```http
 GET /notification_preferences?user_id=eq.{user_id}&select=*
 ```
 
 #### Update Preferences
+
 ```http
 PATCH /notification_preferences?user_id=eq.{user_id}
 Content-Type: application/json
@@ -583,11 +638,13 @@ Content-Type: application/json
 ### Notifications
 
 #### Get User Notifications
+
 ```http
 GET /notifications?user_id=eq.{user_id}&order=created_at.desc&limit=50
 ```
 
 #### Mark Notification as Read
+
 ```http
 PATCH /notifications?id=eq.{notification_id}
 Content-Type: application/json
@@ -598,6 +655,7 @@ Content-Type: application/json
 ```
 
 #### Get Unread Count
+
 ```http
 GET /notifications?user_id=eq.{user_id}&read_at=is.null&count=exact
 ```
@@ -609,11 +667,13 @@ GET /notifications?user_id=eq.{user_id}&read_at=is.null&count=exact
 ### User Management
 
 #### Get All Users
+
 ```http
 GET /profiles?select=*&order=created_at.desc
 ```
 
 #### Suspend User
+
 ```http
 PATCH /profiles?id=eq.{user_id}
 Content-Type: application/json
@@ -625,6 +685,7 @@ Content-Type: application/json
 ```
 
 #### Verify User
+
 ```http
 PATCH /profiles?id=eq.{user_id}
 Content-Type: application/json
@@ -638,11 +699,13 @@ Content-Type: application/json
 ### Content Moderation
 
 #### Get Moderation Queue
+
 ```http
 GET /moderation_queue?status=eq.pending&select=*&order=created_at.asc
 ```
 
 #### Review Content
+
 ```http
 PATCH /moderation_queue?id=eq.{queue_id}
 Content-Type: application/json
@@ -656,11 +719,13 @@ Content-Type: application/json
 ### Platform Analytics
 
 #### Get User Activity
+
 ```http
 GET /user_activity?user_id=eq.{user_id}&order=created_at.desc&limit=100
 ```
 
 #### Get Platform Metrics
+
 ```http
 GET /platform_analytics?date=eq.{date}&select=*
 ```
@@ -672,21 +737,25 @@ GET /platform_analytics?date=eq.{date}&select=*
 ### Advanced Search
 
 #### Search Gear with Filters
+
 ```http
 GET /gear?select=*,categories(name,slug),profiles!owner_id(full_name,rating)&is_available=eq.true&status=eq.active&category_id=eq.{category_id}&price_per_day.gte.{min_price}&price_per_day.lte.{max_price}&condition=eq.{condition}&order=created_at.desc
 ```
 
 #### Search by Location
+
 ```http
 GET /gear?select=*,categories(name)&is_available=eq.true&pickup_location=ilike.%{location}%&order=created_at.desc
 ```
 
 #### Search by Brand/Model
+
 ```http
 GET /gear?select=*,categories(name)&is_available=eq.true&or=(brand.ilike.%{search_term}%,model.ilike.%{search_term}%,name.ilike.%{search_term}%)&order=created_at.desc
 ```
 
 #### Full-text Search
+
 ```http
 GET /gear?select=*,categories(name)&is_available=eq.true&textSearch=websearch('{search_term}')&order=created_at.desc
 ```
@@ -694,6 +763,7 @@ GET /gear?select=*,categories(name)&is_available=eq.true&textSearch=websearch('{
 ### Featured Gear
 
 #### Get Featured Gear
+
 ```http
 GET /gear?select=*,categories(name,slug),profiles!owner_id(full_name,rating)&is_featured=eq.true&is_available=eq.true&order=created_at.desc&limit=10
 ```
@@ -705,6 +775,7 @@ GET /gear?select=*,categories(name,slug),profiles!owner_id(full_name,rating)&is_
 ### User Analytics
 
 #### Get User Statistics
+
 ```http
 GET /profiles?select=total_bookings,total_earnings,rating,total_reviews&id=eq.{user_id}
 ```
@@ -712,31 +783,37 @@ GET /profiles?select=total_bookings,total_earnings,rating,total_reviews&id=eq.{u
 ### Owner Analytics Dashboard
 
 #### Get Owner Financial Analytics
+
 ```http
 GET /rpc/get_owner_analytics?owner_id={owner_id}
 ```
 
 #### Get Equipment Performance
+
 ```http
 GET /gear?owner_id=eq.{owner_id}&select=*,bookings(count),reviews(avg_rating)&order=view_count.desc
 ```
 
 #### Get Revenue Breakdown
+
 ```http
 GET /transactions?select=sum(rental_amount),sum(platform_fee),count(*)&booking_id=in.(select id from bookings where owner_id=eq.{owner_id})
 ```
 
 #### Get Stripe Connect Status
+
 ```http
 GET /connected_accounts?owner_id=eq.{owner_id}&select=account_status,charges_enabled,payouts_enabled
 ```
 
 #### Export Financial Data
+
 ```http
 GET /rpc/export_owner_financials?owner_id={owner_id}&start_date={start_date}&end_date={end_date}
 ```
 
 #### Get User Activity Summary
+
 ```http
 GET /user_activity?user_id=eq.{user_id}&activity_type=in.(gear_viewed,booking_created,payment_made)&created_at.gte.{start_date}&created_at.lte.{end_date}&select=activity_type,count(*)
 ```
@@ -744,11 +821,13 @@ GET /user_activity?user_id=eq.{user_id}&activity_type=in.(gear_viewed,booking_cr
 ### Platform Analytics
 
 #### Get Platform Statistics
+
 ```http
 GET /platform_analytics?date=eq.{date}&select=metric_name,metric_value
 ```
 
 #### Get Revenue Analytics
+
 ```http
 GET /transactions?status=eq.completed&created_at.gte.{start_date}&created_at.lte.{end_date}&select=sum(amount),sum(platform_fee),count(*)
 ```
@@ -760,6 +839,7 @@ GET /transactions?status=eq.completed&created_at.gte.{start_date}&created_at.lte
 ### Rate Limiting
 
 #### Check Rate Limit
+
 ```http
 POST /rpc/check_rate_limit
 Content-Type: application/json
@@ -772,6 +852,7 @@ Content-Type: application/json
 ```
 
 #### Get User Rate Limits
+
 ```http
 GET /rate_limits?user_id=eq.{user_id}&order=created_at.desc
 ```
@@ -779,6 +860,7 @@ GET /rate_limits?user_id=eq.{user_id}&order=created_at.desc
 ### Security Events
 
 #### Report Security Event
+
 ```http
 POST /security_events
 Content-Type: application/json
@@ -801,11 +883,13 @@ Content-Type: application/json
 ### System Settings
 
 #### Get Public Settings
+
 ```http
 GET /system_settings?is_public=eq.true&select=setting_key,setting_value,setting_type,description
 ```
 
 #### Update System Setting (Admin)
+
 ```http
 PATCH /system_settings?setting_key=eq.{key}
 Content-Type: application/json
@@ -823,42 +907,63 @@ Content-Type: application/json
 ### Subscribe to Changes
 
 #### Booking Updates
+
 ```typescript
 const subscription = supabase
-  .channel('bookings')
-  .on('postgres_changes', 
-    { event: '*', schema: 'public', table: 'bookings', filter: `id=eq.${bookingId}` },
+  .channel("bookings")
+  .on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "bookings",
+      filter: `id=eq.${bookingId}`,
+    },
     (payload) => {
-      console.log('Booking updated:', payload)
-    }
+      console.log("Booking updated:", payload);
+    },
   )
-  .subscribe()
+  .subscribe();
 ```
 
 #### Messages
+
 ```typescript
 const subscription = supabase
-  .channel('messages')
-  .on('postgres_changes',
-    { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+  .channel("messages")
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "messages",
+      filter: `conversation_id=eq.${conversationId}`,
+    },
     (payload) => {
-      console.log('New message:', payload)
-    }
+      console.log("New message:", payload);
+    },
   )
-  .subscribe()
+  .subscribe();
 ```
 
 #### Notifications
+
 ```typescript
 const subscription = supabase
-  .channel('notifications')
-  .on('postgres_changes',
-    { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+  .channel("notifications")
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "notifications",
+      filter: `user_id=eq.${userId}`,
+    },
     (payload) => {
-      console.log('New notification:', payload)
-    }
+      console.log("New notification:", payload);
+    },
   )
-  .subscribe()
+  .subscribe();
 ```
 
 ---
@@ -866,6 +971,7 @@ const subscription = supabase
 ## 🚨 Error Handling
 
 ### Standard Error Response
+
 ```json
 {
   "error": {
@@ -878,6 +984,7 @@ const subscription = supabase
 ```
 
 ### Common Error Codes
+
 - `AUTH_REQUIRED`: Authentication required
 - `INSUFFICIENT_PERMISSIONS`: User lacks required permissions
 - `VALIDATION_ERROR`: Input validation failed
@@ -893,12 +1000,14 @@ const subscription = supabase
 ## 📱 Mobile API Considerations
 
 ### Optimized Responses
+
 ```typescript
 // Optimize responses for mobile
 const getOptimizedGearList = async () => {
   const { data, error } = await supabase
-    .from('gear')
-    .select(`
+    .from("gear")
+    .select(
+      `
       id,
       name,
       price_per_day,
@@ -907,13 +1016,14 @@ const getOptimizedGearList = async () => {
       gear_images!inner(image_url),
       profiles!owner_id(full_name, rating),
       categories(name)
-    `)
-    .eq('is_available', true)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(20)
-  
-  return data?.map(item => ({
+    `,
+    )
+    .eq("is_available", true)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  return data?.map((item) => ({
     id: item.id,
     name: item.name,
     price: item.price_per_day,
@@ -922,32 +1032,34 @@ const getOptimizedGearList = async () => {
     image: item.gear_images?.[0]?.image_url,
     owner: item.profiles?.full_name,
     ownerRating: item.profiles?.rating,
-    category: item.categories?.name
-  }))
-}
+    category: item.categories?.name,
+  }));
+};
 ```
 
 ### Pagination
+
 ```typescript
 // Implement cursor-based pagination
-const getPaginatedResults = async (table: string, cursor?: string, limit: number = 20) => {
-  let query = supabase
-    .from(table)
-    .select('*')
-    .limit(limit)
-  
+const getPaginatedResults = async (
+  table: string,
+  cursor?: string,
+  limit: number = 20,
+) => {
+  let query = supabase.from(table).select("*").limit(limit);
+
   if (cursor) {
-    query = query.gt('id', cursor)
+    query = query.gt("id", cursor);
   }
-  
-  const { data, error } = await query
+
+  const { data, error } = await query;
   return {
     data: data || [],
-    nextCursor: data && data.length === limit ? data[data.length - 1].id : null
-  }
-}
+    nextCursor: data && data.length === limit ? data[data.length - 1].id : null,
+  };
+};
 ```
 
 ---
 
-This comprehensive API documentation covers all endpoints needed for the complete GearUp platform implementation, supporting the redesigned database schema and all planned features from the roadmap. 
+This comprehensive API documentation covers all endpoints needed for the complete GearUp platform implementation, supporting the redesigned database schema and all planned features from the roadmap.

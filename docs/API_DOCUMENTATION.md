@@ -11,42 +11,45 @@ The GearUp platform provides a comprehensive REST API built on **Supabase** with
 ### Authentication Methods
 
 #### 1. Supabase Auth (Primary)
+
 ```typescript
 // Initialize Supabase client
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-  'https://your-project.supabase.co',
-  'your-anon-key'
-)
+  "https://your-project.supabase.co",
+  "your-anon-key",
+);
 
 // Sign up
 const { data, error } = await supabase.auth.signUp({
-  email: 'user@example.com',
-  password: 'password123'
-})
+  email: "user@example.com",
+  password: "password123",
+});
 
 // Sign in
 const { data, error } = await supabase.auth.signInWithPassword({
-  email: 'user@example.com',
-  password: 'password123'
-})
+  email: "user@example.com",
+  password: "password123",
+});
 
 // Sign out
-const { error } = await supabase.auth.signOut()
+const { error } = await supabase.auth.signOut();
 ```
 
 #### 2. JWT Token Authentication
+
 ```typescript
 // Set auth header for API requests
 const { data, error } = await supabase
-  .from('profiles')
-  .select('*')
-  .eq('id', user.id)
-  .single()
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .single();
 ```
 
 ### Authentication Headers
+
 ```http
 Authorization: Bearer <jwt_token>
 apikey: <supabase_anon_key>
@@ -57,11 +60,13 @@ apikey: <supabase_anon_key>
 ## 📡 Base URL
 
 ### Development
+
 ```
 https://your-project-ref.supabase.co/rest/v1/
 ```
 
 ### Production
+
 ```
 https://your-project-ref.supabase.co/rest/v1/
 ```
@@ -71,39 +76,43 @@ https://your-project-ref.supabase.co/rest/v1/
 ## 🔄 Real-time Subscriptions
 
 ### Subscribe to Changes
+
 ```typescript
 // Subscribe to booking changes
 const subscription = supabase
-  .channel('bookings')
-  .on('postgres_changes', 
-    { event: '*', schema: 'public', table: 'bookings' },
+  .channel("bookings")
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "bookings" },
     (payload) => {
-      console.log('Booking changed:', payload)
-    }
+      console.log("Booking changed:", payload);
+    },
   )
-  .subscribe()
+  .subscribe();
 
 // Subscribe to messages
 const subscription = supabase
-  .channel('messages')
-  .on('postgres_changes',
-    { event: 'INSERT', schema: 'public', table: 'messages' },
+  .channel("messages")
+  .on(
+    "postgres_changes",
+    { event: "INSERT", schema: "public", table: "messages" },
     (payload) => {
-      console.log('New message:', payload)
-    }
+      console.log("New message:", payload);
+    },
   )
-  .subscribe()
+  .subscribe();
 
 // Subscribe to transactions
 const subscription = supabase
-  .channel('transactions')
-  .on('postgres_changes',
-    { event: 'UPDATE', schema: 'public', table: 'transactions' },
+  .channel("transactions")
+  .on(
+    "postgres_changes",
+    { event: "UPDATE", schema: "public", table: "transactions" },
     (payload) => {
-      console.log('Transaction updated:', payload)
-    }
+      console.log("Transaction updated:", payload);
+    },
   )
-  .subscribe()
+  .subscribe();
 ```
 
 ---
@@ -111,11 +120,13 @@ const subscription = supabase
 ## 👤 User Management API
 
 ### Get Current User Profile
+
 ```http
 GET /profiles?id=eq.{user_id}
 ```
 
 **Response:**
+
 ```json
 {
   "id": "uuid",
@@ -131,6 +142,7 @@ GET /profiles?id=eq.{user_id}
 ```
 
 ### Update User Profile
+
 ```http
 PATCH /profiles?id=eq.{user_id}
 Content-Type: application/json
@@ -143,17 +155,18 @@ Content-Type: application/json
 ```
 
 ### Upload Avatar
+
 ```typescript
 // Upload avatar to Supabase Storage
 const { data, error } = await supabase.storage
-  .from('avatars')
-  .upload(`${user.id}/avatar.jpg`, file)
+  .from("avatars")
+  .upload(`${user.id}/avatar.jpg`, file);
 
 // Update profile with avatar URL
 const { error } = await supabase
-  .from('profiles')
+  .from("profiles")
   .update({ avatar_url: `${user.id}/avatar.jpg` })
-  .eq('id', user.id)
+  .eq("id", user.id);
 ```
 
 ---
@@ -161,11 +174,13 @@ const { error } = await supabase
 ## 📦 Gear Management API
 
 ### Get All Gear
+
 ```http
 GET /gear?select=*,categories(name,slug)&is_available=eq.true
 ```
 
 **Query Parameters:**
+
 - `select`: Fields to return
 - `category_id`: Filter by category
 - `owner_id`: Filter by owner
@@ -174,6 +189,7 @@ GET /gear?select=*,categories(name,slug)&is_available=eq.true
 - `is_available`: Filter by availability
 
 **Response:**
+
 ```json
 [
   {
@@ -204,11 +220,13 @@ GET /gear?select=*,categories(name,slug)&is_available=eq.true
 ```
 
 ### Get Single Gear Item
+
 ```http
 GET /gear?id=eq.{gear_id}&select=*,categories(name,slug),profiles!owner_id(full_name,avatar_url,is_verified)
 ```
 
 ### Create Gear Listing
+
 ```http
 POST /gear
 Content-Type: application/json
@@ -230,6 +248,7 @@ Content-Type: application/json
 ```
 
 ### Update Gear Listing
+
 ```http
 PATCH /gear?id=eq.{gear_id}
 Content-Type: application/json
@@ -242,30 +261,32 @@ Content-Type: application/json
 ```
 
 ### Delete Gear Listing
+
 ```http
 DELETE /gear?id=eq.{gear_id}
 ```
 
 ### Upload Gear Images
+
 ```typescript
 // Upload images to Supabase Storage
 const uploadPromises = files.map(async (file, index) => {
-  const fileName = `${gearId}/image_${index}.jpg`
+  const fileName = `${gearId}/image_${index}.jpg`;
   const { data, error } = await supabase.storage
-    .from('gear-images')
-    .upload(fileName, file)
-  
-  if (error) throw error
-  return fileName
-})
+    .from("gear-images")
+    .upload(fileName, file);
 
-const uploadedFiles = await Promise.all(uploadPromises)
+  if (error) throw error;
+  return fileName;
+});
+
+const uploadedFiles = await Promise.all(uploadPromises);
 
 // Update gear with image URLs
 const { error } = await supabase
-  .from('gear')
+  .from("gear")
   .update({ images: uploadedFiles })
-  .eq('id', gearId)
+  .eq("id", gearId);
 ```
 
 ---
@@ -273,6 +294,7 @@ const { error } = await supabase
 ## 📅 Booking Management API
 
 ### Create Booking
+
 ```http
 POST /bookings
 Content-Type: application/json
@@ -291,11 +313,13 @@ Content-Type: application/json
 ```
 
 ### Get User Bookings
+
 ```http
 GET /bookings?select=*,gear(name,images),profiles!renter_id(full_name),profiles!owner_id(full_name)&or=(renter_id.eq.{user_id},owner_id.eq.{user_id})
 ```
 
 ### Update Booking Status
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -306,6 +330,7 @@ Content-Type: application/json
 ```
 
 ### Cancel Booking
+
 ```http
 PATCH /bookings?id=eq.{booking_id}
 Content-Type: application/json
@@ -320,6 +345,7 @@ Content-Type: application/json
 ## 💳 Payment & Transaction API
 
 ### Create Transaction
+
 ```http
 POST /transactions
 Content-Type: application/json
@@ -337,11 +363,13 @@ Content-Type: application/json
 ```
 
 ### Get Transaction Details
+
 ```http
 GET /transactions?select=*,bookings(gear(name),profiles!renter_id(full_name))&booking_id=eq.{booking_id}
 ```
 
 ### Update Transaction Status
+
 ```http
 PATCH /transactions?id=eq.{transaction_id}
 Content-Type: application/json
@@ -352,6 +380,7 @@ Content-Type: application/json
 ```
 
 ### Process Refund
+
 ```http
 PATCH /transactions?id=eq.{transaction_id}
 Content-Type: application/json
@@ -364,6 +393,7 @@ Content-Type: application/json
 ```
 
 ### Get User Transactions
+
 ```http
 GET /transactions?select=*,bookings(gear(name),profiles!renter_id(full_name),profiles!owner_id(full_name))&or=(bookings.renter_id.eq.{user_id},bookings.owner_id.eq.{user_id})
 ```
@@ -373,6 +403,7 @@ GET /transactions?select=*,bookings(gear(name),profiles!renter_id(full_name),pro
 ## 💬 Messaging API
 
 ### Send Message
+
 ```http
 POST /messages
 Content-Type: application/json
@@ -385,11 +416,13 @@ Content-Type: application/json
 ```
 
 ### Get Messages for Booking
+
 ```http
 GET /messages?select=*,profiles!sender_id(full_name,avatar_url)&booking_id=eq.{booking_id}&order=created_at.asc
 ```
 
 ### Mark Message as Read
+
 ```http
 PATCH /messages?id=eq.{message_id}
 Content-Type: application/json
@@ -400,6 +433,7 @@ Content-Type: application/json
 ```
 
 ### Get Unread Message Count
+
 ```http
 GET /messages?select=id&is_read=eq.false&or=(bookings.renter_id.eq.{user_id},bookings.owner_id.eq.{user_id})&count=exact
 ```
@@ -409,6 +443,7 @@ GET /messages?select=id&is_read=eq.false&or=(bookings.renter_id.eq.{user_id},boo
 ## ⭐ Reviews API
 
 ### Create Review
+
 ```http
 POST /reviews
 Content-Type: application/json
@@ -424,16 +459,19 @@ Content-Type: application/json
 ```
 
 ### Get Gear Reviews
+
 ```http
 GET /reviews?select=*,profiles!reviewer_id(full_name,avatar_url)&gear_id=eq.{gear_id}&order=created_at.desc
 ```
 
 ### Get User Reviews
+
 ```http
 GET /reviews?select=*,gear(name,images),profiles!reviewer_id(full_name)&reviewed_id=eq.{user_id}&order=created_at.desc
 ```
 
 ### Update Review
+
 ```http
 PATCH /reviews?id=eq.{review_id}
 Content-Type: application/json
@@ -449,6 +487,7 @@ Content-Type: application/json
 ## 🛡️ Claims & Disputes API
 
 ### Create Claim
+
 ```http
 POST /claims
 Content-Type: application/json
@@ -463,11 +502,13 @@ Content-Type: application/json
 ```
 
 ### Get Claims for Booking
+
 ```http
 GET /claims?select=*,profiles!claimant_id(full_name)&booking_id=eq.{booking_id}&order=created_at.desc
 ```
 
 ### Update Claim Status (Admin Only)
+
 ```http
 PATCH /claims?id=eq.{claim_id}
 Content-Type: application/json
@@ -481,6 +522,7 @@ Content-Type: application/json
 ```
 
 ### Get User Claims
+
 ```http
 GET /claims?select=*,bookings(gear(name))&claimant_id=eq.{user_id}&order=created_at.desc
 ```
@@ -490,44 +532,49 @@ GET /claims?select=*,bookings(gear(name))&claimant_id=eq.{user_id}&order=created
 ## 📸 Photo Upload API
 
 ### Upload Handover Photos
+
 ```typescript
 // Upload photos to Supabase Storage
-const uploadPhoto = async (bookingId: string, photoType: string, file: File) => {
-  const fileName = `${bookingId}/${photoType}_${Date.now()}.jpg`
-  
+const uploadPhoto = async (
+  bookingId: string,
+  photoType: string,
+  file: File,
+) => {
+  const fileName = `${bookingId}/${photoType}_${Date.now()}.jpg`;
+
   const { data, error } = await supabase.storage
-    .from('handover-photos')
-    .upload(fileName, file)
-  
-  if (error) throw error
-  
+    .from("handover-photos")
+    .upload(fileName, file);
+
+  if (error) throw error;
+
   // Create photo upload record
-  const { error: dbError } = await supabase
-    .from('photo_uploads')
-    .insert({
-      booking_id: bookingId,
-      uploaded_by: userId,
-      photo_type: photoType,
-      photo_url: fileName,
-      metadata: {
-        file_size: file.size,
-        mime_type: file.type,
-        uploaded_at: new Date().toISOString()
-      }
-    })
-  
-  if (dbError) throw dbError
-  
-  return fileName
-}
+  const { error: dbError } = await supabase.from("photo_uploads").insert({
+    booking_id: bookingId,
+    uploaded_by: userId,
+    photo_type: photoType,
+    photo_url: fileName,
+    metadata: {
+      file_size: file.size,
+      mime_type: file.type,
+      uploaded_at: new Date().toISOString(),
+    },
+  });
+
+  if (dbError) throw dbError;
+
+  return fileName;
+};
 ```
 
 ### Get Photos for Booking
+
 ```http
 GET /photo_uploads?select=*&booking_id=eq.{booking_id}&order=timestamp.asc
 ```
 
 ### Get Photos by Type
+
 ```http
 GET /photo_uploads?select=*&booking_id=eq.{booking_id}&photo_type=eq.pickup_renter
 ```
@@ -537,32 +584,35 @@ GET /photo_uploads?select=*&booking_id=eq.{booking_id}&photo_type=eq.pickup_rent
 ## 🚦 Rate Limiting API
 
 ### Check Rate Limit
+
 ```typescript
 // Check if user can perform action
-const canPerformAction = await supabase.rpc('check_rate_limit', {
-  action_type: 'create_booking',
+const canPerformAction = await supabase.rpc("check_rate_limit", {
+  action_type: "create_booking",
   max_actions: 10,
-  window_minutes: 60
-})
+  window_minutes: 60,
+});
 
 if (!canPerformAction.data) {
-  throw new Error('Rate limit exceeded')
+  throw new Error("Rate limit exceeded");
 }
 ```
 
 ### Get User Rate Limits
+
 ```http
 GET /rate_limits?select=*&user_id=eq.{user_id}&order=created_at.desc
 ```
 
 ### Rate Limit Configuration
+
 ```typescript
 const rateLimits = {
   create_booking: { max_actions: 10, window_minutes: 60 },
   send_message: { max_actions: 50, window_minutes: 60 },
   upload_photo: { max_actions: 20, window_minutes: 60 },
-  create_review: { max_actions: 5, window_minutes: 60 }
-}
+  create_review: { max_actions: 5, window_minutes: 60 },
+};
 ```
 
 ---
@@ -570,16 +620,19 @@ const rateLimits = {
 ## 📊 Categories API
 
 ### Get All Categories
+
 ```http
 GET /categories?select=*&order=name.asc
 ```
 
 ### Get Category by Slug
+
 ```http
 GET /categories?select=*&slug=eq.camere-foto
 ```
 
 ### Create Category (Admin Only)
+
 ```http
 POST /categories
 Content-Type: application/json
@@ -597,16 +650,19 @@ Content-Type: application/json
 ## 🔍 Search & Filter API
 
 ### Advanced Gear Search
+
 ```http
 GET /gear?select=*,categories(name,slug),profiles!owner_id(full_name,rating)&is_available=eq.true&category_id=eq.{category_id}&price_per_day.gte.{min_price}&price_per_day.lte.{max_price}&condition=eq.{condition}&order=created_at.desc
 ```
 
 ### Search by Location
+
 ```http
 GET /gear?select=*,categories(name)&is_available=eq.true&pickup_location=ilike.%{location}%&order=created_at.desc
 ```
 
 ### Search by Brand/Model
+
 ```http
 GET /gear?select=*,categories(name)&is_available=eq.true&or=(brand.ilike.%{search_term}%,model.ilike.%{search_term}%,name.ilike.%{search_term}%)&order=created_at.desc
 ```
@@ -616,58 +672,66 @@ GET /gear?select=*,categories(name)&is_available=eq.true&or=(brand.ilike.%{searc
 ## 📈 Analytics API
 
 ### Get User Statistics
+
 ```typescript
 // Get user booking statistics
 const getUserStats = async (userId: string) => {
   const { data: bookings } = await supabase
-    .from('bookings')
-    .select('status, total_amount')
-    .or(`renter_id.eq.${userId},owner_id.eq.${userId}`)
-  
+    .from("bookings")
+    .select("status, total_amount")
+    .or(`renter_id.eq.${userId},owner_id.eq.${userId}`);
+
   const { data: gear } = await supabase
-    .from('gear')
-    .select('view_count, is_available')
-    .eq('owner_id', userId)
-  
+    .from("gear")
+    .select("view_count, is_available")
+    .eq("owner_id", userId);
+
   const { data: reviews } = await supabase
-    .from('reviews')
-    .select('rating')
-    .eq('reviewed_id', userId)
-  
+    .from("reviews")
+    .select("rating")
+    .eq("reviewed_id", userId);
+
   return {
     total_bookings: bookings?.length || 0,
     total_earnings: bookings?.reduce((sum, b) => sum + b.total_amount, 0) || 0,
     total_listings: gear?.length || 0,
-    average_rating: reviews?.reduce((sum, r) => sum + r.rating, 0) / (reviews?.length || 1) || 0
-  }
-}
+    average_rating:
+      reviews?.reduce((sum, r) => sum + r.rating, 0) / (reviews?.length || 1) ||
+      0,
+  };
+};
 ```
 
 ### Get Platform Statistics (Admin Only)
+
 ```typescript
 // Get platform-wide statistics
 const getPlatformStats = async () => {
   const { data: bookings } = await supabase
-    .from('bookings')
-    .select('status, total_amount, created_at')
-    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-  
+    .from("bookings")
+    .select("status, total_amount, created_at")
+    .gte(
+      "created_at",
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    );
+
   const { data: users } = await supabase
-    .from('profiles')
-    .select('created_at')
-    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-  
-  const { data: gear } = await supabase
-    .from('gear')
-    .select('is_available')
-  
+    .from("profiles")
+    .select("created_at")
+    .gte(
+      "created_at",
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    );
+
+  const { data: gear } = await supabase.from("gear").select("is_available");
+
   return {
     monthly_bookings: bookings?.length || 0,
     monthly_revenue: bookings?.reduce((sum, b) => sum + b.total_amount, 0) || 0,
     monthly_new_users: users?.length || 0,
-    total_available_gear: gear?.filter(g => g.is_available).length || 0
-  }
-}
+    total_available_gear: gear?.filter((g) => g.is_available).length || 0,
+  };
+};
 ```
 
 ---
@@ -675,52 +739,57 @@ const getPlatformStats = async () => {
 ## 🔒 Security & Validation
 
 ### Input Validation
+
 ```typescript
 // Validate gear input
 const validateGearInput = (gear: any) => {
   if (!gear.name || gear.name.length < 3 || gear.name.length > 100) {
-    throw new Error('Invalid gear name')
+    throw new Error("Invalid gear name");
   }
-  
+
   if (!gear.price_per_day || gear.price_per_day <= 0) {
-    throw new Error('Invalid price')
+    throw new Error("Invalid price");
   }
-  
+
   if (gear.description && gear.description.length > 2000) {
-    throw new Error('Description too long')
+    throw new Error("Description too long");
   }
-}
+};
 
 // Validate booking input
 const validateBookingInput = (booking: any) => {
   if (new Date(booking.start_date) <= new Date()) {
-    throw new Error('Start date must be in the future')
+    throw new Error("Start date must be in the future");
   }
-  
+
   if (new Date(booking.end_date) <= new Date(booking.start_date)) {
-    throw new Error('End date must be after start date')
+    throw new Error("End date must be after start date");
   }
-  
+
   if (booking.total_days <= 0) {
-    throw new Error('Invalid rental duration')
+    throw new Error("Invalid rental duration");
   }
-}
+};
 ```
 
 ### Rate Limiting
+
 ```typescript
 // Apply rate limiting to API calls
-const rateLimitedApiCall = async (actionType: string, apiCall: () => Promise<any>) => {
-  const { data: canProceed } = await supabase.rpc('check_rate_limit', {
-    action_type: actionType
-  })
-  
+const rateLimitedApiCall = async (
+  actionType: string,
+  apiCall: () => Promise<any>,
+) => {
+  const { data: canProceed } = await supabase.rpc("check_rate_limit", {
+    action_type: actionType,
+  });
+
   if (!canProceed) {
-    throw new Error('Rate limit exceeded. Please try again later.')
+    throw new Error("Rate limit exceeded. Please try again later.");
   }
-  
-  return apiCall()
-}
+
+  return apiCall();
+};
 ```
 
 ---
@@ -728,6 +797,7 @@ const rateLimitedApiCall = async (actionType: string, apiCall: () => Promise<any
 ## 🚨 Error Handling
 
 ### Standard Error Response
+
 ```json
 {
   "error": {
@@ -739,6 +809,7 @@ const rateLimitedApiCall = async (actionType: string, apiCall: () => Promise<any
 ```
 
 ### Common Error Codes
+
 - `AUTH_REQUIRED`: Authentication required
 - `INSUFFICIENT_PERMISSIONS`: User lacks required permissions
 - `VALIDATION_ERROR`: Input validation failed
@@ -748,22 +819,23 @@ const rateLimitedApiCall = async (actionType: string, apiCall: () => Promise<any
 - `PAYMENT_FAILED`: Payment processing failed
 
 ### Error Handling Example
+
 ```typescript
 const handleApiError = (error: any) => {
-  if (error.code === 'AUTH_REQUIRED') {
+  if (error.code === "AUTH_REQUIRED") {
     // Redirect to login
-    window.location.href = '/login'
-  } else if (error.code === 'RATE_LIMIT_EXCEEDED') {
+    window.location.href = "/login";
+  } else if (error.code === "RATE_LIMIT_EXCEEDED") {
     // Show rate limit message
-    showToast('Too many requests. Please wait before trying again.')
-  } else if (error.code === 'VALIDATION_ERROR') {
+    showToast("Too many requests. Please wait before trying again.");
+  } else if (error.code === "VALIDATION_ERROR") {
     // Show validation error
-    showToast(error.message)
+    showToast(error.message);
   } else {
     // Show generic error
-    showToast('An unexpected error occurred. Please try again.')
+    showToast("An unexpected error occurred. Please try again.");
   }
-}
+};
 ```
 
 ---
@@ -771,12 +843,14 @@ const handleApiError = (error: any) => {
 ## 📱 Mobile API Considerations
 
 ### Optimized Responses
+
 ```typescript
 // Optimize responses for mobile
 const getOptimizedGearList = async () => {
   const { data, error } = await supabase
-    .from('gear')
-    .select(`
+    .from("gear")
+    .select(
+      `
       id,
       name,
       price_per_day,
@@ -785,12 +859,13 @@ const getOptimizedGearList = async () => {
       is_available,
       owner:profiles!owner_id(full_name, rating),
       category:categories(name)
-    `)
-    .eq('is_available', true)
-    .order('created_at', { ascending: false })
-    .limit(20)
-  
-  return data?.map(item => ({
+    `,
+    )
+    .eq("is_available", true)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  return data?.map((item) => ({
     id: item.id,
     name: item.name,
     price: item.price_per_day,
@@ -798,32 +873,34 @@ const getOptimizedGearList = async () => {
     image: item.images?.[0], // Only first image for mobile
     owner: item.owner?.full_name,
     ownerRating: item.owner?.rating,
-    category: item.category?.name
-  }))
-}
+    category: item.category?.name,
+  }));
+};
 ```
 
 ### Pagination
+
 ```typescript
 // Implement cursor-based pagination
-const getPaginatedResults = async (table: string, cursor?: string, limit: number = 20) => {
-  let query = supabase
-    .from(table)
-    .select('*')
-    .limit(limit)
-  
+const getPaginatedResults = async (
+  table: string,
+  cursor?: string,
+  limit: number = 20,
+) => {
+  let query = supabase.from(table).select("*").limit(limit);
+
   if (cursor) {
-    query = query.gt('id', cursor)
+    query = query.gt("id", cursor);
   }
-  
-  const { data, error } = await query
+
+  const { data, error } = await query;
   return {
     data: data || [],
-    nextCursor: data && data.length === limit ? data[data.length - 1].id : null
-  }
-}
+    nextCursor: data && data.length === limit ? data[data.length - 1].id : null,
+  };
+};
 ```
 
 ---
 
-This comprehensive API documentation covers all endpoints and functionality available in the GearUp platform, ensuring developers can effectively integrate with the system. 
+This comprehensive API documentation covers all endpoints and functionality available in the GearUp platform, ensuring developers can effectively integrate with the system.

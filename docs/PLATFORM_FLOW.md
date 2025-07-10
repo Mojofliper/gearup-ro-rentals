@@ -1,9 +1,11 @@
 # GearUp Platform Flow - Comprehensive Guide
 
 ## 🎯 Core Concept
+
 GearUp is a peer-to-peer rental platform for photo-video gear in Romania, designed with security, trust, and local community in mind.
 
 ### Key Principles
+
 - ✅ **Local pickup only** - No shipping, face-to-face transactions
 - ✅ **Deposit-based protection** - Financial security for both parties
 - ✅ **Manual approval** - Owners control who rents their gear
@@ -17,7 +19,9 @@ GearUp is a peer-to-peer rental platform for photo-video gear in Romania, design
 ## 🔐 1. USER SIGNUP & VERIFICATION
 
 ### Registration Flow
+
 **Required Fields:**
+
 - Full Name (validated, sanitized)
 - Email (must be verified via Supabase Auth)
 - Password (minimum 6 characters)
@@ -27,17 +31,20 @@ GearUp is a peer-to-peer rental platform for photo-video gear in Romania, design
 **Note**: SMS verification is planned for future implementation. Currently, only email verification is required.
 
 **Role Selection:**
+
 - `renter` - Can only rent gear
 - `lender` - Can only list gear
 - `both` - Can rent and list gear
 
 **Verification Process:**
+
 1. **Email Verification**: Automatic via Supabase Auth
 2. **Profile Creation**: Triggered automatically on signup
 3. **Verification Flag**: `is_verified` starts as `false`
 4. **Future Enhancement**: SMS verification for phone numbers
 
 **Security Features:**
+
 - Input sanitization and validation
 - Rate limiting on auth attempts
 - Secure password handling
@@ -45,6 +52,7 @@ GearUp is a peer-to-peer rental platform for photo-video gear in Romania, design
 - Session management with automatic cleanup
 
 ### Database Schema
+
 ```sql
 profiles {
   id: UUID (references auth.users)
@@ -60,6 +68,7 @@ profiles {
 ```
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Complete signup/login flow with Supabase Auth
 - Google OAuth integration working
 - Profile management with avatar upload
@@ -72,7 +81,9 @@ profiles {
 ## 🎒 2. GEAR LISTING (OWNER)
 
 ### Listing Creation Flow
+
 **Required Fields:**
+
 - Gear Title (3-100 characters, sanitized)
 - Description (optional, max 2000 characters)
 - Category (from predefined categories)
@@ -85,12 +96,14 @@ profiles {
 **Note**: While the original specification required minimum 3 photos, the current implementation requires minimum 1 photo. This will be enhanced in future updates.
 
 **Optional Fields:**
+
 - Brand and Model
 - Technical specifications (array)
 - Included items (array)
 - Availability toggle
 
 ### Validation & Security
+
 - **Input Validation**: Server-side validation with custom functions
 - **Content Sanitization**: XSS prevention
 - **Image Upload**: Secure file handling via Supabase Storage
@@ -98,6 +111,7 @@ profiles {
 - **Ownership Verification**: Only authenticated users can create listings
 
 ### Database Schema
+
 ```sql
 gear {
   id: UUID
@@ -122,6 +136,7 @@ gear {
 ```
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Multi-step gear creation form
 - Photo upload via Supabase Storage
 - Category system with predefined categories
@@ -134,7 +149,9 @@ gear {
 ## 🔍 3. BROWSING & BOOKING (RENTER)
 
 ### Search & Discovery
+
 **Filter Options:**
+
 - Text search (name, description)
 - Category filter
 - Location filter (by owner's county)
@@ -142,12 +159,14 @@ gear {
 - Availability status
 
 **Sort Options:**
+
 - Relevance (default)
 - Price (low to high, high to low)
 - Date added (newest first)
 - Popularity (view count)
 
 ### Booking Process
+
 1. **Select Gear**: View detailed listing with photos
 2. **Choose Dates**: Date picker for rental period
 3. **Review Costs**:
@@ -158,6 +177,7 @@ gear {
 4. **Send Request**: Creates booking with `pending` status
 
 ### Cost Breakdown Display
+
 ```
 Rental Fee: 150 RON (50 RON/day × 3 days)
 Platform Fee: 19.50 RON (13%)
@@ -167,6 +187,7 @@ Total: 369.50 RON
 ```
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Complete search and filtering system
 - Date selection with validation
 - Cost calculation with platform fee
@@ -178,12 +199,15 @@ Total: 369.50 RON
 ## ✅ 4. BOOKING APPROVAL (OWNER)
 
 ### Owner Notification
+
 - **Email notification** sent immediately to owner
 - **In-app notification** appears in dashboard
 - **Notification redirects to Dashboard → "Ca Proprietar" tab → Rental Requests**
 
 ### Approval Decision
+
 **Owner receives booking details:**
+
 - Renter's name and profile
 - Rental dates and duration
 - Total amount breakdown
@@ -191,7 +215,8 @@ Total: 369.50 RON
 - Any notes from renter
 
 **Owner Actions:**
-- **Accept**: 
+
+- **Accept**:
   - Status changes to `confirmed`
   - **Popup appears to set pickup location** (exact address required)
   - Renter receives email notification
@@ -199,12 +224,14 @@ Total: 369.50 RON
 - **Message**: Can communicate before deciding
 
 ### Status Flow
+
 ```
 pending → confirmed (owner accepts + sets pickup location)
 pending → cancelled (owner rejects)
 ```
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Owner approval/rejection system
 - Real-time notifications via Supabase
 - Booking status management
@@ -215,6 +242,7 @@ pending → cancelled (owner rejects)
 ## 💳 5. PAYMENT (RENTER)
 
 ### Payment Flow
+
 1. **Booking Confirmed**: Owner accepts booking and sets pickup location
 2. **Renter Notification**: Email notification directs to Dashboard → "Rezervările Mele" tab
 3. **Payment Button**: Renter clicks "Plătește" button
@@ -225,7 +253,9 @@ pending → cancelled (owner rejects)
    - Rental Fee + Deposit → Held in escrow
 
 ### Rental Dashboard Features
+
 **Both parties see in the rental thread:**
+
 - **Pickup Location**: Exact address set by owner
 - **Direct Messaging**: Thread-specific communication
 - **Escrow Status**: Deposit amount held by platform
@@ -234,12 +264,14 @@ pending → cancelled (owner rejects)
 - **Payment Status**: Real-time payment tracking
 
 ### Payment Security
+
 - **Stripe Checkout**: PCI-compliant payment processing
 - **Amount Validation**: Server-side verification
 - **Transaction Records**: Complete audit trail
 - **Webhook Handling**: Real-time payment status updates
 
 ### Database Schema
+
 ```sql
 transactions {
   id: UUID
@@ -260,6 +292,7 @@ transactions {
 ```
 
 **Implementation Status: 🔄 PARTIALLY IMPLEMENTED**
+
 - ✅ **Payment Provider**: Stripe selected for Romanian market
 - ✅ Stripe integration and configuration
 - ✅ Payment intent creation
@@ -277,13 +310,16 @@ transactions {
 ## 📍 6. PICKUP COORDINATION
 
 ### After Payment Success
+
 1. **Booking Status**: Changes to `confirmed`
 2. **Location Sharing**: Owner provides exact pickup address
 3. **Messaging Enabled**: Dedicated conversation thread opens
 4. **Photo Requirements**: Both parties prepare for handover
 
 ### Messaging System
+
 **Features:**
+
 - **Booking-specific threads**: Each booking has its own conversation
 - **Real-time updates**: Live message delivery
 - **File sharing**: Photos and documents (future)
@@ -291,12 +327,14 @@ transactions {
 - **Mobile responsive**: Optimized for all devices
 
 **Security:**
+
 - **Access Control**: Only booking participants can message
 - **Content Sanitization**: XSS prevention
 - **Rate Limiting**: Prevent spam
 - **Message Encryption**: Secure transmission
 
 ### Database Schema
+
 ```sql
 messages {
   id: UUID
@@ -318,6 +356,7 @@ message_threads {
 ```
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Real-time messaging via Supabase realtime
 - Booking-specific conversation threads
 - Message history and read receipts
@@ -329,18 +368,23 @@ message_threads {
 ## 📷 7. HANDOVER PROCESS
 
 ### Pickup Confirmation
+
 **Owner Actions:**
+
 1. **Upload Photos**: 1-2 timestamped photos before handover
 2. **Confirm Pickup**: Changes status to `active`
 3. **Test Equipment**: Verify functionality with renter
 
 **Renter Actions:**
+
 1. **Upload Photos**: 1-2 timestamped photos after receiving
 2. **Verify Condition**: Check against listing description
 3. **Confirm Receipt**: Acknowledge handover
 
 ### Photo Upload System
+
 **Photo Types:**
+
 - `pickup_owner`: Owner's photos before handover
 - `pickup_renter`: Renter's photos after receiving
 - `return_renter`: Renter's photos before return
@@ -348,12 +392,14 @@ message_threads {
 - `claim_evidence`: Dispute resolution photos
 
 **Security Features:**
+
 - **Timestamped**: Automatic timestamp on upload
 - **Metadata Storage**: Camera info, location (optional)
 - **Secure Storage**: Supabase Storage with access control
 - **Compression**: Optimized for web viewing
 
 ### Database Schema
+
 ```sql
 photo_uploads {
   id: UUID
@@ -367,6 +413,7 @@ photo_uploads {
 ```
 
 **Implementation Status: 🔄 PARTIALLY IMPLEMENTED**
+
 - ✅ Photo upload functionality
 - ✅ Secure photo storage
 - 🔄 Handover photo system partially implemented
@@ -379,18 +426,22 @@ photo_uploads {
 ## 🔁 8. RETURN & COMPLETION
 
 ### Return Process
+
 **Renter Actions:**
+
 1. **Prepare Return**: Clean and pack equipment
 2. **Upload Photos**: 1-2 timestamped photos before return
 3. **Click "Returned"**: Button in rental dashboard/thread
 
 **Owner Actions:**
+
 1. **Inspect Equipment**: Check condition and completeness
 2. **Upload Photos**: 1-2 timestamped photos after return
 3. **Click "Received"**: Button in rental dashboard/thread
 4. **Both confirm**: Transaction completes automatically
 
 ### Completion Flow
+
 - **Both parties must confirm** return in the rental dashboard
 - **Escrow funds released** automatically after confirmation
 - **Rental fee** → Released to owner
@@ -398,22 +449,27 @@ photo_uploads {
 - **Transaction complete** → Status changes to `completed`
 
 ### Fund Release
+
 **Successful Return:**
+
 - **Deposit**: Returned to renter (full amount)
 - **Rental Fee**: Released to owner
 - **Platform Fee**: Already collected
 
 **Automatic Processing:**
+
 - **Stripe Integration**: Automated refunds and transfers
 - **Email Notifications**: Confirm fund movements
 - **Transaction Records**: Complete audit trail
 
 ### Status Flow
+
 ```
 active → completed (renter marks returned, owner confirms)
 ```
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Return confirmation system
 - Status flow management
 - Confirmation permissions
@@ -425,25 +481,30 @@ active → completed (renter marks returned, owner confirms)
 ## 🛠 9. CLAIMS & DISPUTES
 
 ### Dispute Resolution
+
 **When Claims Arise:**
+
 - Equipment damage
 - Late returns
 - Missing items
 - Other issues
 
 **Claim Process:**
+
 1. **File Claim**: Either party can initiate
 2. **Upload Evidence**: Photos and documentation
 3. **Admin Review**: Professional mediation
 4. **Resolution**: Admin decision with deposit adjustment
 
 ### Claim Types
+
 - `damage`: Equipment damage
 - `late_return`: Returned after agreed date
 - `missing_item`: Missing components
 - `other`: Miscellaneous issues
 
 ### Database Schema
+
 ```sql
 claims {
   id: UUID
@@ -464,19 +525,23 @@ claims {
 ```
 
 ### Admin Resolution
+
 **Review Process:**
+
 1. **Evidence Analysis**: Photos, messages, booking details
 2. **Party Communication**: Contact both parties
 3. **Decision Making**: Fair resolution based on evidence
 4. **Fund Adjustment**: Deposit penalty if warranted
 
 **Resolution Options:**
+
 - **Full Deposit Return**: No fault found
 - **Partial Penalty**: Minor issues
 - **Full Penalty**: Significant damage/misuse
 - **Additional Charges**: Beyond deposit amount
 
 **Implementation Status: 🔄 PARTIALLY IMPLEMENTED**
+
 - ✅ Claims database structure implemented
 - ✅ Photo evidence upload structure
 - ❌ Admin interface not implemented (planned for Phase 3)
@@ -488,9 +553,11 @@ claims {
 ## 📊 10. OWNER ANALYTICS DASHBOARD
 
 ### Analytics Dashboard Features
+
 **For equipment owners (sellers):**
 
 **Financial Analytics:**
+
 - **Total Earnings**: All-time revenue from rentals
 - **Monthly Revenue**: Monthly earnings breakdown
 - **Platform Fees**: Total fees paid to platform
@@ -498,30 +565,35 @@ claims {
 - **Stripe Connect Status**: Account verification status
 
 **Equipment Analytics:**
+
 - **Most Rented Gear**: Top performing equipment
 - **Rental Frequency**: How often each item is rented
 - **Average Rental Duration**: Typical rental periods
 - **Equipment Utilization**: Percentage of time rented vs. available
 
 **User Analytics:**
+
 - **Customer Reviews**: Average ratings and feedback
 - **Repeat Customers**: Users who rent multiple times
 - **Customer Demographics**: Location and usage patterns
 - **Response Time**: Average time to respond to requests
 
 **Business Intelligence:**
+
 - **Revenue Trends**: Growth over time
 - **Seasonal Patterns**: Peak rental periods
 - **Pricing Optimization**: Suggested price adjustments
 - **Market Analysis**: Competition and demand
 
 ### Dashboard Access
+
 - **Dashboard → "Ca Proprietar" tab → Analytics**
 - **Real-time updates** via Supabase realtime
 - **Export functionality** for financial records
 - **Mobile responsive** design for on-the-go access
 
 **Implementation Status: ❌ NOT IMPLEMENTED**
+
 - ❌ Analytics dashboard not implemented (planned for Phase 3)
 - ❌ Financial reporting not implemented (planned for Phase 3)
 - ❌ Stripe Connect integration not implemented (planned for Phase 2)
@@ -531,18 +603,22 @@ claims {
 ## ⭐ 11. REVIEWS & FEEDBACK
 
 ### Review System
+
 **When Reviews Can Be Left:**
+
 - After booking completion
 - Both parties can review each other
 - One review per completed booking
 
 **Review Components:**
+
 - **Rating**: 1-5 stars
 - **Comment**: Text feedback (optional)
 - **Gear Rating**: Specific to equipment quality
 - **User Rating**: Specific to user behavior
 
 ### Database Schema
+
 ```sql
 reviews {
   id: UUID
@@ -557,6 +633,7 @@ reviews {
 ```
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Complete review and rating system
 - Review validation (only completed bookings)
 - Rating display on gear pages
@@ -567,30 +644,35 @@ reviews {
 ## 🛡 11. SECURITY & SAFETY LAYERS
 
 ### Authentication & Authorization
+
 - **Supabase Auth**: Secure user management
 - **Row Level Security (RLS)**: Database-level access control
 - **JWT Tokens**: Secure session management
 - **Role-based Access**: Different permissions per user type
 
 ### Data Protection
+
 - **Input Sanitization**: XSS prevention
 - **SQL Injection Prevention**: Parameterized queries
 - **Rate Limiting**: Prevent abuse
 - **Content Validation**: Server-side validation
 
 ### Financial Security
+
 - **Stripe Integration**: PCI-compliant payments
 - **Escrow System**: Funds held until completion
 - **Transaction Records**: Complete audit trail
 - **Refund Protection**: Secure refund processing
 
 ### Dispute Resolution
+
 - **Photo Evidence**: Timestamped documentation
 - **Message History**: Complete communication record
 - **Admin Mediation**: Professional conflict resolution
 - **Deposit Protection**: Financial security for both parties
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Comprehensive security implementation
 - Row Level Security enabled
 - Input validation and sanitization
@@ -602,6 +684,7 @@ reviews {
 ## 🔧 12. TECHNICAL ARCHITECTURE
 
 ### Frontend Stack
+
 - **React 18**: Modern UI framework
 - **TypeScript**: Type safety
 - **Tailwind CSS**: Utility-first styling
@@ -611,6 +694,7 @@ reviews {
 - **Vite**: Fast build tool
 
 ### Backend Stack
+
 - **Supabase**: Backend-as-a-Service
 - **PostgreSQL**: Primary database
 - **Edge Functions**: Serverless backend logic
@@ -618,18 +702,21 @@ reviews {
 - **Row Level Security**: Database security
 
 ### Payment Processing
+
 - **Stripe**: Payment processing
 - **Webhooks**: Real-time payment updates
 - **Checkout Sessions**: Secure payment flow
 - **Refund API**: Automated refunds
 
 ### File Storage
+
 - **Supabase Storage**: Image and file storage
 - **Access Control**: Secure file permissions
 - **Image Optimization**: Automatic compression
 - **CDN**: Fast global delivery
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Complete technical stack implemented
 - All core technologies integrated
 - Performance optimizations in place
@@ -640,7 +727,9 @@ reviews {
 ## 📱 13. USER EXPERIENCE FLOW
 
 ### Dashboard Structure
+
 **Main Dashboard Navigation:**
+
 - **Dashboard**: Main hub with all user activities
 - **Edit Profile**: Small button with popup for profile picture, name, etc.
 - **My Equipment**: Combined view of owned equipment and rental requests
@@ -648,7 +737,9 @@ reviews {
 - **Analytics**: Financial and performance data (owners only)
 
 ### Equipment Management (Owners)
+
 **"My Equipment" Section:**
+
 - **Equipment List**: All owned gear with status
 - **Rental Requests**: Dropdown for each equipment showing:
   - Active rental threads
@@ -657,6 +748,7 @@ reviews {
 - **Quick Actions**: Accept/Reject, Set pickup location, View analytics
 
 ### New User Journey
+
 1. **Landing Page**: Learn about platform
 2. **Sign Up**: Create account with verification
 3. **Dashboard Setup**: Complete profile via popup
@@ -665,6 +757,7 @@ reviews {
 6. **Review**: Leave feedback after completion
 
 ### Owner Journey
+
 1. **Dashboard**: Access "My Equipment" section
 2. **Add Gear**: Create detailed listing
 3. **Manage Requests**: Review and approve bookings via dropdown
@@ -673,6 +766,7 @@ reviews {
 6. **Receive Payment**: Get rental fees via Stripe Connect
 
 ### Renter Journey
+
 1. **Dashboard**: Access "My Bookings" section
 2. **Find Gear**: Search and filter equipment
 3. **Book Gear**: Request rental with dates
@@ -681,6 +775,7 @@ reviews {
 6. **Return Gear**: Safe return and confirmation
 
 **Implementation Status: ✅ FULLY IMPLEMENTED**
+
 - Complete user journeys implemented
 - Intuitive navigation and flow
 - Mobile-responsive design
@@ -691,6 +786,7 @@ reviews {
 ## 🚀 14. FUTURE ENHANCEMENTS
 
 ### Planned Features
+
 - **SMS Verification**: Phone number verification
 - **Insurance Integration**: Optional equipment insurance
 - **Advanced Search**: More sophisticated filtering
@@ -703,6 +799,7 @@ reviews {
 - **Multi-language**: International expansion
 
 ### Scalability Considerations
+
 - **Database Optimization**: Indexing and query optimization
 - **CDN Integration**: Global content delivery
 - **Caching Strategy**: Redis for performance
@@ -711,6 +808,7 @@ reviews {
 - **Backup Strategy**: Automated data protection
 
 **Implementation Status: ❌ NOT IMPLEMENTED**
+
 - Future roadmap features
 - Scalability improvements planned
 - Advanced functionality enhancements
@@ -720,24 +818,28 @@ reviews {
 ## 📋 15. OPERATIONAL GUIDELINES
 
 ### Support Process
+
 1. **User Self-Service**: FAQ and help documentation
 2. **In-App Support**: Chat and messaging
 3. **Email Support**: Detailed issue resolution
 4. **Phone Support**: Urgent matters (future)
 
 ### Quality Assurance
+
 - **User Verification**: Identity confirmation
 - **Equipment Validation**: Quality standards
 - **Review System**: Community feedback
 - **Dispute Resolution**: Professional mediation
 
 ### Compliance
+
 - **GDPR Compliance**: Data protection
 - **Financial Regulations**: Payment processing
 - **Tax Reporting**: Transaction documentation
 - **Legal Framework**: Terms of service and privacy policy
 
 **Implementation Status: 🔄 PARTIALLY IMPLEMENTED**
+
 - Basic support structure in place
 - Quality assurance measures implemented
 - Compliance framework established
@@ -748,26 +850,29 @@ reviews {
 ## 📊 IMPLEMENTATION SUMMARY
 
 ### Overall Status
+
 - **Core Features**: 85% complete
-- **Payment System**: 60% complete  
+- **Payment System**: 60% complete
 - **Admin Features**: 10% complete
 - **Security Features**: 90% complete
 - **User Experience**: 95% complete
 
 ### Key Achievements
+
 ✅ Complete user authentication and profile system  
 ✅ Full gear listing and browsing functionality  
 ✅ Real-time messaging system  
 ✅ Booking management and confirmation system  
 ✅ Review and rating system  
 ✅ Comprehensive security implementation  
-✅ Modern, responsive UI/UX  
+✅ Modern, responsive UI/UX
 
 ### Next Priorities
+
 1. **Complete Payment Flow**: Finish payment UI and escrow system
 2. **Admin Dashboard**: Implement administrative interface
 3. **Photo Documentation**: Enhance photo upload and validation
 4. **Notification System**: Implement email and push notifications
 5. **Dispute Resolution**: Complete dispute management system
 
-This comprehensive platform flow ensures a secure, user-friendly, and scalable peer-to-peer rental experience for photo-video equipment in Romania, with most core features fully implemented and operational. 
+This comprehensive platform flow ensures a secure, user-friendly, and scalable peer-to-peer rental experience for photo-video equipment in Romania, with most core features fully implemented and operational.

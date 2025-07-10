@@ -1,11 +1,24 @@
-import React, { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Upload, FileText, Camera, AlertTriangle, CheckCircle } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import React, { useState, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Loader2,
+  Upload,
+  FileText,
+  Camera,
+  AlertTriangle,
+  CheckCircle,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface IdentityDocumentUploadProps {
   isOpen: boolean;
@@ -14,7 +27,7 @@ interface IdentityDocumentUploadProps {
 }
 
 interface DocumentUpload {
-  type: 'identity_document' | 'identity_document_back' | 'address_document';
+  type: "identity_document" | "identity_document_back" | "address_document";
   file: File | null;
   preview: string | null;
   uploaded: boolean;
@@ -29,21 +42,26 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentUpload[]>([
-    { type: 'identity_document', file: null, preview: null, uploaded: false },
-    { type: 'identity_document_back', file: null, preview: null, uploaded: false },
-    { type: 'address_document', file: null, preview: null, uploaded: false },
+    { type: "identity_document", file: null, preview: null, uploaded: false },
+    {
+      type: "identity_document_back",
+      file: null,
+      preview: null,
+      uploaded: false,
+    },
+    { type: "address_document", file: null, preview: null, uploaded: false },
   ]);
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const getDocumentLabel = (type: string) => {
     switch (type) {
-      case 'identity_document':
-        return 'Document de identitate (față)';
-      case 'identity_document_back':
-        return 'Document de identitate (verso)';
-      case 'address_document':
-        return 'Document cu adresa (opțional)';
+      case "identity_document":
+        return "Document de identitate (față)";
+      case "identity_document_back":
+        return "Document de identitate (verso)";
+      case "address_document":
+        return "Document cu adresa (opțional)";
       default:
         return type;
     }
@@ -51,32 +69,33 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
 
   const getDocumentDescription = (type: string) => {
     switch (type) {
-      case 'identity_document':
-        return 'Încărcați fața documentului de identitate (CI, pașaport)';
-      case 'identity_document_back':
-        return 'Încărcați verso-ul documentului de identitate';
-      case 'address_document':
-        return 'Încărcați o factură sau document care confirmă adresa (opțional)';
+      case "identity_document":
+        return "Încărcați fața documentului de identitate (CI, pașaport)";
+      case "identity_document_back":
+        return "Încărcați verso-ul documentului de identitate";
+      case "address_document":
+        return "Încărcați o factură sau document care confirmă adresa (opțional)";
       default:
-        return '';
+        return "";
     }
   };
 
   const handleFileSelect = (index: number, file: File) => {
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit
       toast({
-        title: 'Fișier prea mare',
-        description: 'Fișierul nu poate depăși 10MB.',
-        variant: 'destructive',
+        title: "Fișier prea mare",
+        description: "Fișierul nu poate depăși 10MB.",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       toast({
-        title: 'Tip de fișier invalid',
-        description: 'Vă rugăm să încărcați doar imagini (JPG, PNG).',
-        variant: 'destructive',
+        title: "Tip de fișier invalid",
+        description: "Vă rugăm să încărcați doar imagini (JPG, PNG).",
+        variant: "destructive",
       });
       return;
     }
@@ -104,38 +123,42 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          const base64 = result.split(',')[1]; // Remove data:image/...;base64, prefix
+          const base64 = result.split(",")[1]; // Remove data:image/...;base64, prefix
           resolve(base64);
         };
         reader.readAsDataURL(document.file!);
       });
 
-      const response = await fetch('https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-upload-identity', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      const response = await fetch(
+        "https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-upload-identity",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            documentType: document.type,
+            documentData: base64,
+            documentPurpose: "identity_document",
+          }),
         },
-        body: JSON.stringify({
-          userId: user.id,
-          documentType: document.type,
-          documentData: base64,
-          documentPurpose: 'identity_document',
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload document');
+        throw new Error(errorData.error || "Failed to upload document");
       }
 
       return true;
     } catch (err: unknown) {
-      console.error('Error uploading document:', err);
+      console.error("Error uploading document:", err);
       toast({
-        title: 'Eroare la încărcare',
-        description: (err as Error).message || 'Nu s-a putut încărca documentul.',
-        variant: 'destructive',
+        title: "Eroare la încărcare",
+        description:
+          (err as Error).message || "Nu s-a putut încărca documentul.",
+        variant: "destructive",
       });
       return false;
     }
@@ -144,9 +167,9 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
   const handleUpload = async () => {
     if (!user?.id) {
       toast({
-        title: 'Eroare',
-        description: 'Trebuie să fiți conectat pentru a încărca documente.',
-        variant: 'destructive',
+        title: "Eroare",
+        description: "Trebuie să fiți conectat pentru a încărca documente.",
+        variant: "destructive",
       });
       return;
     }
@@ -157,7 +180,7 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
     try {
       // Upload all documents that have files
       const uploadPromises = documents
-        .filter(doc => doc.file && !doc.uploaded)
+        .filter((doc) => doc.file && !doc.uploaded)
         .map(async (doc, index) => {
           const success = await uploadDocument(doc);
           if (success) {
@@ -169,36 +192,39 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
         });
 
       const results = await Promise.all(uploadPromises);
-      const allSuccessful = results.every(result => result);
+      const allSuccessful = results.every((result) => result);
 
       if (allSuccessful) {
         toast({
-          title: 'Documente încărcate cu succes',
-          description: 'Documentele au fost încărcate și trimise pentru verificare.',
+          title: "Documente încărcate cu succes",
+          description:
+            "Documentele au fost încărcate și trimise pentru verificare.",
         });
-        
+
         if (onSuccess) {
           onSuccess();
         }
-        
+
         onClose();
       } else {
-        setError('Unele documente nu au putut fi încărcate. Vă rugăm să încercați din nou.');
+        setError(
+          "Unele documente nu au putut fi încărcate. Vă rugăm să încercați din nou.",
+        );
       }
     } catch (err: unknown) {
-      setError((err as Error).message || 'A apărut o eroare neașteptată.');
+      setError((err as Error).message || "A apărut o eroare neașteptată.");
     } finally {
       setLoading(false);
     }
   };
 
-  const hasRequiredDocuments = documents.some(doc => 
-    doc.type === 'identity_document' && doc.file
+  const hasRequiredDocuments = documents.some(
+    (doc) => doc.type === "identity_document" && doc.file,
   );
 
   const allDocumentsUploaded = documents
-    .filter(doc => doc.file) // Only check documents that have files
-    .every(doc => doc.uploaded);
+    .filter((doc) => doc.file) // Only check documents that have files
+    .every((doc) => doc.uploaded);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -206,7 +232,8 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
         <DialogHeader>
           <DialogTitle>Încărcare documente de identitate</DialogTitle>
           <DialogDescription>
-            Pentru a activa contul de plată, trebuie să încărcați documentele de identitate necesare.
+            Pentru a activa contul de plată, trebuie să încărcați documentele de
+            identitate necesare.
           </DialogDescription>
         </DialogHeader>
 
@@ -224,7 +251,9 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
             <div key={document.type} className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold">{getDocumentLabel(document.type)}</h3>
+                  <h3 className="font-semibold">
+                    {getDocumentLabel(document.type)}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     {getDocumentDescription(document.type)}
                   </p>
@@ -248,7 +277,12 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
                         size="sm"
                         onClick={() => {
                           const newDocuments = [...documents];
-                          newDocuments[index] = { ...document, file: null, preview: null, uploaded: false };
+                          newDocuments[index] = {
+                            ...document,
+                            file: null,
+                            preview: null,
+                            uploaded: false,
+                          };
                           setDocuments(newDocuments);
                         }}
                         disabled={loading}
@@ -339,4 +373,4 @@ export const IdentityDocumentUpload: React.FC<IdentityDocumentUploadProps> = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};

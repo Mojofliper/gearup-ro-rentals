@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
 // Industry-standard auth error handling patterns
 export class AuthErrorHandler {
@@ -20,27 +20,29 @@ export class AuthErrorHandler {
 
   // Check if error is auth-related
   isAuthError(error: unknown): boolean {
-    if (!error || typeof error !== 'object') return false;
-    
+    if (!error || typeof error !== "object") return false;
+
     const errorObj = error as Record<string, unknown>;
-    
+
     // Check for common auth error patterns
-    if (errorObj.message && typeof errorObj.message === 'string') {
+    if (errorObj.message && typeof errorObj.message === "string") {
       const message = errorObj.message.toLowerCase();
-      return message.includes('401') || 
-             message.includes('403') || 
-             message.includes('unauthorized') || 
-             message.includes('forbidden') ||
-             message.includes('jwt') ||
-             message.includes('token') ||
-             message.includes('session');
+      return (
+        message.includes("401") ||
+        message.includes("403") ||
+        message.includes("unauthorized") ||
+        message.includes("forbidden") ||
+        message.includes("jwt") ||
+        message.includes("token") ||
+        message.includes("session")
+      );
     }
-    
+
     // Check for status codes
-    if (errorObj.status && typeof errorObj.status === 'number') {
+    if (errorObj.status && typeof errorObj.status === "number") {
       return errorObj.status === 401 || errorObj.status === 403;
     }
-    
+
     return false;
   }
 
@@ -50,7 +52,7 @@ export class AuthErrorHandler {
       return false;
     }
 
-    console.log('AuthErrorHandler: Handling auth error:', error);
+    console.log("AuthErrorHandler: Handling auth error:", error);
 
     // If already refreshing, queue this request
     if (this.isRefreshing) {
@@ -63,27 +65,34 @@ export class AuthErrorHandler {
 
     try {
       // Try to refresh the session
-      const { data, error: refreshError } = await supabase.auth.refreshSession();
-      
+      const { data, error: refreshError } =
+        await supabase.auth.refreshSession();
+
       if (refreshError) {
-        console.error('AuthErrorHandler: Session refresh failed:', refreshError);
+        console.error(
+          "AuthErrorHandler: Session refresh failed:",
+          refreshError,
+        );
         // Clear session and redirect to login
         await this.clearSession();
         return false;
       }
 
       if (data.session) {
-        console.log('AuthErrorHandler: Session refreshed successfully');
+        console.log("AuthErrorHandler: Session refreshed successfully");
         // Process queued requests
         this.processQueue(null, data.session);
         return true;
       } else {
-        console.log('AuthErrorHandler: No session after refresh');
+        console.log("AuthErrorHandler: No session after refresh");
         await this.clearSession();
         return false;
       }
     } catch (refreshError) {
-      console.error('AuthErrorHandler: Exception during session refresh:', refreshError);
+      console.error(
+        "AuthErrorHandler: Exception during session refresh:",
+        refreshError,
+      );
       this.processQueue(refreshError, null);
       await this.clearSession();
       return false;
@@ -97,15 +106,15 @@ export class AuthErrorHandler {
     try {
       await supabase.auth.signOut();
       // Clear any cached data
-      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem("supabase.auth.token");
       sessionStorage.clear();
-      
+
       // Redirect to home page (login will be handled by auth guard)
-      if (window.location.pathname !== '/') {
-        window.location.href = '/';
+      if (window.location.pathname !== "/") {
+        window.location.href = "/";
       }
     } catch (error) {
-      console.error('AuthErrorHandler: Error clearing session:', error);
+      console.error("AuthErrorHandler: Error clearing session:", error);
     }
   }
 
@@ -118,17 +127,19 @@ export class AuthErrorHandler {
         resolve(session);
       }
     });
-    
+
     this.failedQueue = [];
   }
 
   // Check if user is authenticated
   async isAuthenticated(): Promise<boolean> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       return !!session?.user;
     } catch (error) {
-      console.error('AuthErrorHandler: Error checking authentication:', error);
+      console.error("AuthErrorHandler: Error checking authentication:", error);
       return false;
     }
   }
@@ -136,11 +147,14 @@ export class AuthErrorHandler {
   // Get current session
   async getCurrentSession() {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
       if (error) throw error;
       return session;
     } catch (error) {
-      console.error('AuthErrorHandler: Error getting session:', error);
+      console.error("AuthErrorHandler: Error getting session:", error);
       return null;
     }
   }
@@ -167,7 +181,7 @@ export const authErrorHandler = AuthErrorHandler.getInstance();
 
 // Utility function to wrap API calls with auth error handling
 export const withAuthErrorHandling = async <T>(
-  apiCall: () => Promise<T>
+  apiCall: () => Promise<T>,
 ): Promise<T> => {
   try {
     return await apiCall();
@@ -193,4 +207,4 @@ export const handleQueryError = (error: unknown): void => {
     // The auth error handler will handle the session refresh
     authErrorHandler.handleAuthError(error).catch(console.error);
   }
-}; 
+};

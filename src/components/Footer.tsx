@@ -1,7 +1,6 @@
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Mail } from 'lucide-react';
+import React from "react";
+import { Link } from "react-router-dom";
+import { Facebook, Instagram, Mail } from "lucide-react";
 
 export const Footer: React.FC = () => {
   return (
@@ -10,15 +9,19 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo & Description */}
           <div>
-            <Link to="/" className="flex items-center space-x-2 font-bold text-xl mb-4">
-              <img 
-                src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png" 
-                alt="GearUp" 
+            <Link
+              to="/"
+              className="flex items-center space-x-2 font-bold text-xl mb-4"
+            >
+              <img
+                src="/lovable-uploads/81ffbf32-0e06-4641-b110-f9aec3ae32c7.png"
+                alt="GearUp"
                 className="h-8 w-auto"
               />
             </Link>
             <p className="text-gray-400 text-sm">
-              Platforma care conectează creatorii romani. Închiriază sau oferă spre închiriere echipament profesional în siguranță.
+              Platforma care conectează creatorii romani. Închiriază sau oferă
+              spre închiriere echipament profesional în siguranță.
             </p>
           </div>
 
@@ -26,10 +29,26 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="font-semibold mb-4">Link-uri rapide</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/browse" className="text-gray-400 hover:text-white">Caută echipament</Link></li>
-              <li><Link to="/add-gear" className="text-gray-400 hover:text-white">Adaugă echipament</Link></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Cum funcționează</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Prețuri</a></li>
+              <li>
+                <Link to="/browse" className="text-gray-400 hover:text-white">
+                  Caută echipament
+                </Link>
+              </li>
+              <li>
+                <Link to="/add-gear" className="text-gray-400 hover:text-white">
+                  Adaugă echipament
+                </Link>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  Cum funcționează
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  Prețuri
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -37,10 +56,26 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="font-semibold mb-4">Suport</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="text-gray-400 hover:text-white">Centru de ajutor</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Termeni și condiții</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Politica de confidențialitate</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Contact</a></li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  Centru de ajutor
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  Termeni și condiții
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  Politica de confidențialitate
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  Contact
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -48,7 +83,10 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="font-semibold mb-4">Conectează-te cu noi</h3>
             <div className="space-y-3">
-              <a href="mailto:hello@gearup.ro" className="flex items-center space-x-2 text-gray-400 hover:text-white text-sm">
+              <a
+                href="mailto:hello@gearup.ro"
+                className="flex items-center space-x-2 text-gray-400 hover:text-white text-sm"
+              >
                 <Mail className="h-4 w-4" />
                 <span>hello@gearup.ro</span>
               </a>
@@ -65,8 +103,14 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; 2025 GearUp. Toate drepturile rezervate. Made with ❤️ in Romania</p>
-          <p className="mt-2">Made by <span className="font-semibold text-white">FluX Dev Designs</span></p>
+          <p>
+            &copy; 2025 GearUp. Toate drepturile rezervate. Made with ❤️ in
+            Romania
+          </p>
+          <p className="mt-2">
+            Made by{" "}
+            <span className="font-semibold text-white">FluX Dev Designs</span>
+          </p>
         </div>
       </div>
     </footer>

@@ -1,8 +1,7 @@
-
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { LoadingScreen } from './LoadingScreen';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { LoadingScreen } from "./LoadingScreen";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -10,10 +9,10 @@ interface AuthGuardProps {
   redirectTo?: string;
 }
 
-export const AuthGuard: React.FC<AuthGuardProps> = ({ 
-  children, 
+export const AuthGuard: React.FC<AuthGuardProps> = ({
+  children,
   fallback,
-  redirectTo = '/'
+  redirectTo = "/",
 }) => {
   const { user, loading } = useAuth();
 
@@ -25,7 +24,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
     if (fallback) {
       return <>{fallback}</>;
     }
-    
+
     // Redirect to home page where auth modal can be triggered
     return <Navigate to={redirectTo} replace />;
   }

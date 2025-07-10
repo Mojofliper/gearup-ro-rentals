@@ -1,8 +1,8 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, RefreshCw, Home, ArrowLeft } from 'lucide-react';
-import { reportError } from '@/utils/errorReporting';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, RefreshCw, Home, ArrowLeft } from "lucide-react";
+import { reportError } from "@/utils/errorReporting";
 
 interface Props {
   children: ReactNode;
@@ -18,7 +18,7 @@ interface State {
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false
+    hasError: false,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Generate unique error ID
     const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     this.setState({ error, errorInfo, errorId });
 
     // Send to error reporting service
@@ -36,10 +36,10 @@ export class ErrorBoundary extends Component<Props, State> {
       errorId,
       componentStack: errorInfo.componentStack,
       url: window.location.href,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
     });
 
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
 
   private handleReload = () => {
@@ -47,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleGoHome = () => {
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   private handleGoBack = () => {
@@ -61,11 +61,13 @@ export class ErrorBoundary extends Component<Props, State> {
       reportError(error, {
         errorId,
         componentStack: errorInfo?.componentStack,
-        userAction: 'manual_report',
-        url: window.location.href
+        userAction: "manual_report",
+        url: window.location.href,
       });
-      
-      alert(`Eroarea a fost raportată cu ID: ${errorId}\nMulțumim pentru feedback!`);
+
+      alert(
+        `Eroarea a fost raportată cu ID: ${errorId}\nMulțumim pentru feedback!`,
+      );
     }
   };
 
@@ -86,9 +88,10 @@ export class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600 text-center">
-                Ne pare rău, a apărut o eroare neașteptată. Echipa noastră a fost notificată și va rezolva problema cât mai curând.
+                Ne pare rău, a apărut o eroare neașteptată. Echipa noastră a
+                fost notificată și va rezolva problema cât mai curând.
               </p>
-              
+
               {this.state.errorId && (
                 <div className="text-xs text-gray-500 text-center">
                   ID Eroare: {this.state.errorId}
@@ -100,23 +103,35 @@ export class ErrorBoundary extends Component<Props, State> {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Reîncarcă Pagina
                 </Button>
-                
-                <Button variant="outline" onClick={this.handleGoBack} className="w-full">
+
+                <Button
+                  variant="outline"
+                  onClick={this.handleGoBack}
+                  className="w-full"
+                >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Înapoi
                 </Button>
-                
-                <Button variant="outline" onClick={this.handleGoHome} className="w-full">
+
+                <Button
+                  variant="outline"
+                  onClick={this.handleGoHome}
+                  className="w-full"
+                >
                   <Home className="h-4 w-4 mr-2" />
                   Pagina Principală
                 </Button>
-                
-                <Button variant="outline" onClick={this.handleReportError} className="w-full">
+
+                <Button
+                  variant="outline"
+                  onClick={this.handleReportError}
+                  className="w-full"
+                >
                   Raportează Eroarea
                 </Button>
               </div>
 
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {process.env.NODE_ENV === "development" && this.state.error && (
                 <details className="mt-4">
                   <summary className="cursor-pointer text-sm font-medium text-gray-700">
                     Detalii Eroare (Development)
@@ -128,13 +143,17 @@ export class ErrorBoundary extends Component<Props, State> {
                     {this.state.error.stack && (
                       <div>
                         <strong>Stack:</strong>
-                        <pre className="whitespace-pre-wrap">{this.state.error.stack}</pre>
+                        <pre className="whitespace-pre-wrap">
+                          {this.state.error.stack}
+                        </pre>
                       </div>
                     )}
                     {this.state.errorInfo && (
                       <div>
                         <strong>Component Stack:</strong>
-                        <pre className="whitespace-pre-wrap">{this.state.errorInfo.componentStack}</pre>
+                        <pre className="whitespace-pre-wrap">
+                          {this.state.errorInfo.componentStack}
+                        </pre>
                       </div>
                     )}
                   </div>
@@ -153,7 +172,7 @@ export class ErrorBoundary extends Component<Props, State> {
 // Higher-order component for wrapping components with error boundary
 export const withErrorBoundary = <P extends object>(
   Component: React.ComponentType<P>,
-  fallback?: ReactNode
+  fallback?: ReactNode,
 ) => {
   const WrappedComponent = (props: P) => (
     <ErrorBoundary fallback={fallback}>
@@ -162,26 +181,26 @@ export const withErrorBoundary = <P extends object>(
   );
 
   WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-  
+
   return WrappedComponent;
 };
 
 // Hook for functional components to handle errors
 export const useErrorHandler = () => {
   const handleError = (error: Error, context?: string) => {
-    console.error(`Error in ${context || 'component'}:`, error);
-    
+    console.error(`Error in ${context || "component"}:`, error);
+
     // In production, send to error reporting service
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       // TODO: Send to error reporting service
-      console.error('Production error:', {
+      console.error("Production error:", {
         message: error.message,
         stack: error.stack,
         context,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   };
 
   return { handleError };
-}; 
+};

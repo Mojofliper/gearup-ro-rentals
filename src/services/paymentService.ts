@@ -1,12 +1,12 @@
-import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
-import { 
-  CreatePaymentIntentParams, 
-  PaymentIntentResponse, 
+import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+import {
+  CreatePaymentIntentParams,
+  PaymentIntentResponse,
   StripeError,
   calculatePlatformFee,
-  validatePaymentAmounts 
-} from '@/integrations/stripe/client';
+  validatePaymentAmounts,
+} from "@/integrations/stripe/client";
 
 type BookingUpdate = {
   id?: string;
@@ -23,11 +23,19 @@ export class PaymentService {
   /**
    * Create a payment intent for a booking
    */
-  static async createPaymentIntent(params: CreatePaymentIntentParams): Promise<{ url: string; sessionId: string }> {
+  static async createPaymentIntent(
+    params: CreatePaymentIntentParams,
+  ): Promise<{ url: string; sessionId: string }> {
     try {
       // Validate amounts
-      if (!validatePaymentAmounts(params.rentalAmount, params.depositAmount, params.platformFee)) {
-        throw new StripeError('Invalid payment amounts');
+      if (
+        !validatePaymentAmounts(
+          params.rentalAmount,
+          params.depositAmount,
+          params.platformFee,
+        )
+      ) {
+        throw new StripeError("Invalid payment amounts");
       }
 
       // Call Supabase Edge Function to create Stripe payment intent
@@ -35,7 +43,7 @@ export class PaymentService {
         transactionId: params.transactionId,
         bookingId: params.bookingId,
         amount: params.amount,
-        currency: 'ron',
+        currency: "ron",
         metadata: {
           ...params.metadata,
           gearTitle: params.gearTitle,
@@ -43,37 +51,46 @@ export class PaymentService {
           endDate: params.endDate,
         },
       };
-      console.log('Sending payment intent payload:', payload);
-      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-create-payment-intent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      console.log("Sending payment intent payload:", payload);
+      const response = await fetch(
+        `https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-create-payment-intent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Edge Function error response:', errorData);
-        throw new StripeError(errorData.details || errorData.message || 'Failed to create checkout session');
+        console.error("Edge Function error response:", errorData);
+        throw new StripeError(
+          errorData.details ||
+            errorData.message ||
+            "Failed to create checkout session",
+        );
       }
 
       const sessionData = await response.json();
-      console.log('Edge Function success response:', sessionData);
-      
+      console.log("Edge Function success response:", sessionData);
+
       if (!sessionData.url) {
-        console.error('No URL in session data:', sessionData);
-        throw new StripeError('No payment URL received from server');
+        console.error("No URL in session data:", sessionData);
+        throw new StripeError("No payment URL received from server");
       }
-      
+
       return {
         url: sessionData.url,
         sessionId: sessionData.sessionId,
       };
     } catch (error) {
-      console.error('Checkout session creation error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to create checkout session');
+      console.error("Checkout session creation error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to create checkout session");
     }
   }
 
@@ -84,10 +101,12 @@ export class PaymentService {
     try {
       // For now, we'll just log the confirmation
       // In a real implementation, you'd update the booking status
-      console.log('Payment confirmed for intent:', paymentIntentId);
+      console.log("Payment confirmed for intent:", paymentIntentId);
     } catch (error) {
-      console.error('Payment confirmation error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to confirm payment');
+      console.error("Payment confirmation error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to confirm payment");
     }
   }
 
@@ -97,30 +116,35 @@ export class PaymentService {
   static async processRefund(
     bookingId: string,
     amount: number,
-    reason: string
+    reason: string,
   ): Promise<void> {
     try {
       // Call Supabase Edge Function to process refund
-      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-refund`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      const response = await fetch(
+        `https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-refund`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            bookingId,
+            amount,
+            reason,
+          }),
         },
-        body: JSON.stringify({
-          bookingId,
-          amount,
-          reason,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new StripeError(errorData.message || 'Failed to process refund');
+        throw new StripeError(errorData.message || "Failed to process refund");
       }
     } catch (error) {
-      console.error('Refund processing error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to process refund');
+      console.error("Refund processing error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to process refund");
     }
   }
 
@@ -130,19 +154,21 @@ export class PaymentService {
   static async getBookingById(bookingId: string) {
     try {
       const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('id', bookingId)
+        .from("bookings")
+        .select("*")
+        .eq("id", bookingId)
         .single();
 
       if (error) {
-        throw new StripeError('Failed to fetch booking');
+        throw new StripeError("Failed to fetch booking");
       }
 
       return data;
     } catch (error) {
-      console.error('Booking fetch error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to fetch booking');
+      console.error("Booking fetch error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to fetch booking");
     }
   }
 
@@ -152,31 +178,38 @@ export class PaymentService {
   static async getUserBookings(userId: string) {
     try {
       const { data, error } = await supabase
-        .from('bookings')
-        .select(`
+        .from("bookings")
+        .select(
+          `
           *,
           gear:gear(*),
           owner:users!owner_id(*),
           renter:users!renter_id(*)
-        `)
+        `,
+        )
         .or(`owner_id.eq.${userId},renter_id.eq.${userId}`)
-        .order('created_at', { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) {
-        throw new StripeError('Failed to fetch user bookings');
+        throw new StripeError("Failed to fetch user bookings");
       }
 
       return data || [];
     } catch (error) {
-      console.error('User bookings fetch error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to fetch user bookings');
+      console.error("User bookings fetch error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to fetch user bookings");
     }
   }
 
   /**
    * Calculate payment breakdown
    */
-  static calculatePaymentBreakdown(rentalAmount: number, depositAmount: number) {
+  static calculatePaymentBreakdown(
+    rentalAmount: number,
+    depositAmount: number,
+  ) {
     const platformFee = calculatePlatformFee(rentalAmount);
     const totalAmount = rentalAmount + depositAmount + platformFee;
 
@@ -191,30 +224,41 @@ export class PaymentService {
   /**
    * Setup Stripe Connect account for gear owner
    */
-  static async setupStripeConnect(userId: string, email: string, country: string = 'RO') {
+  static async setupStripeConnect(
+    userId: string,
+    email: string,
+    country: string = "RO",
+  ) {
     try {
-      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-connect-setup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      const response = await fetch(
+        `https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/stripe-connect-setup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            email,
+            country,
+          }),
         },
-        body: JSON.stringify({
-          userId,
-          email,
-          country,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new StripeError(errorData.error || 'Failed to setup Stripe Connect');
+        throw new StripeError(
+          errorData.error || "Failed to setup Stripe Connect",
+        );
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Stripe Connect setup error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to setup Stripe Connect');
+      console.error("Stripe Connect setup error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to setup Stripe Connect");
     }
   }
 
@@ -224,19 +268,21 @@ export class PaymentService {
   static async getConnectedAccountStatus(userId: string) {
     try {
       const { data, error } = await supabase
-        .from('connected_accounts')
-        .select('*')
-        .eq('owner_id', userId)
+        .from("connected_accounts")
+        .select("*")
+        .eq("owner_id", userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        throw new StripeError('Failed to fetch connected account status');
+      if (error && error.code !== "PGRST116") {
+        throw new StripeError("Failed to fetch connected account status");
       }
 
       return data;
     } catch (error) {
-      console.error('Connected account status error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to fetch connected account status');
+      console.error("Connected account status error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to fetch connected account status");
     }
   }
 
@@ -245,26 +291,33 @@ export class PaymentService {
    */
   static async syncConnectedAccountStatus(userId: string) {
     try {
-      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/sync-stripe-account-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      const response = await fetch(
+        `https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/sync-stripe-account-status`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            userId,
+          }),
         },
-        body: JSON.stringify({
-          userId,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new StripeError(errorData.error || 'Failed to sync account status');
+        throw new StripeError(
+          errorData.error || "Failed to sync account status",
+        );
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Sync account status error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to sync account status');
+      console.error("Sync account status error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to sync account status");
     }
   }
 
@@ -274,19 +327,21 @@ export class PaymentService {
   static async getEscrowTransaction(bookingId: string) {
     try {
       const { data, error } = await supabase
-        .from('escrow_transactions')
-        .select('*')
-        .eq('booking_id', bookingId)
+        .from("escrow_transactions")
+        .select("*")
+        .eq("booking_id", bookingId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        throw new StripeError('Failed to fetch escrow transaction');
+      if (error && error.code !== "PGRST116") {
+        throw new StripeError("Failed to fetch escrow transaction");
       }
 
       return data;
     } catch (error) {
-      console.error('Escrow transaction error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to fetch escrow transaction');
+      console.error("Escrow transaction error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to fetch escrow transaction");
     }
   }
 
@@ -324,23 +379,23 @@ export class PaymentService {
     // console.log('Is user the renter?', session?.data?.session?.user?.id === booking.renter_id);
     // console.log('Is user the owner?', session?.data?.session?.user?.id === booking.owner_id);
     // console.log('=== TRANSACTION DEBUG END ===');
-    
+
     // Try to find an existing transaction for this booking
     const { data: existing, error: findError } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('booking_id', booking.id)
+      .from("transactions")
+      .select("*")
+      .eq("booking_id", booking.id)
       .single();
-    
-    if (findError && findError.code !== 'PGRST116') {
-      console.error('Error finding existing transaction:', findError);
+
+    if (findError && findError.code !== "PGRST116") {
+      console.error("Error finding existing transaction:", findError);
     }
-    
+
     if (existing) {
       // console.log('Found existing transaction:', existing);
       return existing;
     }
-    
+
     // Calculate the correct amounts
     // The booking.rental_amount is the actual rental cost (without deposit and fees)
     // We need to calculate platform fee and total amount
@@ -348,37 +403,37 @@ export class PaymentService {
     const depositAmount = Number(booking.deposit_amount) || 0;
     const platformFee = Math.round(rentalAmount * 0.13);
     const totalAmount = rentalAmount + depositAmount + platformFee;
-    
+
     // console.log('Calculated amounts:', {
     //   rentalAmount,
     //   depositAmount,
     //   platformFee,
     //   totalAmount
     // });
-    
+
     // If not found, create a new transaction
     const { data, error } = await supabase
-      .from('transactions')
+      .from("transactions")
       .insert({
         booking_id: booking.id,
         amount: totalAmount,
         platform_fee: platformFee,
         deposit_amount: depositAmount,
         rental_amount: rentalAmount,
-        status: 'pending',
+        status: "pending",
       })
       .select()
       .single();
-    
+
     if (error) {
-      console.error('Error creating transaction:', error);
+      console.error("Error creating transaction:", error);
       throw new StripeError(`Failed to create transaction: ${error.message}`);
     }
-    
+
     if (!data) {
-      throw new StripeError('Failed to create transaction: No data returned');
+      throw new StripeError("Failed to create transaction: No data returned");
     }
-    
+
     // console.log('Created transaction:', data);
     return data;
   }
@@ -386,7 +441,17 @@ export class PaymentService {
   /**
    * Release escrow funds for a completed booking
    */
-  static async releaseEscrowFunds(bookingId: string, releaseType: 'automatic' | 'manual' | 'claim_owner' | 'claim_denied' | 'return_confirmed' | 'completed' = 'automatic', depositToOwner: boolean = false) {
+  static async releaseEscrowFunds(
+    bookingId: string,
+    releaseType:
+      | "automatic"
+      | "manual"
+      | "claim_owner"
+      | "claim_denied"
+      | "return_confirmed"
+      | "completed" = "automatic",
+    depositToOwner: boolean = false,
+  ) {
     try {
       // Check if booking exists
       const booking = await this.getBookingById(bookingId);
@@ -394,28 +459,35 @@ export class PaymentService {
         throw new StripeError(`Booking with ID ${bookingId} not found.`);
       }
 
-      const response = await fetch(`https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      const response = await fetch(
+        `https://wnrbxwzeshgblkfidayb.supabase.co/functions/v1/escrow-release`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            booking_id: bookingId,
+            release_type: releaseType,
+            deposit_to_owner: depositToOwner,
+          }),
         },
-        body: JSON.stringify({
-          booking_id: bookingId,
-          release_type: releaseType,
-          deposit_to_owner: depositToOwner,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new StripeError(errorData.error || 'Failed to release escrow funds');
+        throw new StripeError(
+          errorData.error || "Failed to release escrow funds",
+        );
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Escrow release error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to release escrow funds');
+      console.error("Escrow release error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to release escrow funds");
     }
   }
 
@@ -426,29 +498,34 @@ export class PaymentService {
     try {
       // Get booking with payment details
       const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .select(`
+        .from("bookings")
+        .select(
+          `
           *,
           transactions(*),
           escrow_transactions(*)
-        `)
-        .eq('id', bookingId)
+        `,
+        )
+        .eq("id", bookingId)
         .single();
 
       if (bookingError) {
-        throw new StripeError('Failed to fetch booking payment status');
+        throw new StripeError("Failed to fetch booking payment status");
       }
 
       return {
         booking,
         transaction: booking.transactions?.[0] || null,
         escrowTransaction: booking.escrow_transactions?.[0] || null,
-        paymentStatus: booking.payment_status || 'pending',
-        escrowStatus: booking.escrow_transactions?.[0]?.escrow_status || 'pending'
+        paymentStatus: booking.payment_status || "pending",
+        escrowStatus:
+          booking.escrow_transactions?.[0]?.escrow_status || "pending",
       };
     } catch (error) {
-      console.error('Payment status error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to get payment status');
+      console.error("Payment status error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to get payment status");
     }
   }
 
@@ -459,39 +536,47 @@ export class PaymentService {
     try {
       // Find bookings that are ready for automatic escrow release
       const { data: completedBookings, error } = await supabase
-        .from('bookings')
-        .select(`
+        .from("bookings")
+        .select(
+          `
           *,
           escrow_transactions(*)
-        `)
-        .eq('status', 'completed')
-        .eq('payment_status', 'paid')
-        .eq('escrow_transactions.escrow_status', 'held');
+        `,
+        )
+        .eq("status", "completed")
+        .eq("payment_status", "paid")
+        .eq("escrow_transactions.escrow_status", "held");
 
       if (error) {
-        throw new StripeError('Failed to fetch completed bookings');
+        throw new StripeError("Failed to fetch completed bookings");
       }
 
-      const releasePromises = completedBookings?.map(async (booking) => {
-        try {
-          return await this.releaseEscrowFunds(booking.id, 'automatic');
-        } catch (error) {
-          console.error(`Failed to release escrow for booking ${booking.id}:`, error);
-          return null;
-        }
-      }) || [];
+      const releasePromises =
+        completedBookings?.map(async (booking) => {
+          try {
+            return await this.releaseEscrowFunds(booking.id, "automatic");
+          } catch (error) {
+            console.error(
+              `Failed to release escrow for booking ${booking.id}:`,
+              error,
+            );
+            return null;
+          }
+        }) || [];
 
       const results = await Promise.all(releasePromises);
-      const successful = results.filter(result => result !== null);
+      const successful = results.filter((result) => result !== null);
 
       return {
         total: completedBookings?.length || 0,
         successful: successful.length,
-        failed: (completedBookings?.length || 0) - successful.length
+        failed: (completedBookings?.length || 0) - successful.length,
       };
     } catch (error) {
-      console.error('Automatic escrow release error:', error);
-      throw error instanceof StripeError ? error : new StripeError('Failed to process automatic escrow release');
+      console.error("Automatic escrow release error:", error);
+      throw error instanceof StripeError
+        ? error
+        : new StripeError("Failed to process automatic escrow release");
     }
   }
 }

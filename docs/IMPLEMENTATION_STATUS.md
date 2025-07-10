@@ -3,6 +3,7 @@
 ## 📝 **TODOs (from Roadmap Cross-Reference)**
 
 ### Admin Dashboard
+
 - [ ] Expand analytics dashboard (revenue, user, transaction analytics)
 - [ ] Add user management (listing, search, verification, activity monitoring)
 - [ ] Implement content moderation tools (gear, reviews, flagging, moderation queue)
@@ -10,27 +11,32 @@
 - [ ] Complete admin authentication and access controls
 
 ### Notification System
+
 - [ ] Complete email notification templates and delivery flows
 - [ ] Implement push notification delivery and preferences
 - [ ] Add notification analytics and reporting
 - [ ] Test all notification scenarios and add troubleshooting guide
 
 ### Photo Documentation
+
 - [ ] Enhance photo validation and metadata extraction
 - [ ] Improve photo comparison tools and workflow
 - [ ] Add photo upload guidelines and documentation
 
 ### Production Readiness
+
 - [ ] Finalize performance optimization (CDN, caching, bundle size)
 - [ ] Add monitoring, error tracking, and analytics integration
 - [ ] Complete deployment documentation and production setup
 
 ### Testing & Quality
+
 - [ ] Increase unit, integration, and E2E test coverage
 - [ ] Add performance and accessibility testing
 - [ ] Complete documentation for all critical paths
 
 ### Miscellaneous
+
 - [ ] Refactor legacy code and complete migration to new API service/hooks
 - [ ] Improve code comments and documentation consistency
 - [ ] Address all known technical debt and issues
@@ -42,6 +48,7 @@
 ### **Core Features**
 
 #### **API Service Migration**
+
 - **Database Schema Redesign** - New schema with escrow, admin, notifications
 - **API Service Layer** - Service layer with all endpoints
 - **React Query Hooks** - Core hooks for API service
@@ -52,6 +59,7 @@
   - `useMessages.ts` - Messaging hooks with `useMessagingApi`
 
 #### **Performance Optimizations**
+
 - **Error Boundaries** - Error handling system
   - `ErrorBoundary.tsx` - Class-based error boundary
   - `withErrorBoundary` HOC for component wrapping
@@ -62,6 +70,7 @@
   - `GearCard.tsx` - Memoized with TypeScript types
 
 #### **Code Architecture**
+
 - **Type Safety** - TypeScript usage throughout
 - **Modular Components** - Organized components
 - **API Abstraction** - Separation between UI and data layer
@@ -69,6 +78,7 @@
 ### **Ongoing and Planned Work**
 
 #### **API Service Migration**
+
 - **Component Migration** - Components using new hooks
   - `BrowseGear.tsx` - Uses new `useGearList` with error boundaries and skeletons
   - `GearDetail.tsx` - Uses new `useGear` with error boundaries and skeletons
@@ -76,6 +86,7 @@
   - `BookingModal.tsx` - To use new `useCreateBooking`
 
 #### **Performance Optimizations**
+
 - **Code Splitting** - Lazy loading for routes
 - **React.memo** - More components to be memoized
 - **useMemo/useCallback** - Optimize expensive operations
@@ -84,16 +95,19 @@
 ### **Planned Tasks**
 
 #### **State Management Improvements**
+
 - **Context Optimization** - Reduce unnecessary re-renders
 - **Local State Management** - Improved component state
 - **Global State** - Consider Zustand or Redux Toolkit
 
 #### **Advanced Features**
+
 - **Real-time Updates** - WebSocket integration
 - **Offline Support** - Service worker
 - **Progressive Web App** - PWA features
 
 #### **Testing & Quality**
+
 - **Unit Tests** - Component and hook testing
 - **Integration Tests** - API integration testing
 - **E2E Tests** - Full user flow testing
@@ -102,16 +116,19 @@
 ## **🔧 Technical Debt & Issues**
 
 ### **High Priority**
+
 - Component Migration - Some components use direct Supabase calls
 - Type Safety - Some components lack TypeScript types
 - Error Handling - Inconsistent error handling
 
 ### **Medium Priority**
+
 - Performance - Large components need refactoring
 - Bundle Size - Code splitting needed
 - Accessibility - ARIA labels and keyboard navigation
 
 ### **Low Priority**
+
 - Documentation - Component documentation
 - Code Comments - More inline documentation
 - Consistency - Naming conventions and patterns
@@ -119,12 +136,14 @@
 ## **📈 Performance Metrics**
 
 ### **Current Metrics**
+
 - Bundle Size: ~2.5MB
 - First Contentful Paint: ~2.8s
 - Largest Contentful Paint: ~4.2s
 - Cumulative Layout Shift: 0.15
 
 ### **Target Metrics**
+
 - Bundle Size: <1.5MB
 - First Contentful Paint: <1.5s
 - Largest Contentful Paint: <2.5s
@@ -133,6 +152,7 @@
 ## **🎯 Next Steps**
 
 ### **Immediate**
+
 - Complete Component Migration
   - Update `BrowseGear.tsx` to use new API hooks
   - Update `GearDetail.tsx` to use new API hooks
@@ -143,6 +163,7 @@
   - Add useMemo/useCallback optimizations
 
 ### **Short Term**
+
 - Testing Implementation
   - Set up testing framework
   - Write unit tests for hooks
@@ -153,6 +174,7 @@
   - Offline support
 
 ### **Long Term**
+
 - Production Readiness
   - Performance monitoring
   - Error tracking
@@ -182,4 +204,4 @@
 - Bundle size reduced
 - Error rate reduced
 - TypeScript coverage improved
-- Test coverage improved 
+- Test coverage improved

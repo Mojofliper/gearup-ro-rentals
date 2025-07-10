@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Bell } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
+import React, { useEffect, useState } from "react";
+import { Bell } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/contexts/AuthContext';
-import { Skeleton } from '@/components/ui/skeleton';
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface NotificationRow {
   id: string;
@@ -28,63 +28,85 @@ export const NotificationBell: React.FC = () => {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
 
-
-
   useEffect(() => {
     if (!user) return;
-    
+
     const load = async () => {
       try {
-        console.log('NotificationBell: Loading notifications for user:', user.id);
+        console.log(
+          "NotificationBell: Loading notifications for user:",
+          user.id,
+        );
         const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
+          .from("notifications")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
           .limit(20);
-        
+
         if (error) {
-          console.error('NotificationBell: Error loading notifications:', error);
+          console.error(
+            "NotificationBell: Error loading notifications:",
+            error,
+          );
         } else {
-          console.log('NotificationBell: Loaded notifications:', data);
+          console.log("NotificationBell: Loaded notifications:", data);
           setNotifications(data as NotificationRow[]);
-          setUnread(data.filter(n => !n.is_read).length);
+          setUnread(data.filter((n) => !n.is_read).length);
         }
       } catch (err) {
-        console.error('NotificationBell: Exception loading notifications:', err);
+        console.error(
+          "NotificationBell: Exception loading notifications:",
+          err,
+        );
       }
       setLoading(false);
     };
-    
+
     load();
 
-    const channel = supabase.channel('notifications_' + user.id)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, payload => {
-        console.log('NotificationBell: Real-time notification change detected:', payload);
-        // Reload all notifications on any change
-        load();
-      })
+    const channel = supabase
+      .channel("notifications_" + user.id)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log(
+            "NotificationBell: Real-time notification change detected:",
+            payload,
+          );
+          // Reload all notifications on any change
+          load();
+        },
+      )
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const markAllRead = async () => {
     if (!user) return;
     try {
-      const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("user_id", user.id);
       if (error) {
-        console.error('Error marking notifications as read:', error);
+        console.error("Error marking notifications as read:", error);
       } else {
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
         setUnread(0);
       }
     } catch (err) {
-      console.error('Exception marking notifications as read:', err);
+      console.error("Exception marking notifications as read:", err);
     }
   };
-
-
-
 
   if (!user) return null;
 
@@ -100,24 +122,40 @@ export const NotificationBell: React.FC = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+      <DropdownMenuContent
+        align="end"
+        className="w-80 max-h-96 overflow-y-auto"
+      >
         <DropdownMenuLabel className="flex items-center justify-between">
           Notificări
           {unread > 0 && (
-            <Button variant="link" size="sm" onClick={markAllRead}>Marchează citite</Button>
+            <Button variant="link" size="sm" onClick={markAllRead}>
+              Marchează citite
+            </Button>
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {loading ? (
           <div className="p-4 space-y-2">
-            {Array.from({ length: 3 }).map((_,i)=>(<Skeleton key={i} className="h-6" />))}
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-6" />
+            ))}
           </div>
         ) : notifications.length === 0 ? (
-          <DropdownMenuItem className="text-xs text-muted-foreground">Nu ai notificări.</DropdownMenuItem>
+          <DropdownMenuItem className="text-xs text-muted-foreground">
+            Nu ai notificări.
+          </DropdownMenuItem>
         ) : (
-          notifications.map(n => (
-            <DropdownMenuItem key={n.id} className="flex flex-col space-y-0.5 whitespace-normal">
-              <span className={`text-sm font-medium ${n.is_read ? 'text-muted-foreground' : ''}`}>{n.title}</span>
+          notifications.map((n) => (
+            <DropdownMenuItem
+              key={n.id}
+              className="flex flex-col space-y-0.5 whitespace-normal"
+            >
+              <span
+                className={`text-sm font-medium ${n.is_read ? "text-muted-foreground" : ""}`}
+              >
+                {n.title}
+              </span>
               <span className="text-xs text-muted-foreground">{n.message}</span>
             </DropdownMenuItem>
           ))
@@ -125,4 +163,4 @@ export const NotificationBell: React.FC = () => {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}; 
+};

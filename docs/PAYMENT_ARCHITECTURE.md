@@ -7,6 +7,7 @@ After comprehensive analysis of payment providers for the Romanian market, **Str
 ### Why Stripe?
 
 #### ✅ **Advantages for GearUp:**
+
 - **Romanian Market Support**: Full RON currency support and local payment methods
 - **Marketplace Features**: Stripe Connect supports escrow and marketplace scenarios
 - **Security**: PCI-compliant with advanced fraud detection
@@ -16,6 +17,7 @@ After comprehensive analysis of payment providers for the Romanian market, **Str
 - **Already Partially Implemented**: 60% of integration complete
 
 #### 🔄 **Alternative Providers Considered:**
+
 - **PayPal**: Limited Romanian market support, higher fees
 - **Square**: Not available in Romania
 - **Adyen**: Enterprise-focused, complex for startups
@@ -26,6 +28,7 @@ After comprehensive analysis of payment providers for the Romanian market, **Str
 ## 🏗 Payment Architecture Overview
 
 ### System Components
+
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Supabase      │    │     Stripe      │
@@ -41,6 +44,7 @@ After comprehensive analysis of payment providers for the Romanian market, **Str
 ```
 
 ### Payment Flow Architecture
+
 1. **Booking Creation** → Database transaction record
 2. **Payment Intent** → Stripe Checkout Session
 3. **User Payment** → Stripe processes payment
@@ -55,6 +59,7 @@ After comprehensive analysis of payment providers for the Romanian market, **Str
 ### Current Implementation Status: 60% Complete
 
 #### ✅ **Implemented Features:**
+
 - Stripe client integration
 - Payment intent creation
 - Basic webhook handling
@@ -63,12 +68,14 @@ After comprehensive analysis of payment providers for the Romanian market, **Str
 - Refund API structure
 
 #### 🔄 **Partially Implemented:**
+
 - Payment UI refinement
 - Webhook processing
 - Error handling
 - User feedback
 
 #### ❌ **Missing Features:**
+
 - Escrow system (Stripe Connect)
 - Automatic fund distribution
 - Advanced fraud detection
@@ -78,6 +85,7 @@ After comprehensive analysis of payment providers for the Romanian market, **Str
 ### Stripe Configuration
 
 #### Environment Variables
+
 ```env
 # Frontend
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
@@ -90,13 +98,14 @@ CANCEL_URL=https://gearup.ro/payment-cancel
 ```
 
 #### Stripe Account Setup
+
 ```typescript
 // Stripe configuration for Romania
 export const STRIPE_CONFIG = {
-  currency: 'ron',
-  locale: 'ro',
-  payment_method_types: ['card'],
-  capture_method: 'automatic',
+  currency: "ron",
+  locale: "ro",
+  payment_method_types: ["card"],
+  capture_method: "automatic",
   // Future: Add local payment methods
   // payment_method_types: ['card', 'sofort', 'ideal', 'bancontact'],
 } as const;
@@ -109,6 +118,7 @@ export const STRIPE_CONFIG = {
 ### Stripe Connect Marketplace Model
 
 #### Account Structure
+
 ```
 GearUp Platform Account (Platform)
 ├── Connected Accounts (Owners)
@@ -119,11 +129,12 @@ GearUp Platform Account (Platform)
 ```
 
 #### Escrow Flow
+
 ```typescript
 // 1. Create Connected Account for Owner
 const account = await stripe.accounts.create({
-  type: 'express',
-  country: 'RO',
+  type: "express",
+  country: "RO",
   email: owner.email,
   capabilities: {
     card_payments: { requested: true },
@@ -134,7 +145,7 @@ const account = await stripe.accounts.create({
 // 2. Create Payment Intent with Application Fee
 const paymentIntent = await stripe.paymentIntents.create({
   amount: totalAmount,
-  currency: 'ron',
+  currency: "ron",
   application_fee_amount: platformFee,
   transfer_data: {
     destination: owner.stripe_account_id,
@@ -150,13 +161,14 @@ const paymentIntent = await stripe.paymentIntents.create({
 // 4. Release funds after rental completion
 const transfer = await stripe.transfers.create({
   amount: rentalAmount,
-  currency: 'ron',
+  currency: "ron",
   destination: owner.stripe_account_id,
   source_transaction: paymentIntent.latest_charge,
 });
 ```
 
 ### Database Schema for Escrow
+
 ```sql
 -- Connected accounts for owners
 CREATE TABLE connected_accounts (
@@ -189,10 +201,11 @@ CREATE TABLE escrow_transactions (
 ## 🔄 Complete Payment Flow
 
 ### 1. Booking Creation
+
 ```typescript
 // User creates booking
 const booking = await supabase
-  .from('bookings')
+  .from("bookings")
   .insert({
     gear_id: gearId,
     renter_id: userId,
@@ -201,44 +214,47 @@ const booking = await supabase
     end_date: endDate,
     total_amount: rentalAmount,
     deposit_amount: depositAmount,
-    status: 'pending',
-    payment_status: 'pending'
+    status: "pending",
+    payment_status: "pending",
   })
   .select()
   .single();
 
 // Create transaction record
 const transaction = await supabase
-  .from('transactions')
+  .from("transactions")
   .insert({
     booking_id: booking.id,
     amount: totalAmount,
     rental_amount: rentalAmount,
     deposit_amount: depositAmount,
     platform_fee: platformFee,
-    status: 'pending'
+    status: "pending",
   })
   .select()
   .single();
 ```
 
 ### 2. Payment Intent Creation
+
 ```typescript
 // Create Stripe Checkout Session
 const session = await stripe.checkout.sessions.create({
-  payment_method_types: ['card'],
-  line_items: [{
-    price_data: {
-      currency: 'ron',
-      product_data: {
-        name: `Rental: ${gear.name}`,
-        description: `Rental period: ${startDate} - ${endDate}`,
+  payment_method_types: ["card"],
+  line_items: [
+    {
+      price_data: {
+        currency: "ron",
+        product_data: {
+          name: `Rental: ${gear.name}`,
+          description: `Rental period: ${startDate} - ${endDate}`,
+        },
+        unit_amount: totalAmount,
       },
-      unit_amount: totalAmount,
+      quantity: 1,
     },
-    quantity: 1,
-  }],
-  mode: 'payment',
+  ],
+  mode: "payment",
   success_url: `${SUCCESS_URL}?session_id={CHECKOUT_SESSION_ID}`,
   cancel_url: CANCEL_URL,
   customer_email: user.email,
@@ -253,23 +269,24 @@ const session = await stripe.checkout.sessions.create({
 ```
 
 ### 3. Payment Processing
+
 ```typescript
 // Webhook handler for payment success
 async function handlePaymentSuccess(paymentIntent: any) {
   // Update transaction status
   await supabase
-    .from('transactions')
+    .from("transactions")
     .update({
-      status: 'completed',
+      status: "completed",
       stripe_charge_id: paymentIntent.latest_charge,
     })
-    .eq('stripe_payment_intent_id', paymentIntent.id);
+    .eq("stripe_payment_intent_id", paymentIntent.id);
 
   // Update booking status
   await supabase
-    .from('bookings')
-    .update({ payment_status: 'paid' })
-    .eq('id', paymentIntent.metadata.booking_id);
+    .from("bookings")
+    .update({ payment_status: "paid" })
+    .eq("id", paymentIntent.metadata.booking_id);
 
   // Send notifications
   await sendPaymentSuccessNotifications(paymentIntent.metadata.booking_id);
@@ -277,6 +294,7 @@ async function handlePaymentSuccess(paymentIntent: any) {
 ```
 
 ### 4. Escrow Management
+
 ```typescript
 // Hold funds in escrow (automatic with Stripe Connect)
 // Funds are automatically held until manual release or automatic release
@@ -285,11 +303,11 @@ async function handlePaymentSuccess(paymentIntent: any) {
 async function releaseEscrowFunds(bookingId: string) {
   const booking = await getBookingById(bookingId);
   const transaction = await getTransactionByBookingId(bookingId);
-  
+
   // Release rental amount to owner
   await stripe.transfers.create({
     amount: transaction.rental_amount,
-    currency: 'ron',
+    currency: "ron",
     destination: booking.owner.stripe_account_id,
     source_transaction: transaction.stripe_charge_id,
   });
@@ -302,12 +320,12 @@ async function releaseEscrowFunds(bookingId: string) {
 
   // Update escrow status
   await supabase
-    .from('escrow_transactions')
+    .from("escrow_transactions")
     .update({
-      escrow_status: 'released',
+      escrow_status: "released",
       release_date: new Date().toISOString(),
     })
-    .eq('booking_id', bookingId);
+    .eq("booking_id", bookingId);
 }
 ```
 
@@ -316,27 +334,30 @@ async function releaseEscrowFunds(bookingId: string) {
 ## 🛡 Security & Compliance
 
 ### PCI Compliance
+
 - **Stripe**: PCI DSS Level 1 compliant
 - **No Card Data**: Card data never touches our servers
 - **Tokenization**: All sensitive data is tokenized
 
 ### Fraud Protection
+
 ```typescript
 // Stripe Radar integration
 const paymentIntent = await stripe.paymentIntents.create({
   amount: amount,
-  currency: 'ron',
-  capture_method: 'automatic',
+  currency: "ron",
+  capture_method: "automatic",
   // Enable fraud detection
   radar_options: {
     session: sessionId,
   },
   // 3D Secure authentication
-  setup_future_usage: 'off_session',
+  setup_future_usage: "off_session",
 });
 ```
 
 ### Data Protection
+
 - **GDPR Compliance**: All data processing follows GDPR
 - **Data Minimization**: Only necessary data is collected
 - **Right to Deletion**: Users can request data deletion
@@ -347,31 +368,33 @@ const paymentIntent = await stripe.paymentIntents.create({
 ## 📊 Payment Analytics & Reporting
 
 ### Transaction Monitoring
+
 ```sql
 -- Payment success rate
-SELECT 
+SELECT
   DATE(created_at) as date,
   COUNT(*) as total_transactions,
   COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
   ROUND(
-    COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*), 
+    COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*),
     2
   ) as success_rate
-FROM transactions 
+FROM transactions
 WHERE created_at >= NOW() - INTERVAL '30 days'
 GROUP BY DATE(created_at)
 ORDER BY date;
 ```
 
 ### Revenue Tracking
+
 ```sql
 -- Platform revenue
-SELECT 
+SELECT
   DATE(created_at) as date,
   SUM(platform_fee) as platform_revenue,
   SUM(rental_amount) as total_rentals,
   SUM(deposit_amount) as total_deposits
-FROM transactions 
+FROM transactions
 WHERE status = 'completed'
   AND created_at >= NOW() - INTERVAL '30 days'
 GROUP BY DATE(created_at)
@@ -383,6 +406,7 @@ ORDER BY date;
 ## 🔧 Implementation Roadmap
 
 ### Phase 1: Complete Current Implementation (Week 1-2)
+
 - [ ] Refine payment UI components
 - [ ] Complete webhook processing
 - [ ] Improve error handling
@@ -390,6 +414,7 @@ ORDER BY date;
 - [ ] Test payment flows thoroughly
 
 ### Phase 2: Escrow System (Week 3-4)
+
 - [ ] Implement Stripe Connect
 - [ ] Create connected accounts for owners
 - [ ] Implement escrow logic
@@ -397,6 +422,7 @@ ORDER BY date;
 - [ ] Test escrow flows
 
 ### Phase 3: Advanced Features (Week 5-6)
+
 - [ ] Add local payment methods
 - [ ] Implement invoice generation
 - [ ] Add payment analytics
@@ -404,6 +430,7 @@ ORDER BY date;
 - [ ] Add payment dispute handling
 
 ### Phase 4: Optimization (Week 7-8)
+
 - [ ] Performance optimization
 - [ ] Mobile responsive optimization
 - [ ] A/B testing payment flows
@@ -415,6 +442,7 @@ ORDER BY date;
 ## 🚀 Production Checklist
 
 ### Pre-Launch
+
 - [ ] Switch to live Stripe keys
 - [ ] Set up production webhooks
 - [ ] Configure fraud detection
@@ -424,6 +452,7 @@ ORDER BY date;
 - [ ] Legal compliance review
 
 ### Post-Launch
+
 - [ ] Monitor payment success rates
 - [ ] Track user feedback
 - [ ] Optimize conversion rates
@@ -436,17 +465,20 @@ ORDER BY date;
 ## 📈 Cost Analysis
 
 ### Stripe Fees (Romanian Market)
+
 - **Standard Transaction**: 2.9% + 0.30 RON
 - **International Cards**: 3.9% + 0.30 RON
 - **Stripe Connect**: No additional fees
 - **Refunds**: No fee (original fee not returned)
 
 ### Platform Fee Structure
+
 - **Platform Fee**: 13% of rental amount
 - **Owner Receives**: 87% of rental amount
 - **Deposit**: 100% returned to renter (if no issues)
 
 ### Example Transaction
+
 ```
 Rental Amount: 100 RON
 Platform Fee: 13 RON (13%)
@@ -457,4 +489,4 @@ Platform Revenue: 9.80 RON (13 - 3.20)
 
 ---
 
-This payment architecture ensures a secure, compliant, and user-friendly payment experience for the GearUp platform while maximizing revenue and minimizing risk. 
+This payment architecture ensures a secure, compliant, and user-friendly payment experience for the GearUp platform while maximizing revenue and minimizing risk.

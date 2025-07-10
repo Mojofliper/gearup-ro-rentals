@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CreditCard, Shield, CheckCircle, AlertTriangle } from 'lucide-react';
-import { useStripeConnect } from '@/hooks/useStripeConnect';
-import { toast } from '@/hooks/use-toast';
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Loader2,
+  CreditCard,
+  Shield,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
+import { useStripeConnect } from "@/hooks/useStripeConnect";
+import { toast } from "@/hooks/use-toast";
 
 interface StripeConnectModalProps {
   isOpen: boolean;
@@ -15,20 +27,24 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { connectedAccount, loading, error, setupStripeConnect } = useStripeConnect();
+  const { connectedAccount, loading, error, setupStripeConnect } =
+    useStripeConnect();
 
   const handleSetup = async () => {
     try {
       await setupStripeConnect();
       toast({
-        title: 'Configurare inițiată',
-        description: 'Veți fi redirecționat către Stripe pentru configurarea contului.',
+        title: "Configurare inițiată",
+        description:
+          "Veți fi redirecționat către Stripe pentru configurarea contului.",
       });
     } catch (err: unknown) {
       toast({
-        title: 'Eroare',
-        description: (err as Error).message || 'Nu s-a putut iniția configurarea Stripe Connect.',
-        variant: 'destructive',
+        title: "Eroare",
+        description:
+          (err as Error).message ||
+          "Nu s-a putut iniția configurarea Stripe Connect.",
+        variant: "destructive",
       });
     }
   };
@@ -37,21 +53,21 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
     if (!connectedAccount) return null;
 
     switch (connectedAccount.account_status) {
-      case 'active':
+      case "active":
         return (
           <div className="flex items-center space-x-2 text-green-600">
             <CheckCircle className="h-4 w-4" />
             <span>Cont activ</span>
           </div>
         );
-      case 'pending':
+      case "pending":
         return (
           <div className="flex items-center space-x-2 text-yellow-600">
             <AlertTriangle className="h-4 w-4" />
             <span>În așteptare</span>
           </div>
         );
-      case 'restricted':
+      case "restricted":
         return (
           <div className="flex items-center space-x-2 text-red-600">
             <AlertTriangle className="h-4 w-4" />
@@ -69,7 +85,8 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
         <DialogHeader>
           <DialogTitle>Configurare Stripe Connect</DialogTitle>
           <DialogDescription>
-            Configurați-vă contul de plată pentru a primi plăți pentru închirierea echipamentului.
+            Configurați-vă contul de plată pentru a primi plăți pentru
+            închirierea echipamentului.
           </DialogDescription>
         </DialogHeader>
 
@@ -82,10 +99,12 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
                 <div className="space-y-2">
                   <div>Status cont: {getStatusBadge()}</div>
                   <div className="text-sm text-muted-foreground">
-                    Plăți activate: {connectedAccount.charges_enabled ? 'Da' : 'Nu'}
+                    Plăți activate:{" "}
+                    {connectedAccount.charges_enabled ? "Da" : "Nu"}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Payouts activate: {connectedAccount.payouts_enabled ? 'Da' : 'Nu'}
+                    Payouts activate:{" "}
+                    {connectedAccount.payouts_enabled ? "Da" : "Nu"}
                   </div>
                 </div>
               </AlertDescription>
@@ -124,11 +143,7 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
         </div>
 
         <div className="flex space-x-2">
-          <Button 
-            onClick={handleSetup} 
-            disabled={loading}
-            className="flex-1"
-          >
+          <Button onClick={handleSetup} disabled={loading} className="flex-1">
             {loading ? (
               <>
                 <Loader2 className="animate-spin mr-2" />
@@ -148,4 +163,4 @@ export const StripeConnectModal: React.FC<StripeConnectModalProps> = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};

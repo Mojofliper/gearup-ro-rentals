@@ -1,10 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useBookingApi } from './useApi';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useDeleteConversation } from '@/hooks/useMessages';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useBookingApi } from "./useApi";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useDeleteConversation } from "@/hooks/useMessages";
 
 type Booking = Record<string, unknown>;
 type BookingInsert = Record<string, unknown>;
@@ -13,9 +13,9 @@ export const useUserBookings = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { getUserBookings, loading, error } = useBookingApi();
-  
+
   const query = useQuery({
-    queryKey: ['bookings', 'user', user?.id],
+    queryKey: ["bookings", "user", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       return await getUserBookings(user.id);
@@ -23,8 +23,11 @@ export const useUserBookings = () => {
     enabled: !!user?.id,
     retry: (failureCount, error) => {
       // Retry up to 3 times, but only if it's a session-related error
-      if (failureCount < 3 && error?.message?.includes('401')) {
-        console.log('useUserBookings (useBookings): Retrying due to 401 error, attempt:', failureCount + 1);
+      if (failureCount < 3 && error?.message?.includes("401")) {
+        console.log(
+          "useUserBookings (useBookings): Retrying due to 401 error, attempt:",
+          failureCount + 1,
+        );
         return true;
       }
       return false;
@@ -36,94 +39,120 @@ export const useUserBookings = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('useBookings: Setting up real-time subscriptions for user:', user.id);
+    console.log(
+      "useBookings: Setting up real-time subscriptions for user:",
+      user.id,
+    );
 
     const channel = supabase
-      .channel('booking-updates')
+      .channel("booking-updates")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-          filter: `renter_id=eq.${user.id} OR owner_id=eq.${user.id}`
+          event: "*",
+          schema: "public",
+          table: "bookings",
+          filter: `renter_id=eq.${user.id} OR owner_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('useBookings: Booking update received:', payload);
-          console.log('useBookings: New booking status:', (payload.new as Record<string, unknown>)?.status);
-          console.log('useBookings: Old booking status:', (payload.old as Record<string, unknown>)?.status);
+          console.log("useBookings: Booking update received:", payload);
+          console.log(
+            "useBookings: New booking status:",
+            (payload.new as Record<string, unknown>)?.status,
+          );
+          console.log(
+            "useBookings: Old booking status:",
+            (payload.old as Record<string, unknown>)?.status,
+          );
           // Invalidate and refetch bookings when any booking changes
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+          queryClient.invalidateQueries({
+            queryKey: ["bookings", "user", user.id],
+          });
           // Also refresh calendar availability when booking status changes
-          queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] });
-        }
+          queryClient.invalidateQueries({
+            queryKey: ["gear-unavailable-dates"],
+          });
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'escrow_transactions'
+          event: "*",
+          schema: "public",
+          table: "escrow_transactions",
         },
         (payload) => {
-          console.log('useBookings: Escrow transaction update received:', payload);
+          console.log(
+            "useBookings: Escrow transaction update received:",
+            payload,
+          );
           // Invalidate and refetch bookings when escrow status changes
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
+          queryClient.invalidateQueries({
+            queryKey: ["bookings", "user", user.id],
+          });
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'transactions'
+          event: "*",
+          schema: "public",
+          table: "transactions",
         },
         () => {
-          console.log('useBookings: Transaction update received');
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
+          console.log("useBookings: Transaction update received");
+          queryClient.invalidateQueries({
+            queryKey: ["bookings", "user", user.id],
+          });
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'claims'
+          event: "*",
+          schema: "public",
+          table: "claims",
         },
         () => {
-          console.log('useBookings: Claim update received');
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
+          console.log("useBookings: Claim update received");
+          queryClient.invalidateQueries({
+            queryKey: ["bookings", "user", user.id],
+          });
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'reviews'
+          event: "*",
+          schema: "public",
+          table: "reviews",
         },
         () => {
-          console.log('useBookings: Review update received');
-          queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
-        }
+          console.log("useBookings: Review update received");
+          queryClient.invalidateQueries({
+            queryKey: ["bookings", "user", user.id],
+          });
+        },
       )
       .subscribe((status) => {
-        console.log('useBookings: Real-time subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('useBookings: Real-time subscription active');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('useBookings: Real-time subscription error');
+        console.log("useBookings: Real-time subscription status:", status);
+        if (status === "SUBSCRIBED") {
+          console.log("useBookings: Real-time subscription active");
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("useBookings: Real-time subscription error");
         }
       });
 
     // Polling fallback - refresh every 30 seconds as backup
     const pollInterval = setInterval(() => {
-      console.log('useBookings: Polling fallback - refreshing bookings');
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+      console.log("useBookings: Polling fallback - refreshing bookings");
+      queryClient.invalidateQueries({
+        queryKey: ["bookings", "user", user.id],
+      });
     }, 30000);
 
     return () => {
-      console.log('useBookings: Cleaning up real-time subscriptions');
+      console.log("useBookings: Cleaning up real-time subscriptions");
       supabase.removeChannel(channel);
       clearInterval(pollInterval);
     };
@@ -148,13 +177,21 @@ export const useCreateBooking = () => {
       return await createBooking(bookingData);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['gear'] });
-      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
+      queryClient.invalidateQueries({
+        queryKey: ["bookings", "user", user?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["gear"] });
+      queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] }); // Refresh calendar availability
       // Send notification to owner and renter
       if (data && data.id && data.gear_id && data.owner_id && data.renter_id) {
-        const gearTitle = (data.gear as { title?: string })?.title || 'Echipament';
-        await notifyBookingCreated(data.id as string, gearTitle, data.owner_id as string, data.renter_id as string);
+        const gearTitle =
+          (data.gear as { title?: string })?.title || "Echipament";
+        await notifyBookingCreated(
+          data.id as string,
+          gearTitle,
+          data.owner_id as string,
+          data.renter_id as string,
+        );
       }
     },
   });
@@ -164,19 +201,37 @@ export const useAcceptBooking = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { acceptBooking, loading, error } = useBookingApi();
-  const { notifyBookingConfirmed, notifyBookingConfirmedOwner } = useNotifications();
+  const { notifyBookingConfirmed, notifyBookingConfirmedOwner } =
+    useNotifications();
   return useMutation({
-    mutationFn: async ({ bookingId, pickupLocation }: { bookingId: string; pickupLocation: string }) => {
+    mutationFn: async ({
+      bookingId,
+      pickupLocation,
+    }: {
+      bookingId: string;
+      pickupLocation: string;
+    }) => {
       return await acceptBooking(bookingId, pickupLocation);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
+      queryClient.invalidateQueries({
+        queryKey: ["bookings", "user", user?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] }); // Refresh calendar availability
       // Send notification to renter and owner
       if (data && data.id && data.renter_id && data.owner_id) {
-        const gearTitle = (data.gear as { title?: string })?.title || 'Echipament';
-        await notifyBookingConfirmed(data.id as string, gearTitle, data.renter_id as string);
-        await notifyBookingConfirmedOwner(data.id as string, gearTitle, data.owner_id as string);
+        const gearTitle =
+          (data.gear as { title?: string })?.title || "Echipament";
+        await notifyBookingConfirmed(
+          data.id as string,
+          gearTitle,
+          data.renter_id as string,
+        );
+        await notifyBookingConfirmedOwner(
+          data.id as string,
+          gearTitle,
+          data.owner_id as string,
+        );
       }
     },
   });
@@ -192,15 +247,20 @@ export const useRejectBooking = () => {
       return await rejectBooking(bookingId);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
-      
+      queryClient.invalidateQueries({
+        queryKey: ["bookings", "user", user?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] }); // Refresh calendar availability
+
       // Delete the conversation after successful rejection
       if (data && data.id) {
         try {
           deleteConversation(data.id as string);
         } catch (error) {
-          console.error('Failed to delete conversation after rejection:', error);
+          console.error(
+            "Failed to delete conversation after rejection:",
+            error,
+          );
         }
       }
     },
@@ -216,8 +276,8 @@ export const useConfirmReturn = () => {
       return await confirmReturn(bookingId);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] }); // Refresh calendar availability
       // Optionally notify owner/renter here if needed
     },
   });
@@ -232,8 +292,8 @@ export const useCompleteReturn = () => {
       return await completeReturn(bookingId);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] }); // Refresh calendar availability
       // Optionally notify owner/renter here if needed
     },
   });
@@ -241,9 +301,9 @@ export const useCompleteReturn = () => {
 
 export const useRentalDashboard = (bookingId: string) => {
   const { getRentalDashboard, loading, error } = useBookingApi();
-  
+
   return useQuery({
-    queryKey: ['rental-dashboard', bookingId],
+    queryKey: ["rental-dashboard", bookingId],
     queryFn: async () => {
       if (!bookingId) return null;
       return await getRentalDashboard(bookingId);
@@ -251,8 +311,11 @@ export const useRentalDashboard = (bookingId: string) => {
     enabled: !!bookingId,
     retry: (failureCount, error) => {
       // Retry up to 3 times, but only if it's a session-related error
-      if (failureCount < 3 && error?.message?.includes('401')) {
-        console.log('useRentalDashboard: Retrying due to 401 error, attempt:', failureCount + 1);
+      if (failureCount < 3 && error?.message?.includes("401")) {
+        console.log(
+          "useRentalDashboard: Retrying due to 401 error, attempt:",
+          failureCount + 1,
+        );
         return true;
       }
       return false;
@@ -266,12 +329,18 @@ export const useUpdateBooking = () => {
   const { updateBooking, loading, error } = useBookingApi();
 
   return useMutation({
-    mutationFn: async ({ bookingId, updates }: { bookingId: string; updates: Record<string, unknown> }) => {
+    mutationFn: async ({
+      bookingId,
+      updates,
+    }: {
+      bookingId: string;
+      updates: Record<string, unknown>;
+    }) => {
       return await updateBooking(bookingId, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] }); // Refresh calendar availability
     },
   });
 };
@@ -279,18 +348,18 @@ export const useUpdateBooking = () => {
 export const useCompleteRental = () => {
   const queryClient = useQueryClient();
   const { completeRental } = useBookingApi();
-  
+
   return useMutation({
     mutationFn: async (bookingId: string) => {
       return await completeRental(bookingId);
     },
     onSuccess: () => {
       // Invalidate all booking-related queries
-      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] }); // Refresh calendar availability
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ["user-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["gear-unavailable-dates"] }); // Refresh calendar availability
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
     },
   });
 };

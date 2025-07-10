@@ -1,18 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { gearApi } from '@/services/apiService';
-import { authErrorHandler } from '@/utils/authErrorHandler';
-import { isSessionReady } from '@/utils/security';
-import { useGearApi } from './useApi';
-import { useAuthQuery, useAuthMutation } from './useAuthQuery';
-import { GearData, GearUpdate } from '@/integrations/supabase/types';
-import { getGearUnavailableDates } from '@/services/apiService';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { gearApi } from "@/services/apiService";
+import { authErrorHandler } from "@/utils/authErrorHandler";
+import { isSessionReady } from "@/utils/security";
+import { useGearApi } from "./useApi";
+import { useAuthQuery, useAuthMutation } from "./useAuthQuery";
+import { GearData, GearUpdate } from "@/integrations/supabase/types";
+import { getGearUnavailableDates } from "@/services/apiService";
 
 export const useAllGear = () => {
   const { getAvailableGear } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['all-gear'],
+    queryKey: ["all-gear"],
     queryFn: async () => {
       return await getAvailableGear();
     },
@@ -28,9 +28,9 @@ export const useAllGear = () => {
 
 export const useGearById = (gearId: string) => {
   const { getGearItem } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['gear', gearId],
+    queryKey: ["gear", gearId],
     queryFn: async () => {
       return await getGearItem(gearId);
     },
@@ -47,30 +47,30 @@ export const useGearById = (gearId: string) => {
 export const useCreateGear = () => {
   const queryClient = useQueryClient();
   const { createGear } = useGearApi();
-  
+
   return useMutation({
     mutationFn: async (gearData: Record<string, unknown>) => {
       // Check if session is ready before making the API call
       const sessionReady = await isSessionReady();
       if (!sessionReady) {
-        throw new Error('Session not ready. Please try again.');
+        throw new Error("Session not ready. Please try again.");
       }
-      
+
       const result = await createGear(gearData);
-      
+
       // The useGearApi.createGear returns the data directly or null on error
       if (!result) {
-        throw new Error('Failed to create gear: No result returned from API');
+        throw new Error("Failed to create gear: No result returned from API");
       }
-      
+
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-gear'] });
-      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+      queryClient.invalidateQueries({ queryKey: ["all-gear"] });
+      queryClient.invalidateQueries({ queryKey: ["user-listings"] });
     },
     onError: (error: unknown) => {
-      console.error('useCreateGear error:', error);
+      console.error("useCreateGear error:", error);
       // Handle auth errors
       if (authErrorHandler.isAuthError(error)) {
         authErrorHandler.handleAuthError(error).catch(console.error);
@@ -82,15 +82,21 @@ export const useCreateGear = () => {
 export const useUpdateGear = () => {
   const queryClient = useQueryClient();
   const { updateGear } = useGearApi();
-  
+
   return useMutation({
-    mutationFn: async ({ gearId, updates }: { gearId: string; updates: Record<string, unknown> }) => {
+    mutationFn: async ({
+      gearId,
+      updates,
+    }: {
+      gearId: string;
+      updates: Record<string, unknown>;
+    }) => {
       return await updateGear(gearId, updates);
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['gear', variables.gearId] });
-      queryClient.invalidateQueries({ queryKey: ['all-gear'] });
-      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+      queryClient.invalidateQueries({ queryKey: ["gear", variables.gearId] });
+      queryClient.invalidateQueries({ queryKey: ["all-gear"] });
+      queryClient.invalidateQueries({ queryKey: ["user-listings"] });
     },
   });
 };
@@ -98,23 +104,23 @@ export const useUpdateGear = () => {
 export const useDeleteGear = () => {
   const queryClient = useQueryClient();
   const { deleteGear } = useGearApi();
-  
+
   return useMutation({
     mutationFn: async (gearId: string) => {
       return await deleteGear(gearId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-gear'] });
-      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+      queryClient.invalidateQueries({ queryKey: ["all-gear"] });
+      queryClient.invalidateQueries({ queryKey: ["user-listings"] });
     },
   });
 };
 
 export const useGearByCategory = (categoryId: string) => {
   const { getAvailableGear } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['gear-by-category', categoryId],
+    queryKey: ["gear-by-category", categoryId],
     queryFn: async () => {
       return await getAvailableGear({ category_id: categoryId });
     },
@@ -128,11 +134,15 @@ export const useGearByCategory = (categoryId: string) => {
   });
 };
 
-export const useGearByLocation = (latitude: number, longitude: number, radius: number = 50) => {
+export const useGearByLocation = (
+  latitude: number,
+  longitude: number,
+  radius: number = 50,
+) => {
   const { searchByLocation } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['gear-by-location', latitude, longitude, radius],
+    queryKey: ["gear-by-location", latitude, longitude, radius],
     queryFn: async () => {
       // For now, use searchByLocation with coordinates as string
       return await searchByLocation(`${latitude},${longitude}`);
@@ -149,9 +159,9 @@ export const useGearByLocation = (latitude: number, longitude: number, radius: n
 
 export const useGearByOwner = (ownerId: string) => {
   const { getAvailableGear } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['gear-by-owner', ownerId],
+    queryKey: ["gear-by-owner", ownerId],
     queryFn: async () => {
       return await getAvailableGear({ owner_id: ownerId });
     },
@@ -167,9 +177,9 @@ export const useGearByOwner = (ownerId: string) => {
 
 export const useSearchGear = (searchTerm: string) => {
   const { searchByBrandModel } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['search-gear', searchTerm],
+    queryKey: ["search-gear", searchTerm],
     queryFn: async () => {
       return await searchByBrandModel(searchTerm);
     },
@@ -185,9 +195,9 @@ export const useSearchGear = (searchTerm: string) => {
 
 export const useFeaturedGear = () => {
   const { getAvailableGear } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['featured-gear'],
+    queryKey: ["featured-gear"],
     queryFn: async () => {
       // Use getAvailableGear with featured filter
       return await getAvailableGear({ featured: true });
@@ -201,11 +211,15 @@ export const useFeaturedGear = () => {
   });
 };
 
-export const useGearAvailability = (gearId: string, startDate: string, endDate: string) => {
+export const useGearAvailability = (
+  gearId: string,
+  startDate: string,
+  endDate: string,
+) => {
   const { getGearItem } = useGearApi();
-  
+
   return useQuery({
-    queryKey: ['gear-availability', gearId, startDate, endDate],
+    queryKey: ["gear-availability", gearId, startDate, endDate],
     queryFn: async () => {
       // For now, return the gear item and calculate availability client-side
       // This would need to be implemented in the API
@@ -213,7 +227,7 @@ export const useGearAvailability = (gearId: string, startDate: string, endDate: 
       return {
         gear: gearItem,
         available: true, // Placeholder
-        conflictingBookings: [] // Placeholder
+        conflictingBookings: [], // Placeholder
       };
     },
     enabled: !!(gearId && startDate && endDate),
@@ -228,7 +242,7 @@ export const useGearAvailability = (gearId: string, startDate: string, endDate: 
 
 export const useGearUnavailableDates = (gearId: string | undefined) => {
   return useQuery({
-    queryKey: ['gear-unavailable-dates', gearId],
+    queryKey: ["gear-unavailable-dates", gearId],
     queryFn: async () => {
       if (!gearId) return [];
       return await getGearUnavailableDates(gearId);

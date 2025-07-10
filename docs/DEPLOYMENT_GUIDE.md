@@ -9,18 +9,21 @@ This guide provides step-by-step instructions for deploying the GearUp platform 
 ## 📋 Prerequisites
 
 ### Required Accounts
+
 - [Supabase Account](https://supabase.com) - Backend services
 - [Stripe Account](https://stripe.com) - Payment processing
 - [Vercel Account](https://vercel.com) - Frontend hosting (recommended)
 - [GitHub Account](https://github.com) - Version control
 
 ### Required Tools
+
 - **Node.js** (v18 or higher)
 - **Git** (latest version)
 - **Supabase CLI** (latest version)
 - **Stripe CLI** (for testing)
 
 ### System Requirements
+
 - **RAM**: Minimum 2GB (4GB recommended)
 - **Storage**: 10GB available space
 - **Network**: Stable internet connection
@@ -32,6 +35,7 @@ This guide provides step-by-step instructions for deploying the GearUp platform 
 ### 1. Local Development Environment
 
 #### Install Dependencies
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/gearup-ro-rentals.git
@@ -46,7 +50,9 @@ bun install
 ```
 
 #### Environment Variables
+
 Create `.env.local` file:
+
 ```env
 # Supabase Configuration
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
@@ -63,6 +69,7 @@ VITE_API_URL=http://localhost:54321
 ### 2. Supabase Project Setup
 
 #### Create Supabase Project
+
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
 2. Click "New Project"
 3. Choose organization
@@ -73,6 +80,7 @@ VITE_API_URL=http://localhost:54321
 5. Click "Create new project"
 
 #### Get Project Credentials
+
 1. Go to Settings → API
 2. Copy:
    - **Project URL** → `VITE_SUPABASE_URL`
@@ -80,6 +88,7 @@ VITE_API_URL=http://localhost:54321
    - **service_role secret** → `SUPABASE_SERVICE_ROLE_KEY`
 
 #### Initialize Database
+
 ```bash
 # Install Supabase CLI
 npm install -g supabase
@@ -100,6 +109,7 @@ supabase start
 ### 3. Stripe Configuration
 
 #### Create Stripe Account
+
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
 2. Complete account setup
 3. Navigate to Developers → API Keys
@@ -108,6 +118,7 @@ supabase start
    - **Secret key** → `STRIPE_SECRET_KEY`
 
 #### Configure Webhooks
+
 1. Go to Developers → Webhooks
 2. Click "Add endpoint"
 3. Set endpoint URL: `https://your-project-ref.supabase.co/functions/v1/stripe-webhook`
@@ -119,6 +130,7 @@ supabase start
 5. Copy **Signing secret** → `STRIPE_WEBHOOK_SECRET`
 
 #### Set Up Stripe Connect (for Escrow)
+
 1. Go to Connect → Settings
 2. Configure platform settings:
    - **Business type**: Platform
@@ -131,6 +143,7 @@ supabase start
 ## 🔧 Development Deployment
 
 ### 1. Local Development
+
 ```bash
 # Start development server
 npm run dev
@@ -144,6 +157,7 @@ open http://localhost:5173
 ```
 
 ### 2. Database Migrations
+
 ```bash
 # Create new migration
 supabase migration new add_new_feature
@@ -156,6 +170,7 @@ supabase db reset
 ```
 
 ### 3. Edge Functions Development
+
 ```bash
 # Start edge functions locally
 supabase functions serve
@@ -174,6 +189,7 @@ supabase functions deploy
 ### 1. Frontend Deployment (Vercel)
 
 #### Prepare for Production
+
 ```bash
 # Build application
 npm run build
@@ -183,6 +199,7 @@ npm run preview
 ```
 
 #### Deploy to Vercel
+
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
 2. Click "New Project"
 3. Import GitHub repository
@@ -193,7 +210,9 @@ npm run preview
    - **Install Command**: `npm install`
 
 #### Environment Variables (Vercel)
+
 Add production environment variables:
+
 ```env
 # Supabase Configuration
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
@@ -208,6 +227,7 @@ VITE_API_URL=https://your-project-ref.supabase.co
 ```
 
 #### Custom Domain Setup
+
 1. Go to Project Settings → Domains
 2. Add custom domain
 3. Configure DNS records
@@ -216,6 +236,7 @@ VITE_API_URL=https://your-project-ref.supabase.co
 ### 2. Backend Deployment (Supabase)
 
 #### Production Database Setup
+
 ```bash
 # Link to production project
 supabase link --project-ref your-production-project-ref
@@ -228,6 +249,7 @@ supabase migration up
 ```
 
 #### Edge Functions Deployment
+
 ```bash
 # Deploy all functions
 supabase functions deploy
@@ -237,7 +259,9 @@ supabase functions list
 ```
 
 #### Production Environment Variables
+
 Set in Supabase Dashboard → Settings → Edge Functions:
+
 ```env
 # Stripe Configuration
 STRIPE_SECRET_KEY=sk_live_your_stripe_secret_key
@@ -251,6 +275,7 @@ CANCEL_URL=https://your-domain.vercel.app/payment-cancel
 ### 3. Alternative Frontend Hosting
 
 #### Netlify Deployment
+
 ```bash
 # Install Netlify CLI
 npm install -g netlify-cli
@@ -261,6 +286,7 @@ netlify deploy --prod --dir=dist
 ```
 
 #### AWS S3 + CloudFront
+
 ```bash
 # Install AWS CLI
 aws configure
@@ -276,6 +302,7 @@ aws cloudfront create-distribution --distribution-config file://cloudfront-confi
 ```
 
 #### Docker Deployment
+
 ```dockerfile
 # Dockerfile
 FROM node:18-alpine
@@ -308,6 +335,7 @@ docker run -p 80:80 gearup-app
 ### 1. Environment Security
 
 #### Production Environment Variables
+
 ```env
 # Never commit these to version control
 STRIPE_SECRET_KEY=sk_live_xxx
@@ -316,26 +344,28 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 ```
 
 #### Environment Variable Validation
+
 ```typescript
 // src/utils/env.ts
 export const validateEnv = () => {
   const required = [
-    'VITE_SUPABASE_URL',
-    'VITE_SUPABASE_ANON_KEY',
-    'VITE_STRIPE_PUBLISHABLE_KEY'
-  ]
+    "VITE_SUPABASE_URL",
+    "VITE_SUPABASE_ANON_KEY",
+    "VITE_STRIPE_PUBLISHABLE_KEY",
+  ];
 
   for (const var_name of required) {
     if (!import.meta.env[var_name]) {
-      throw new Error(`Missing required environment variable: ${var_name}`)
+      throw new Error(`Missing required environment variable: ${var_name}`);
     }
   }
-}
+};
 ```
 
 ### 2. Database Security
 
 #### Row Level Security (RLS)
+
 ```sql
 -- Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -345,6 +375,7 @@ ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 ```
 
 #### Security Policies
+
 ```sql
 -- Example: Users can only view their own bookings
 CREATE POLICY "Users can view their own bookings" ON public.bookings
@@ -354,38 +385,42 @@ CREATE POLICY "Users can view their own bookings" ON public.bookings
 ### 3. API Security
 
 #### Rate Limiting
+
 ```typescript
 // Implement rate limiting
 const rateLimit = {
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-}
+  max: 100, // limit each IP to 100 requests per windowMs
+};
 ```
 
 #### CORS Configuration
+
 ```typescript
 // Configure CORS for production
 const corsOptions = {
-  origin: ['https://your-domain.vercel.app'],
+  origin: ["https://your-domain.vercel.app"],
   credentials: true,
-  optionsSuccessStatus: 200
-}
+  optionsSuccessStatus: 200,
+};
 ```
 
 ### 4. Payment Security
 
 #### Stripe Security
+
 ```typescript
 // Validate webhook signatures
-const signature = req.headers['stripe-signature']
+const signature = req.headers["stripe-signature"];
 const event = stripe.webhooks.constructEvent(
   req.body,
   signature,
-  process.env.STRIPE_WEBHOOK_SECRET
-)
+  process.env.STRIPE_WEBHOOK_SECRET,
+);
 ```
 
 #### PCI Compliance
+
 - ✅ Stripe handles PCI compliance
 - ✅ No card data stored locally
 - ✅ All sensitive data tokenized
@@ -397,6 +432,7 @@ const event = stripe.webhooks.constructEvent(
 ### 1. Application Monitoring
 
 #### Vercel Analytics
+
 ```typescript
 // Enable Vercel Analytics
 import { Analytics } from '@vercel/analytics/react'
@@ -412,23 +448,23 @@ function App() {
 ```
 
 #### Error Tracking
+
 ```typescript
 // Sentry integration
-import * as Sentry from "@sentry/react"
+import * as Sentry from "@sentry/react";
 
 Sentry.init({
   dsn: "your-sentry-dsn",
   environment: "production",
-  integrations: [
-    new Sentry.BrowserTracing(),
-  ],
+  integrations: [new Sentry.BrowserTracing()],
   tracesSampleRate: 1.0,
-})
+});
 ```
 
 ### 2. Database Monitoring
 
 #### Supabase Monitoring
+
 1. Go to Supabase Dashboard → Project → Database
 2. Monitor:
    - **Query Performance**: Slow queries
@@ -437,14 +473,15 @@ Sentry.init({
    - **Backup Status**: Backup completion
 
 #### Custom Monitoring
+
 ```sql
 -- Monitor slow queries
-SELECT 
+SELECT
   query,
   mean_exec_time,
   calls,
   total_exec_time
-FROM pg_stat_statements 
+FROM pg_stat_statements
 WHERE mean_exec_time > 1000
 ORDER BY mean_exec_time DESC;
 ```
@@ -452,23 +489,25 @@ ORDER BY mean_exec_time DESC;
 ### 3. Payment Monitoring
 
 #### Stripe Dashboard
+
 1. Monitor payment success rates
 2. Track failed payments
 3. Review dispute activity
 4. Monitor fraud detection
 
 #### Custom Payment Analytics
+
 ```sql
 -- Payment success rate
-SELECT 
+SELECT
   DATE(created_at) as date,
   COUNT(*) as total_transactions,
   COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
   ROUND(
-    COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*), 
+    COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*),
     2
   ) as success_rate
-FROM transactions 
+FROM transactions
 WHERE created_at >= NOW() - INTERVAL '30 days'
 GROUP BY DATE(created_at)
 ORDER BY date;
@@ -481,6 +520,7 @@ ORDER BY date;
 ### 1. GitHub Actions
 
 #### Workflow Configuration
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy to Production
@@ -496,7 +536,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
       - run: npm ci
       - run: npm run test
       - run: npm run build
@@ -511,11 +551,13 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.ORG_ID }}
           vercel-project-id: ${{ secrets.PROJECT_ID }}
-          vercel-args: '--prod'
+          vercel-args: "--prod"
 ```
 
 #### Environment Secrets
+
 Set in GitHub Repository → Settings → Secrets:
+
 - `VERCEL_TOKEN`: Vercel deployment token
 - `ORG_ID`: Vercel organization ID
 - `PROJECT_ID`: Vercel project ID
@@ -525,6 +567,7 @@ Set in GitHub Repository → Settings → Secrets:
 ### 2. Database Migrations
 
 #### Automated Migrations
+
 ```yaml
 # .github/workflows/migrate.yml
 name: Database Migration
@@ -532,7 +575,7 @@ name: Database Migration
 on:
   push:
     branches: [main]
-    paths: ['supabase/migrations/**']
+    paths: ["supabase/migrations/**"]
 
 jobs:
   migrate:
@@ -550,18 +593,21 @@ jobs:
 ### 1. Regular Maintenance Tasks
 
 #### Daily Tasks
+
 - [ ] Monitor error logs
 - [ ] Check payment processing
 - [ ] Verify backup completion
 - [ ] Monitor system performance
 
 #### Weekly Tasks
+
 - [ ] Review security logs
 - [ ] Update dependencies
 - [ ] Monitor user feedback
 - [ ] Review analytics
 
 #### Monthly Tasks
+
 - [ ] Security audit
 - [ ] Performance optimization
 - [ ] Database maintenance
@@ -570,6 +616,7 @@ jobs:
 ### 2. Database Maintenance
 
 #### Vacuum and Analyze
+
 ```sql
 -- Weekly maintenance
 VACUUM ANALYZE;
@@ -577,26 +624,29 @@ REINDEX DATABASE gearup_rentals;
 ```
 
 #### Performance Optimization
+
 ```sql
 -- Monitor slow queries
-SELECT 
+SELECT
   query,
   mean_exec_time,
   calls
-FROM pg_stat_statements 
-ORDER BY mean_exec_time DESC 
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC
 LIMIT 10;
 ```
 
 ### 3. Backup Strategy
 
 #### Automated Backups
+
 - **Frequency**: Daily
 - **Retention**: 30 days
 - **Location**: Supabase managed backups
 - **Verification**: Weekly restore tests
 
 #### Manual Backups
+
 ```bash
 # Export database
 pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql
@@ -612,6 +662,7 @@ psql $DATABASE_URL < backup_20240101.sql
 ### 1. Common Issues
 
 #### Build Failures
+
 ```bash
 # Clear cache and reinstall
 rm -rf node_modules package-lock.json
@@ -625,6 +676,7 @@ npm run validate-env
 ```
 
 #### Database Connection Issues
+
 ```bash
 # Check Supabase status
 supabase status
@@ -638,6 +690,7 @@ supabase db ping
 ```
 
 #### Payment Processing Issues
+
 ```bash
 # Test Stripe webhooks locally
 stripe listen --forward-to localhost:54321/functions/v1/stripe-webhook
@@ -649,6 +702,7 @@ stripe webhooks list
 ### 2. Performance Issues
 
 #### Frontend Performance
+
 ```bash
 # Analyze bundle size
 npm run analyze
@@ -661,18 +715,19 @@ npm run optimize-images
 ```
 
 #### Database Performance
+
 ```sql
 -- Identify slow queries
-SELECT 
+SELECT
   query,
   mean_exec_time,
   calls
-FROM pg_stat_statements 
+FROM pg_stat_statements
 WHERE mean_exec_time > 1000
 ORDER BY mean_exec_time DESC;
 
 -- Check index usage
-SELECT 
+SELECT
   schemaname,
   tablename,
   indexname,
@@ -685,6 +740,7 @@ FROM pg_stat_user_indexes;
 ### 3. Security Issues
 
 #### Security Audit
+
 ```bash
 # Run security audit
 npm audit
@@ -697,6 +753,7 @@ npm update
 ```
 
 #### SSL/TLS Issues
+
 ```bash
 # Verify SSL certificate
 openssl s_client -connect your-domain.com:443
@@ -710,17 +767,20 @@ echo | openssl s_client -servername your-domain.com -connect your-domain.com:443
 ## 📞 Support & Resources
 
 ### 1. Documentation
+
 - [Supabase Documentation](https://supabase.com/docs)
 - [Stripe Documentation](https://stripe.com/docs)
 - [Vercel Documentation](https://vercel.com/docs)
 - [React Documentation](https://react.dev)
 
 ### 2. Community Support
+
 - [Supabase Discord](https://discord.supabase.com)
 - [Stripe Community](https://support.stripe.com)
 - [Vercel Community](https://github.com/vercel/vercel/discussions)
 
 ### 3. Professional Support
+
 - **Supabase**: Enterprise support available
 - **Stripe**: Priority support for verified accounts
 - **Vercel**: Pro plan includes priority support
@@ -730,6 +790,7 @@ echo | openssl s_client -servername your-domain.com -connect your-domain.com:443
 ## 📋 Deployment Checklist
 
 ### Pre-Deployment
+
 - [ ] All tests passing
 - [ ] Environment variables configured
 - [ ] Database migrations ready
@@ -738,6 +799,7 @@ echo | openssl s_client -servername your-domain.com -connect your-domain.com:443
 - [ ] Backup strategy in place
 
 ### Deployment
+
 - [ ] Deploy to staging environment
 - [ ] Run integration tests
 - [ ] Deploy to production
@@ -746,6 +808,7 @@ echo | openssl s_client -servername your-domain.com -connect your-domain.com:443
 - [ ] Check payment processing
 
 ### Post-Deployment
+
 - [ ] Monitor application performance
 - [ ] Verify backup completion
 - [ ] Check security logs
@@ -755,4 +818,4 @@ echo | openssl s_client -servername your-domain.com -connect your-domain.com:443
 
 ---
 
-This comprehensive deployment guide ensures a smooth and secure production deployment of the GearUp platform with proper monitoring, maintenance, and troubleshooting procedures. 
+This comprehensive deployment guide ensures a smooth and secure production deployment of the GearUp platform with proper monitoring, maintenance, and troubleshooting procedures.

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import { useRateLimit } from '@/hooks/useRateLimit';
+import React, { useState, useEffect } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Clock, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { useRateLimit } from "@/hooks/useRateLimit";
 
 interface RateLimitFeedbackProps {
   action: string;
@@ -16,7 +16,7 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
   action,
   endpoint,
   onRetry,
-  showProgress = true
+  showProgress = true,
 }) => {
   const { getRateLimitStatus, resetRateLimit } = useRateLimit();
   const [rateLimitStatus, setRateLimitStatus] = useState<unknown>(null);
@@ -27,12 +27,12 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
       try {
         const status = await getRateLimitStatus(endpoint);
         setRateLimitStatus(status);
-        
+
         if (status.isLimited) {
           setTimeRemaining(status.resetTime - Date.now());
         }
       } catch (error) {
-        console.error('Error checking rate limit status:', error);
+        console.error("Error checking rate limit status:", error);
       }
     };
 
@@ -45,7 +45,7 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
   useEffect(() => {
     if (timeRemaining > 0) {
       const timer = setTimeout(() => {
-        setTimeRemaining(prev => Math.max(0, prev - 1000));
+        setTimeRemaining((prev) => Math.max(0, prev - 1000));
       }, 1000);
 
       return () => clearTimeout(timer);
@@ -56,7 +56,7 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
     const seconds = Math.ceil(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    
+
     if (minutes > 0) {
       return `${minutes}m ${remainingSeconds}s`;
     }
@@ -93,14 +93,17 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
         <AlertTitle>Limită de rate atinsă</AlertTitle>
         <AlertDescription className="space-y-3">
           <p>
-            Ai atins limita de {action.toLowerCase()}. Te rugăm să aștepți înainte de a încerca din nou.
+            Ai atins limita de {action.toLowerCase()}. Te rugăm să aștepți
+            înainte de a încerca din nou.
           </p>
-          
+
           {showProgress && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Timp rămas:</span>
-                <span className="font-medium">{formatTimeRemaining(timeRemaining)}</span>
+                <span className="font-medium">
+                  {formatTimeRemaining(timeRemaining)}
+                </span>
               </div>
               <Progress value={getProgressPercentage()} className="h-2" />
             </div>
@@ -109,7 +112,8 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
           <div className="flex items-center gap-2 text-sm text-orange-700">
             <Clock className="h-4 w-4" />
             <span>
-              {rateLimitStatus.remaining} din {rateLimitStatus.limit} încercări rămase
+              {rateLimitStatus.remaining} din {rateLimitStatus.limit} încercări
+              rămase
             </span>
           </div>
 
@@ -135,8 +139,8 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
         <AlertTitle>Atenție - Limită aproape atinsă</AlertTitle>
         <AlertDescription>
           <p>
-            Ai aproape atins limita de {action.toLowerCase()}. 
-            Mai ai {rateLimitStatus.remaining} încercări rămase.
+            Ai aproape atins limita de {action.toLowerCase()}. Mai ai{" "}
+            {rateLimitStatus.remaining} încercări rămase.
           </p>
         </AlertDescription>
       </Alert>
@@ -149,7 +153,8 @@ export const RateLimitFeedback: React.FC<RateLimitFeedbackProps> = ({
       <AlertTitle>Limită OK</AlertTitle>
       <AlertDescription>
         <p>
-          Mai ai {rateLimitStatus.remaining} din {rateLimitStatus.limit} încercări disponibile.
+          Mai ai {rateLimitStatus.remaining} din {rateLimitStatus.limit}{" "}
+          încercări disponibile.
         </p>
       </AlertDescription>
     </Alert>
@@ -168,7 +173,7 @@ export const useRateLimitStatus = (endpoint: string) => {
         const rateLimitStatus = await getRateLimitStatus(endpoint);
         setStatus(rateLimitStatus);
       } catch (error) {
-        console.error('Error checking rate limit status:', error);
+        console.error("Error checking rate limit status:", error);
       } finally {
         setLoading(false);
       }
@@ -184,7 +189,9 @@ export const useRateLimitStatus = (endpoint: string) => {
 };
 
 // Component for showing rate limit status in headers/navigation
-export const RateLimitStatus: React.FC<{ endpoint: string }> = ({ endpoint }) => {
+export const RateLimitStatus: React.FC<{ endpoint: string }> = ({
+  endpoint,
+}) => {
   const { status, loading } = useRateLimitStatus(endpoint);
 
   if (loading || !status) {
@@ -192,9 +199,9 @@ export const RateLimitStatus: React.FC<{ endpoint: string }> = ({ endpoint }) =>
   }
 
   const getStatusColor = () => {
-    if (status.isLimited) return 'text-red-600';
-    if (status.remaining <= 2) return 'text-yellow-600';
-    return 'text-green-600';
+    if (status.isLimited) return "text-red-600";
+    if (status.remaining <= 2) return "text-yellow-600";
+    return "text-green-600";
   };
 
   const getStatusIcon = () => {
@@ -206,7 +213,9 @@ export const RateLimitStatus: React.FC<{ endpoint: string }> = ({ endpoint }) =>
   return (
     <div className={`flex items-center gap-1 text-xs ${getStatusColor()}`}>
       {getStatusIcon()}
-      <span>{status.remaining}/{status.limit}</span>
+      <span>
+        {status.remaining}/{status.limit}
+      </span>
     </div>
   );
-}; 
+};

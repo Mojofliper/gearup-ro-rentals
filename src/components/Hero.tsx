@@ -1,16 +1,72 @@
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Camera,
+  Users,
+  Shield,
+  Sparkles,
+  ArrowRight,
+  Play,
+} from "lucide-react";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useNavigate } from 'react-router-dom';
-import { Search, Camera, Users, Shield, Sparkles, ArrowRight, Play } from 'lucide-react';
-
-const romanianCounties = ['Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'];
+const romanianCounties = [
+  "Alba",
+  "Arad",
+  "Argeș",
+  "Bacău",
+  "Bihor",
+  "Bistrița-Năsăud",
+  "Botoșani",
+  "Brăila",
+  "Brașov",
+  "București",
+  "Buzău",
+  "Călărași",
+  "Caraș-Severin",
+  "Cluj",
+  "Constanța",
+  "Covasna",
+  "Dâmbovița",
+  "Dolj",
+  "Galați",
+  "Giurgiu",
+  "Gorj",
+  "Harghita",
+  "Hunedoara",
+  "Ialomița",
+  "Iași",
+  "Ilfov",
+  "Maramureș",
+  "Mehedinți",
+  "Mureș",
+  "Neamț",
+  "Olt",
+  "Prahova",
+  "Sălaj",
+  "Satu Mare",
+  "Sibiu",
+  "Suceava",
+  "Teleorman",
+  "Timiș",
+  "Tulcea",
+  "Vâlcea",
+  "Vaslui",
+  "Vrancea",
+];
 
 export const Hero: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [location, setLocation] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [location, setLocation] = useState("");
   const navigate = useNavigate();
 
   const handleSearch = () => {
@@ -36,14 +92,14 @@ export const Hero: React.FC = () => {
             {/* Badge */}
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 border border-blue-200 mb-8">
               <Sparkles className="h-4 w-4 text-blue-600 mr-2" />
-              <span className="text-blue-700 text-sm font-medium">Platforma #1 pentru închirieri echipamente foto-video</span>
+              <span className="text-blue-700 text-sm font-medium">
+                Platforma #1 pentru închirieri echipamente foto-video
+              </span>
             </div>
 
             {/* Main Title */}
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              <span className="text-slate-900">
-                Închiriază echipamente
-              </span>
+              <span className="text-slate-900">Închiriază echipamente</span>
               <br />
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 foto-video în siguranță
@@ -52,13 +108,14 @@ export const Hero: React.FC = () => {
 
             {/* Subtitle */}
             <p className="text-xl sm:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Conectează-te cu creatorii români. Închiriază sau oferă spre închiriere echipament profesional cu protecție completă.
+              Conectează-te cu creatorii români. Închiriază sau oferă spre
+              închiriere echipament profesional cu protecție completă.
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <Button 
-                onClick={() => navigate('/browse')}
+              <Button
+                onClick={() => navigate("/browse")}
                 size="lg"
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
@@ -66,9 +123,9 @@ export const Hero: React.FC = () => {
                 Caută echipamente
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
-              
-              <Button 
-                onClick={() => navigate('/add-gear')}
+
+              <Button
+                onClick={() => navigate("/add-gear")}
                 variant="outline"
                 size="lg"
                 className="border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300"
@@ -103,8 +160,8 @@ export const Hero: React.FC = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button 
-                  onClick={handleSearch} 
+                <Button
+                  onClick={handleSearch}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   <Search className="h-5 w-5 mr-2" />
@@ -120,21 +177,27 @@ export const Hero: React.FC = () => {
               <div className="bg-gradient-to-br from-blue-100 to-indigo-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <Camera className="h-10 w-10 text-blue-600" />
               </div>
-              <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">500+</h3>
+              <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
+                500+
+              </h3>
               <p className="text-slate-600 text-lg">Echipamente disponibile</p>
             </div>
             <div className="text-center group">
               <div className="bg-gradient-to-br from-indigo-100 to-purple-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <Users className="h-10 w-10 text-indigo-600" />
               </div>
-              <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">1,200+</h3>
+              <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
+                1,200+
+              </h3>
               <p className="text-slate-600 text-lg">Creatori înregistrați</p>
             </div>
             <div className="text-center group">
               <div className="bg-gradient-to-br from-sky-100 to-blue-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <Shield className="h-10 w-10 text-sky-600" />
               </div>
-              <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">100%</h3>
+              <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
+                100%
+              </h3>
               <p className="text-slate-600 text-lg">Tranzacții securizate</p>
             </div>
           </div>

@@ -1,26 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Search, 
-  Filter, 
-  X, 
-  MapPin, 
-  Star, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Search,
+  Filter,
+  X,
+  MapPin,
+  Star,
   Calendar,
   Save,
   Bookmark,
-  History
-} from 'lucide-react';
-import { useCategories } from '@/hooks/useCategories';
-import { toast } from 'sonner';
+  History,
+} from "lucide-react";
+import { useCategories } from "@/hooks/useCategories";
+import { toast } from "sonner";
 
 interface AdvancedSearchFiltersProps {
   onFiltersChange: (filters: SearchFilters) => void;
@@ -39,7 +45,7 @@ export interface SearchFilters {
   rating: number;
   availability: string[];
   sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
   dateRange: {
     start: string;
     end: string;
@@ -60,58 +66,58 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
   onFiltersChange,
   onSearchHistory,
   onSaveSearch,
-  savedSearches = []
+  savedSearches = [],
 }) => {
   const { data: categories = [] } = useCategories();
   const [filters, setFilters] = useState<SearchFilters>({
-    search: '',
-    category: '',
+    search: "",
+    category: "",
     minPrice: 0,
     maxPrice: 1000,
-    location: '',
+    location: "",
     condition: [],
     rating: 0,
     availability: [],
-    sortBy: 'created_at',
-    sortOrder: 'desc',
+    sortBy: "created_at",
+    sortOrder: "desc",
     dateRange: {
-      start: '',
-      end: ''
+      start: "",
+      end: "",
     },
     features: [],
-    brand: '',
-    model: ''
+    brand: "",
+    model: "",
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [searchName, setSearchName] = useState('');
+  const [searchName, setSearchName] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   // Available conditions
   const conditions = [
-    { value: 'excellent', label: 'Excelent' },
-    { value: 'very_good', label: 'Foarte bun' },
-    { value: 'good', label: 'Bun' },
-    { value: 'fair', label: 'Acceptabil' },
-    { value: 'poor', label: 'Slab' }
+    { value: "excellent", label: "Excelent" },
+    { value: "very_good", label: "Foarte bun" },
+    { value: "good", label: "Bun" },
+    { value: "fair", label: "Acceptabil" },
+    { value: "poor", label: "Slab" },
   ];
 
   // Available features
   const features = [
-    { value: 'warranty', label: 'Garanție' },
-    { value: 'insurance', label: 'Asigurare' },
-    { value: 'delivery', label: 'Livrare' },
-    { value: 'setup', label: 'Configurare' },
-    { value: 'support', label: 'Suport tehnic' }
+    { value: "warranty", label: "Garanție" },
+    { value: "insurance", label: "Asigurare" },
+    { value: "delivery", label: "Livrare" },
+    { value: "setup", label: "Configurare" },
+    { value: "support", label: "Suport tehnic" },
   ];
 
   // Sort options
   const sortOptions = [
-    { value: 'created_at', label: 'Data adăugării' },
-    { value: 'price', label: 'Preț' },
-    { value: 'rating', label: 'Rating' },
-    { value: 'reviews', label: 'Număr recenzii' },
-    { value: 'distance', label: 'Distanță' }
+    { value: "created_at", label: "Data adăugării" },
+    { value: "price", label: "Preț" },
+    { value: "rating", label: "Rating" },
+    { value: "reviews", label: "Număr recenzii" },
+    { value: "distance", label: "Distanță" },
   ];
 
   useEffect(() => {
@@ -119,64 +125,64 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
   }, [filters, onFiltersChange]);
 
   const handleFilterChange = (key: keyof SearchFilters, value: unknown) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: key === 'category' && value === 'all' ? '' : value
+      [key]: key === "category" && value === "all" ? "" : value,
     }));
   };
 
   const handleConditionToggle = (condition: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       condition: prev.condition.includes(condition)
-        ? prev.condition.filter(c => c !== condition)
-        : [...prev.condition, condition]
+        ? prev.condition.filter((c) => c !== condition)
+        : [...prev.condition, condition],
     }));
   };
 
   const handleFeatureToggle = (feature: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       features: prev.features.includes(feature)
-        ? prev.features.filter(f => f !== feature)
-        : [...prev.features, feature]
+        ? prev.features.filter((f) => f !== feature)
+        : [...prev.features, feature],
     }));
   };
 
   const handleAvailabilityToggle = (availability: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       availability: prev.availability.includes(availability)
-        ? prev.availability.filter(a => a !== availability)
-        : [...prev.availability, availability]
+        ? prev.availability.filter((a) => a !== availability)
+        : [...prev.availability, availability],
     }));
   };
 
   const clearFilters = () => {
     setFilters({
-      search: '',
-      category: 'all',
+      search: "",
+      category: "all",
       minPrice: 0,
       maxPrice: 1000,
-      location: '',
+      location: "",
       condition: [],
       rating: 0,
       availability: [],
-      sortBy: 'created_at',
-      sortOrder: 'desc',
+      sortBy: "created_at",
+      sortOrder: "desc",
       dateRange: {
-        start: '',
-        end: ''
+        start: "",
+        end: "",
       },
       features: [],
-      brand: '',
-      model: ''
+      brand: "",
+      model: "",
     });
   };
 
   const saveCurrentSearch = () => {
     if (!searchName.trim()) {
-      toast.error('Te rugăm să introduci un nume pentru căutarea salvată');
+      toast.error("Te rugăm să introduci un nume pentru căutarea salvată");
       return;
     }
 
@@ -184,13 +190,13 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
       id: Date.now().toString(),
       name: searchName,
       filters: { ...filters },
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     onSaveSearch?.(savedSearch);
-    setSearchName('');
+    setSearchName("");
     setShowSaveDialog(false);
-    toast.success('Căutarea a fost salvată!');
+    toast.success("Căutarea a fost salvată!");
   };
 
   const loadSavedSearch = (savedSearch: SavedSearch) => {
@@ -200,7 +206,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
 
   const activeFiltersCount = [
     filters.search,
-    filters.category && filters.category !== 'all',
+    filters.category && filters.category !== "all",
     filters.location,
     filters.brand,
     filters.model,
@@ -209,7 +215,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
     filters.availability.length,
     filters.rating > 0,
     filters.minPrice > 0 || filters.maxPrice < 1000,
-    filters.dateRange.start || filters.dateRange.end
+    filters.dateRange.start || filters.dateRange.end,
   ].filter(Boolean).length;
 
   return (
@@ -223,7 +229,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
               <Input
                 placeholder="Caută echipament, brand, model..."
                 value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
                 className="pl-10 h-10 sm:h-11 text-sm"
               />
             </div>
@@ -242,7 +248,11 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 )}
               </Button>
               {activeFiltersCount > 0 && (
-                <Button variant="outline" onClick={clearFilters} className="text-sm">
+                <Button
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="text-sm"
+                >
                   <X className="h-4 w-4" />
                 </Button>
               )}
@@ -268,7 +278,11 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                   Salvează Căutarea
                 </Button>
                 {savedSearches.length > 0 && (
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs sm:text-sm"
+                  >
                     <History className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Căutări Salvate ({savedSearches.length})
                   </Button>
@@ -282,7 +296,12 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
               {/* Category */}
               <div>
                 <Label className="text-sm">Categorie</Label>
-                <Select value={filters.category || 'all'} onValueChange={(value) => handleFilterChange('category', value)}>
+                <Select
+                  value={filters.category || "all"}
+                  onValueChange={(value) =>
+                    handleFilterChange("category", value)
+                  }
+                >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue placeholder="Toate categoriile" />
                   </SelectTrigger>
@@ -305,7 +324,9 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                   <Input
                     placeholder="Oraș, județ..."
                     value={filters.location}
-                    onChange={(e) => handleFilterChange('location', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("location", e.target.value)
+                    }
                     className="pl-10 h-10 sm:h-11 text-sm"
                   />
                 </div>
@@ -317,7 +338,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 <Input
                   placeholder="ex. Sony, Canon, DJI..."
                   value={filters.brand}
-                  onChange={(e) => handleFilterChange('brand', e.target.value)}
+                  onChange={(e) => handleFilterChange("brand", e.target.value)}
                   className="h-10 sm:h-11 text-sm"
                 />
               </div>
@@ -328,7 +349,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 <Input
                   placeholder="ex. A7 III, EOS R5..."
                   value={filters.model}
-                  onChange={(e) => handleFilterChange('model', e.target.value)}
+                  onChange={(e) => handleFilterChange("model", e.target.value)}
                   className="h-10 sm:h-11 text-sm"
                 />
               </div>
@@ -336,7 +357,10 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
               {/* Sort By */}
               <div>
                 <Label className="text-sm">Sortează după</Label>
-                <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value)}>
+                <Select
+                  value={filters.sortBy}
+                  onValueChange={(value) => handleFilterChange("sortBy", value)}
+                >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -353,7 +377,12 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
               {/* Sort Order */}
               <div>
                 <Label className="text-sm">Ordine</Label>
-                <Select value={filters.sortOrder} onValueChange={(value: 'asc' | 'desc') => handleFilterChange('sortOrder', value)}>
+                <Select
+                  value={filters.sortOrder}
+                  onValueChange={(value: "asc" | "desc") =>
+                    handleFilterChange("sortOrder", value)
+                  }
+                >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -374,8 +403,8 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 <Slider
                   value={[filters.minPrice, filters.maxPrice]}
                   onValueChange={(value) => {
-                    handleFilterChange('minPrice', value[0]);
-                    handleFilterChange('maxPrice', value[1]);
+                    handleFilterChange("minPrice", value[0]);
+                    handleFilterChange("maxPrice", value[1]);
                   }}
                   max={1000}
                   min={0}
@@ -398,13 +427,17 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 <Star className="h-4 w-4 text-yellow-400" />
                 <Slider
                   value={[filters.rating]}
-                  onValueChange={(value) => handleFilterChange('rating', value[0])}
+                  onValueChange={(value) =>
+                    handleFilterChange("rating", value[0])
+                  }
                   max={5}
                   min={0}
                   step={0.5}
                   className="flex-1"
                 />
-                <span className="text-xs sm:text-sm font-medium">{filters.rating} stele</span>
+                <span className="text-xs sm:text-sm font-medium">
+                  {filters.rating} stele
+                </span>
               </div>
             </div>
 
@@ -417,7 +450,11 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 {conditions.map((condition) => (
                   <Button
                     key={condition.value}
-                    variant={filters.condition.includes(condition.value) ? 'default' : 'outline'}
+                    variant={
+                      filters.condition.includes(condition.value)
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => handleConditionToggle(condition.value)}
                     className="text-xs sm:text-sm"
@@ -437,7 +474,11 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 {features.map((feature) => (
                   <Button
                     key={feature.value}
-                    variant={filters.features.includes(feature.value) ? 'default' : 'outline'}
+                    variant={
+                      filters.features.includes(feature.value)
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => handleFeatureToggle(feature.value)}
                     className="text-xs sm:text-sm"
@@ -455,27 +496,39 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
               <Label className="text-sm">Disponibilitate</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 <Button
-                  variant={filters.availability.includes('today') ? 'default' : 'outline'}
+                  variant={
+                    filters.availability.includes("today")
+                      ? "default"
+                      : "outline"
+                  }
                   size="sm"
-                  onClick={() => handleAvailabilityToggle('today')}
+                  onClick={() => handleAvailabilityToggle("today")}
                   className="text-xs sm:text-sm"
                 >
                   <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Disponibil azi
                 </Button>
                 <Button
-                  variant={filters.availability.includes('weekend') ? 'default' : 'outline'}
+                  variant={
+                    filters.availability.includes("weekend")
+                      ? "default"
+                      : "outline"
+                  }
                   size="sm"
-                  onClick={() => handleAvailabilityToggle('weekend')}
+                  onClick={() => handleAvailabilityToggle("weekend")}
                   className="text-xs sm:text-sm"
                 >
                   <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Weekend
                 </Button>
                 <Button
-                  variant={filters.availability.includes('long_term') ? 'default' : 'outline'}
+                  variant={
+                    filters.availability.includes("long_term")
+                      ? "default"
+                      : "outline"
+                  }
                   size="sm"
-                  onClick={() => handleAvailabilityToggle('long_term')}
+                  onClick={() => handleAvailabilityToggle("long_term")}
                   className="text-xs sm:text-sm"
                 >
                   <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -493,7 +546,12 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 <Input
                   type="date"
                   value={filters.dateRange.start}
-                  onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, start: e.target.value })}
+                  onChange={(e) =>
+                    handleFilterChange("dateRange", {
+                      ...filters.dateRange,
+                      start: e.target.value,
+                    })
+                  }
                   className="h-10 sm:h-11 text-sm"
                 />
               </div>
@@ -502,7 +560,12 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                 <Input
                   type="date"
                   value={filters.dateRange.end}
-                  onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, end: e.target.value })}
+                  onChange={(e) =>
+                    handleFilterChange("dateRange", {
+                      ...filters.dateRange,
+                      end: e.target.value,
+                    })
+                  }
                   className="h-10 sm:h-11 text-sm"
                 />
               </div>
@@ -557,7 +620,11 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
                   <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Salvează
                 </Button>
-                <Button variant="outline" onClick={() => setShowSaveDialog(false)} className="text-sm">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSaveDialog(false)}
+                  className="text-sm"
+                >
                   Anulează
                 </Button>
               </div>
@@ -567,4 +634,4 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({
       )}
     </div>
   );
-}; 
+};
