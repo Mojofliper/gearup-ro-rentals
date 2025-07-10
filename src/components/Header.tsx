@@ -21,7 +21,6 @@ import {
   DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from './NotificationBell';
-import { ThemeToggle } from './ThemeToggle';
 
 interface CartItem {
   id: string;
@@ -255,7 +254,6 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
 
                 {/* Action Buttons */}
                 <div className="flex items-center space-x-2">
-                  <ThemeToggle />
                   <NotificationBell />
 
                   <Button
@@ -519,11 +517,6 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
 
                   {/* Action Buttons */}
                   <div className="space-y-2 pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between p-3">
-                      <span className="text-sm font-medium text-gray-700">Temă</span>
-                      <ThemeToggle />
-                    </div>
-                    
                     <Button
                       variant="outline"
                       className="w-full justify-start hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all duration-200"
@@ -550,7 +543,6 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3">
                     <span className="text-sm font-medium text-gray-700">Temă</span>
-                    <ThemeToggle />
                   </div>
                   
                   <Link 
