@@ -50,6 +50,13 @@ export const BookingsPage: React.FC = () => {
   const userBookings = bookings.filter((b: any) => b.renter_id === user?.id);
   const ownerBookings = bookings.filter((b: any) => b.owner_id === user?.id);
 
+  useEffect(() => {
+    // Immediately refetch bookings when the page mounts
+    if (user?.id) {
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+    }
+  }, [queryClient, user?.id]);
+
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
     if (status === 'confirmed') {
       acceptBooking({ bookingId, pickupLocation: 'To be set' }, {
