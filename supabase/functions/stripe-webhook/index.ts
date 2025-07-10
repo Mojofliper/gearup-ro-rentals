@@ -478,7 +478,7 @@ async function handlePaymentIntentFailed(paymentIntent: unknown, supabaseClient:
   }
 }
 
-async function handleChargeRefunded(charge: unknown, supabaseClient: unknown) {
+async function handleChargeRefunded(charge: unknown, supabaseClient: any) {
   console.log('Charge refunded:', charge.id)
 
   try {
@@ -500,12 +500,24 @@ async function handleChargeRefunded(charge: unknown, supabaseClient: unknown) {
         })
         .eq('id', transaction.id)
 
-      // Update booking payment status
+      // Fetch the booking to check its current status
+      const { data: booking } = await supabaseClient
+        .from('bookings')
+        .select('status')
+        .eq('id', transaction.booking_id)
+        .single();
+
+      let newStatus = booking?.status;
+      if (booking && !['returned', 'completed'].includes(booking.status)) {
+        newStatus = 'cancelled';
+      }
+
+      // Update booking payment status and status (only set cancelled if not already returned/completed)
       await supabaseClient
         .from('bookings')
         .update({ 
           payment_status: 'refunded',
-          status: 'cancelled'
+          status: newStatus
         })
         .eq('id', transaction.booking_id)
 
