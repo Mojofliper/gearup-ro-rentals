@@ -84,8 +84,8 @@ class NotificationService {
     ownerId: string,
   ) {
     const notification = {
-      title: "Rezervare confirmată",
-      body: `Rezervarea pentru "${gearTitle}" a fost confirmată de către chiriaș.`,
+      title: "Rezervare plătită",
+      body: `Plata pentru rezervarea \"${gearTitle}\" a fost efectuată de către chiriaș.`,
       data: { type: "booking", bookingId, gearTitle } as NotificationData,
     };
     await this.sendToUser(ownerId, notification);
@@ -499,11 +499,8 @@ class NotificationService {
         }
       };
 
-      // Use service role client to bypass RLS policies
-      const client = this.serviceRoleClient || supabase;
-
-      // Save to database
-      const { error } = await client.from("notifications").insert({
+      // Try to use regular client first to ensure real-time events work
+      let { error } = await supabase.from("notifications").insert({
         user_id: userId,
         title: notification.title,
         message: notification.body,
@@ -512,12 +509,11 @@ class NotificationService {
         is_read: false,
       });
 
+      // If regular client fails due to RLS, fallback to service role client
       if (error) {
-        console.error("Error saving notification:", error);
-        // Fallback to regular client if service role fails
+        console.error("Error saving notification with regular client:", error);
         if (this.serviceRoleClient) {
-          console.log("Falling back to regular client for notification");
-          const { error: fallbackError } = await supabase
+          const { error: serviceError } = await this.serviceRoleClient
             .from("notifications")
             .insert({
               user_id: userId,
@@ -527,16 +523,11 @@ class NotificationService {
               data: notification.data,
               is_read: false,
             });
-
-          if (fallbackError) {
-            console.error(
-              "Fallback notification save also failed:",
-              fallbackError,
-            );
+          
+          if (serviceError) {
+            console.error("Error saving notification with service role client:", serviceError);
           }
         }
-      } else {
-        console.log("Notification saved successfully for user:", userId);
       }
 
       // Send push notification

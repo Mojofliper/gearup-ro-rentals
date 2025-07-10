@@ -28,42 +28,32 @@ export const NotificationBell: React.FC = () => {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const loadNotifications = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("Error loading notifications:", error);
+      } else {
+        setNotifications(data as NotificationRow[]);
+        setUnread(data.filter((n) => !n.is_read).length);
+      }
+    } catch (err) {
+      console.error("Exception loading notifications:", err);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!user) return;
 
-    const load = async () => {
-      try {
-        console.log(
-          "NotificationBell: Loading notifications for user:",
-          user.id,
-        );
-        const { data, error } = await supabase
-          .from("notifications")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(20);
-
-        if (error) {
-          console.error(
-            "NotificationBell: Error loading notifications:",
-            error,
-          );
-        } else {
-          console.log("NotificationBell: Loaded notifications:", data);
-          setNotifications(data as NotificationRow[]);
-          setUnread(data.filter((n) => !n.is_read).length);
-        }
-      } catch (err) {
-        console.error(
-          "NotificationBell: Exception loading notifications:",
-          err,
-        );
-      }
-      setLoading(false);
-    };
-
-    load();
+    loadNotifications();
 
     const channel = supabase
       .channel("notifications_" + user.id)
@@ -76,12 +66,8 @@ export const NotificationBell: React.FC = () => {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log(
-            "NotificationBell: Real-time notification change detected:",
-            payload,
-          );
           // Reload all notifications on any change
-          load();
+          loadNotifications();
         },
       )
       .subscribe();
@@ -107,6 +93,8 @@ export const NotificationBell: React.FC = () => {
       console.error("Exception marking notifications as read:", err);
     }
   };
+
+
 
   if (!user) return null;
 

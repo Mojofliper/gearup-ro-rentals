@@ -159,7 +159,21 @@ function getBookingBadges(booking: BookingData, userId: string) {
     return badges;
   }
 
-  // 3. Active/Confirmed/Returned
+  // 3. Pending status - show confirmation pending instead of payment pending
+  if (status === "pending") {
+    badges.push(
+      <Badge
+        key="pending"
+        variant="outline"
+        className="bg-orange-100 text-orange-800 border-orange-200"
+      >
+        În așteptare confirmare
+      </Badge>,
+    );
+    return badges;
+  }
+
+  // 4. Active/Confirmed/Returned
   if (status === "confirmed") {
     badges.push(
       <Badge
@@ -191,7 +205,8 @@ function getBookingBadges(booking: BookingData, userId: string) {
       </Badge>,
     );
   }
-  // Payment status for active bookings
+
+  // 5. Payment status for active bookings (only show for non-pending statuses)
   if (paymentStatus === "completed" && status !== "completed") {
     badges.push(
       <Badge
@@ -202,7 +217,7 @@ function getBookingBadges(booking: BookingData, userId: string) {
         Plătit
       </Badge>,
     );
-  } else if (paymentStatus === "pending" && status !== "completed") {
+  } else if (paymentStatus === "pending" && status !== "completed" && status !== "pending") {
     badges.push(
       <Badge
         key="pay-pending"
@@ -499,7 +514,13 @@ export const Dashboard: React.FC = () => {
               title: "Rezervare confirmată!",
               description: "Rezervarea a fost confirmată cu succes.",
             });
-            notifyBookingConfirmed(bookingId, "Gear Title", "renter_id");
+            // Get the actual booking data to send proper notification
+            const booking = userBookings.find(b => b.id === bookingId) || ownerBookings.find(b => b.id === bookingId);
+            if (booking) {
+              const gearTitle = (booking.gear as Record<string, unknown>)?.title as string || "Echipament necunoscut";
+              const renterId = booking.renter_id as string;
+              notifyBookingConfirmed(bookingId, gearTitle, renterId);
+            }
           },
           onError: (error) => {
             toast({
