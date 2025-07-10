@@ -26,46 +26,6 @@ import { RenterClaimForm } from '@/components/RenterClaimForm';
 import { ClaimStatusBadge } from '@/components/ClaimStatusBadge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface BookingData {
-  id: string;
-  renter_id: string;
-  owner_id: string;
-  gear_id: string;
-  status: string;
-  payment_status: string;
-  start_date: string;
-  end_date: string;
-  total_amount: number;
-  deposit_amount: number;
-  pickup_location?: string;
-  pickup_lat?: number;
-  pickup_lng?: number;
-  gear: {
-    title: string;
-    price_per_day: number;
-    deposit_amount: number;
-    images: string[];
-  };
-  renter: {
-    full_name?: string;
-    first_name?: string;
-    last_name?: string;
-    email: string;
-  };
-  owner: {
-    full_name?: string;
-    first_name?: string;
-    last_name?: string;
-    email: string;
-  };
-}
-
-interface UserData {
-  full_name?: string;
-  first_name?: string;
-  last_name?: string;
-  email: string;
-}
 
 export const BookingsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -78,17 +38,17 @@ export const BookingsPage: React.FC = () => {
   const { mutate: confirmReturn, isPending: confirmingReturn } = useConfirmReturn();
   const { mutate: deleteConversation } = useDeleteConversation();
   
-  const [pickupBooking, setPickupBooking] = useState<BookingData | null>(null);
-  const [reviewingBooking, setReviewingBooking] = useState<BookingData | null>(null);
-  const [paymentBooking, setPaymentBooking] = useState<BookingData | null>(null);
-  const [confirmationBooking, setConfirmationBooking] = useState<BookingData | null>(null);
+  const [pickupBooking, setPickupBooking] = useState<any>(null);
+  const [reviewingBooking, setReviewingBooking] = useState<any>(null);
+  const [paymentBooking, setPaymentBooking] = useState<any>(null);
+  const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
   const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
-  const [claimBooking, setClaimBooking] = useState<BookingData | null>(null);
+  const [claimBooking, setClaimBooking] = useState<any>(null);
 
 
   // Filter bookings using the actual authenticated user ID
-  const userBookings = bookings.filter((b) => (b as unknown as BookingData).renter_id === user?.id);
-  const ownerBookings = bookings.filter((b) => (b as unknown as BookingData).owner_id === user?.id);
+  const userBookings = bookings.filter((b: any) => b.renter_id === user?.id);
+  const ownerBookings = bookings.filter((b: any) => b.owner_id === user?.id);
 
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
     if (status === 'confirmed') {
@@ -237,18 +197,18 @@ export const BookingsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="flex-1 w-full max-w-full sm:max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-2 sm:px-4 py-4 sm:py-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-6">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/dashboard')}
-            className="hover:bg-gray-100 transition-colors w-full sm:w-auto rounded-xl text-base font-semibold py-3"
+            className="hover:bg-gray-100 transition-colors w-full sm:w-auto"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Înapoi la Dashboard
           </Button>
-          <h1 className="text-2xl sm:text-3xl font-bold w-full sm:w-auto text-center sm:text-left mt-2 sm:mt-0">Rezervările mele</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold w-full sm:w-auto">Rezervările mele</h1>
         </div>
         {isLoading ? (
           <div className="flex justify-center items-center h-40">
@@ -257,31 +217,32 @@ export const BookingsPage: React.FC = () => {
         ) : (
           <>
             {bookings.length === 0 && (
-              <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-16 px-2">
-                <div className="w-28 h-28 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Eye className="h-14 w-14 text-gray-400" />
+              <div className="text-center text-muted-foreground py-12">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Eye className="h-12 w-12 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Nu ai rezervări încă</h3>
-                <p className="text-gray-600 mb-4">Începe să explorezi echipamentele disponibile!</p>
-                <Button className="w-full max-w-xs mx-auto rounded-xl text-base font-semibold py-3" onClick={() => navigate('/browse')}>Explorează echipamente</Button>
+                <h3 className="text-lg font-semibold mb-2">Nu ai rezervări încă</h3>
+                <p className="text-gray-600">Începe să explorezi echipamentele disponibile!</p>
               </div>
             )}
+            
             {userBookings.length > 0 && (
               <section className="mb-10">
-                <h2 className="text-lg sm:text-xl font-semibold mb-4 text-center sm:text-left">Ca chiriaș</h2>
-                <div className="space-y-6">
-                  {userBookings.map((booking: any) => (
-                    <Card key={booking.id} className="rounded-2xl shadow-md p-4 sm:p-6 transition-shadow">
-                      <CardHeader className="p-0 mb-2">
+                <h2 className="text-lg sm:text-xl font-semibold mb-4">Ca chiriaș</h2>
+                <div className="space-y-4">
+                  {userBookings.map((booking: any) => {
+                    return (
+                      <Card key={booking.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader>
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
                             <div>
-                            <CardTitle className="text-base sm:text-lg line-clamp-2 break-words">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
-                            <CardDescription className="text-xs sm:text-sm">
+                              <CardTitle className="text-base sm:text-lg">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
+                              <CardDescription>
                                 {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
                               </CardDescription>
                             </div>
                             <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
-                            <div className="flex items-center gap-1 flex-wrap">
+                              <div className="flex items-center gap-1">
                                 {getBookingBadges(booking, user?.id)}
                                 {(booking.activeClaim as any) && (
                                   <ClaimStatusBadge 
@@ -303,24 +264,24 @@ export const BookingsPage: React.FC = () => {
                             </div>
                           </div>
                         </CardHeader>
-                      <CardContent className="p-0">
+                        <CardContent>
                           <div className="space-y-2">
-                          <div className="text-sm text-muted-foreground truncate">
+                            <div className="text-sm text-muted-foreground">
                               Proprietar: {getUserDisplayName(booking.owner) || 'Proprietar necunoscut'}
                             </div>
-                          <div className="text-sm text-muted-foreground truncate">
+                            <div className="text-sm text-muted-foreground">
                               Locație pickup: {booking.pickup_location || 'Nespecificat'}
                             </div>
                             <div className="text-sm font-medium text-green-600">
                               Total: {formatPrice(booking.total_amount) || 'N/A'}
                             </div>
-                          <div className="flex flex-col gap-2 mt-4 w-full sm:flex-row sm:gap-3">
+                            <div className="flex flex-wrap flex-col sm:flex-row gap-2 mt-4 w-full">
                               {booking.status === 'completed' && (
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
                                   onClick={() => setReviewingBooking(booking)}
-                                className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto rounded-xl"
+                                  className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto"
                                 >
                                   <Star className="h-4 w-4 mr-1" />
                                   Lasă recenzie
@@ -332,67 +293,75 @@ export const BookingsPage: React.FC = () => {
                                   size="sm" 
                                   onClick={() => handleCompleteRental(booking.id)}
                                   disabled={completingRental}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
                                 >
                                   <CheckCircle2 className="h-4 w-4 mr-1" />
                                   Finalizează
                                 </Button>
                               )}
                               {(booking.status === 'confirmed' || booking.status === 'active') && user?.id === booking.renter_id && (
-                                <BookingStatusFlow 
-                                  booking={booking as BookingData} 
-                                  onStatusUpdate={() => {
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                  }} 
-                                  userRole={user?.id === booking.owner_id ? 'owner' : 'renter'}
-                                />
-                              )}
-                              {(booking.status !== 'cancelled' && user?.id === booking.renter_id) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setClaimBooking(booking)}
-                                className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
-                                >
-                                  <AlertCircle className="h-4 w-4 mr-1" />
-                                  Revendică daune
-                                </Button>
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => {
+                                      // Invalidate queries to trigger real-time updates
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
+                                    onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
+                                  />
+                                </div>
                               )}
                               <Button 
                                 variant="outline" 
                                 size="sm" 
                                 onClick={() => navigate('/messages')}
-                              className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto rounded-xl"
+                                className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
                               >
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Mesaje
                               </Button>
+                              {/* Renter can claim at any step except cancelled */}
+                              {(booking.status !== 'cancelled' && user?.id === booking.renter_id) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setClaimBooking(booking)}
+                                  className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+                                >
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Revendică daune
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
+            
             {ownerBookings.length > 0 && (
               <section>
-                <h2 className="text-lg sm:text-xl font-semibold mb-4 text-center sm:text-left">Ca proprietar</h2>
-                <div className="space-y-6">
-                  {ownerBookings.map((booking: any) => (
-                    <Card key={booking.id} className="rounded-2xl shadow-md p-4 sm:p-6 transition-shadow">
-                      <CardHeader className="p-0 mb-2">
+                <h2 className="text-lg sm:text-xl font-semibold mb-4">Ca proprietar</h2>
+                <div className="space-y-4">
+                  {ownerBookings.map((booking: any) => {
+                    return (
+                      <Card key={booking.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader>
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
                             <div>
-                            <CardTitle className="text-base sm:text-lg line-clamp-2 break-words">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
-                            <CardDescription className="text-xs sm:text-sm">
+                              <CardTitle className="text-base sm:text-lg">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
+                              <CardDescription>
                                 {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
                               </CardDescription>
                             </div>
                             <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
-                            <div className="flex items-center gap-1 flex-wrap">
+                              <div className="flex items-center gap-1">
                                 {getBookingBadges(booking, user?.id)}
                                 {(booking.activeClaim as any) && (
                                   <ClaimStatusBadge 
@@ -414,25 +383,25 @@ export const BookingsPage: React.FC = () => {
                             </div>
                           </div>
                         </CardHeader>
-                      <CardContent className="p-0">
+                        <CardContent>
                           <div className="space-y-2">
-                          <div className="text-sm text-muted-foreground truncate">
+                            <div className="text-sm text-muted-foreground">
                               Chiriaș: {getUserDisplayName(booking.renter) || 'Chiriaș necunoscut'}
                             </div>
-                          <div className="text-sm text-muted-foreground truncate">
+                            <div className="text-sm text-muted-foreground">
                               Locație pickup: {booking.pickup_location || 'Nespecificat'}
                             </div>
                             <div className="text-sm font-medium text-green-600">
                               Total: {formatPrice(booking.total_amount) || 'N/A'}
                             </div>
-                          <div className="flex flex-col gap-2 mt-4 w-full sm:flex-row sm:gap-3">
+                            <div className="flex flex-wrap flex-col sm:flex-row gap-2 mt-4 w-full">
                               {booking.status === 'pending' && (
                                 <>
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
                                     onClick={() => setPickupBooking(booking)}
-                                  className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
                                   >
                                     <MapPin className="h-4 w-4 mr-1" />
                                     Setează locația
@@ -446,7 +415,7 @@ export const BookingsPage: React.FC = () => {
                                             size="sm" 
                                             onClick={() => handleBookingAction(booking.id, 'confirmed')}
                                             disabled={acceptingBooking}
-                                          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto rounded-xl"
+                                            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                                           >
                                             <CheckCircle className="h-4 w-4 mr-1" />
                                             Confirmă
@@ -460,7 +429,7 @@ export const BookingsPage: React.FC = () => {
                                     size="sm" 
                                     onClick={() => handleBookingAction(booking.id, 'rejected')}
                                     disabled={acceptingBooking}
-                                  className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
+                                    className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
                                   >
                                     <XCircle className="h-4 w-4 mr-1" />
                                     Respinge
@@ -468,26 +437,32 @@ export const BookingsPage: React.FC = () => {
                                 </>
                               )}
                               {booking.status === 'confirmed' && user?.id === booking.owner_id && (
-                                <BookingStatusFlow 
-                                  booking={booking as BookingData} 
-                                  onStatusUpdate={() => {
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                  }} 
-                                  userRole={user?.id === booking.owner_id ? 'owner' : 'renter'}
-                                />
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => {
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
+                                    onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
+                                  />
+                                </div>
                               )}
                               {booking.status === 'active' && user?.id === booking.owner_id && (
-                                <BookingStatusFlow 
-                                  booking={booking as BookingData} 
-                                  onStatusUpdate={() => {
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                  }} 
-                                  userRole={user?.id === booking.owner_id ? 'owner' : 'renter'}
-                                />
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => {
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
+                                    onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
+                                  />
+                                </div>
                               )}
                               {booking.status === 'returned' && (
                                 <Button 
@@ -495,18 +470,19 @@ export const BookingsPage: React.FC = () => {
                                   size="sm" 
                                   onClick={() => handleCompleteRental(booking.id)}
                                   disabled={completingRental}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
                                 >
                                   <CheckCircle2 className="h-4 w-4 mr-1" />
                                   Finalizează
                                 </Button>
                               )}
+                              {/* Owner can only claim after payment is completed */}
                               {(['confirmed', 'active', 'returned', 'completed'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.owner_id) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setClaimBooking(booking)}
-                                className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
                                 >
                                   <AlertCircle className="h-4 w-4 mr-1" />
                                   Revendică daune
@@ -516,7 +492,7 @@ export const BookingsPage: React.FC = () => {
                                 variant="outline" 
                                 size="sm" 
                                 onClick={() => navigate('/messages')}
-                              className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto rounded-xl"
+                                className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
                               >
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Mesaje
@@ -525,7 +501,8 @@ export const BookingsPage: React.FC = () => {
                           </div>
                         </CardContent>
                       </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
