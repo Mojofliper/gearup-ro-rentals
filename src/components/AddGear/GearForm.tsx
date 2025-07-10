@@ -90,7 +90,7 @@ export const GearForm: React.FC = () => {
     if (currentStep === 1) {
       navigate(-1);
     } else {
-      setCurrentStep(1);
+    setCurrentStep(1);
     }
   };
 
@@ -145,7 +145,7 @@ export const GearForm: React.FC = () => {
       }
       setShowSuccess(true);
       setTimeout(() => {
-        navigate(`/gear/${result.id}`);
+      navigate(`/gear/${result.id}`);
       }, 1800);
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -165,9 +165,9 @@ export const GearForm: React.FC = () => {
       <div className="flex flex-col items-center">
         <div className={`w-9 h-9 flex items-center justify-center rounded-full border-2 ${currentStep === 1 ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-400'} font-bold text-lg transition-all`}>
           <Info className="h-5 w-5" />
-        </div>
+          </div>
         <span className={`mt-1 text-xs font-medium ${currentStep === 1 ? 'text-blue-700' : 'text-gray-400'}`}>Detalii</span>
-      </div>
+          </div>
       <div className={`h-1 w-10 sm:w-16 rounded-full ${currentStep === 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
       <div className="flex flex-col items-center">
         <div className={`w-9 h-9 flex items-center justify-center rounded-full border-2 ${currentStep === 2 ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-400'} font-bold text-lg transition-all`}>
@@ -206,26 +206,26 @@ export const GearForm: React.FC = () => {
       <Stepper />
       {/* Step content */}
       <div className="space-y-8">
-        {currentStep === 1 && (
+      {currentStep === 1 && (
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
             <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Info className="h-5 w-5 text-blue-600" /> Detalii echipament
             </h3>
-            <BasicInfo 
-              formData={formData} 
-              updateFormData={updateFormData}
-              validationErrors={validationErrors}
-            />
+        <BasicInfo 
+          formData={formData} 
+          updateFormData={updateFormData}
+          validationErrors={validationErrors}
+        />
           </div>
-        )}
-        {currentStep === 2 && (
+      )}
+      {currentStep === 2 && (
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
             <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <ImagePlus className="h-5 w-5 text-blue-600" /> Fotografii echipament
             </h3>
-            <PhotoUpload images={images} setImages={setImages} />
+        <PhotoUpload images={images} setImages={setImages} />
           </div>
-        )}
+      )}
       </div>
       {/* Navigation buttons */}
       <div className="flex flex-col sm:flex-row justify-between gap-2 mt-8 sticky bottom-0 bg-white/80 py-3 rounded-xl z-10">

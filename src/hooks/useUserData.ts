@@ -30,10 +30,10 @@ export const useUpdateProfile = () => {
       if (!user?.id) throw new Error('User not authenticated');
       return await updateProfile(user.id, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['current-user'] });
-      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
-    },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['current-user'] });
+        queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      },
   });
 };
 
@@ -116,10 +116,10 @@ export const useUpdateReview = () => {
     }) => {
       return await updateReview(reviewId, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
-    },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['user-reviews'] });
+        queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+      },
   });
 };
 

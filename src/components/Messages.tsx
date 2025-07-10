@@ -868,19 +868,19 @@ export const Messages: React.FC = () => {
                     {/* Enhanced Messages */}
                     <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
                       <div className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-6 space-y-4 bg-gradient-to-b from-gray-50/30 to-white/30 chat-scrollbar">
-                        {selectedBookingData?.pickup_lat && selectedBookingData?.pickup_lng && selectedBookingData?.pickup_location && (
+                      {selectedBookingData?.pickup_lat && selectedBookingData?.pickup_lng && selectedBookingData?.pickup_location && (
                           <div className="mb-4 p-3 bg-white/60 rounded-lg border border-gray-200/50 flex flex-col items-start">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <MapPin className="h-4 w-4 text-blue-600" />
-                              <span className="font-medium text-gray-800 text-sm">Locație de ridicare</span>
-                            </div>
-                            <MapCard 
-                              lat={selectedBookingData.pickup_lat} 
-                              lng={selectedBookingData.pickup_lng} 
-                              address={selectedBookingData.pickup_location}
-                            />
+                          <div className="flex items-center space-x-2 mb-2">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium text-gray-800 text-sm">Locație de ridicare</span>
                           </div>
-                        )}
+                          <MapCard 
+                            lat={selectedBookingData.pickup_lat} 
+                            lng={selectedBookingData.pickup_lng} 
+                            address={selectedBookingData.pickup_location}
+                          />
+                        </div>
+                      )}
                         {messages.length === 0 ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="text-center space-y-4">

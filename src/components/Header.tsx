@@ -383,20 +383,20 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                 Înregistrează-te
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
+          <Button
+            variant="ghost"
+            size="sm"
               className="relative group"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              <div className="relative">
-                {isMobileMenuOpen ? (
-                  <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-                ) : (
-                  <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-                )}
-              </div>
-            </Button>
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <div className="relative">
+              {isMobileMenuOpen ? (
+                <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+              ) : (
+                <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+              )}
+            </div>
+          </Button>
           </div>
         </div>
 

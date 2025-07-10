@@ -233,109 +233,109 @@ export const BookingsPage: React.FC = () => {
                   {userBookings.map((booking: any) => (
                     <Card key={booking.id} className="rounded-2xl shadow-md p-4 sm:p-6 transition-shadow">
                       <CardHeader className="p-0 mb-2">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
-                          <div>
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+                            <div>
                             <CardTitle className="text-base sm:text-lg line-clamp-2 break-words">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
                             <CardDescription className="text-xs sm:text-sm">
-                              {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                            </CardDescription>
-                          </div>
-                          <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
+                                {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
                             <div className="flex items-center gap-1 flex-wrap">
-                              {getBookingBadges(booking, user?.id)}
-                              {(booking.activeClaim as any) && (
-                                <ClaimStatusBadge 
-                                  status={(booking.activeClaim as any).claim_status}
-                                  claim={booking.activeClaim}
-                                  booking={booking}
-                                  currentUserId={user?.id}
-                                />
+                                {getBookingBadges(booking, user?.id)}
+                                {(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.activeClaim as any).claim_status}
+                                    claim={booking.activeClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                                {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.resolvedClaim as any).claim_status}
+                                    claim={booking.resolvedClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      <CardContent className="p-0">
+                          <div className="space-y-2">
+                          <div className="text-sm text-muted-foreground truncate">
+                              Proprietar: {getUserDisplayName(booking.owner) || 'Proprietar necunoscut'}
+                            </div>
+                          <div className="text-sm text-muted-foreground truncate">
+                              Locație pickup: {booking.pickup_location || 'Nespecificat'}
+                            </div>
+                            <div className="text-sm font-medium text-green-600">
+                              Total: {formatPrice(booking.total_amount) || 'N/A'}
+                            </div>
+                          <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
+                              {booking.status === 'completed' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => setReviewingBooking(booking)}
+                                className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto rounded-xl"
+                                >
+                                  <Star className="h-4 w-4 mr-1" />
+                                  Lasă recenzie
+                                </Button>
                               )}
-                              {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
-                                <ClaimStatusBadge 
-                                  status={(booking.resolvedClaim as any).claim_status}
-                                  claim={booking.resolvedClaim}
-                                  booking={booking}
-                                  currentUserId={user?.id}
-                                />
+                              {booking.status === 'returned' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleCompleteRental(booking.id)}
+                                  disabled={completingRental}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                                  Finalizează
+                                </Button>
+                              )}
+                              {(booking.status === 'confirmed' || booking.status === 'active') && user?.id === booking.renter_id && (
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => {
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
+                                    onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
+                                  />
+                                </div>
+                              )}
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => navigate('/messages')}
+                              className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto rounded-xl"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Mesaje
+                              </Button>
+                              {(booking.status !== 'cancelled' && user?.id === booking.renter_id) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setClaimBooking(booking)}
+                                className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
+                                >
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Revendică daune
+                                </Button>
                               )}
                             </div>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <div className="space-y-2">
-                          <div className="text-sm text-muted-foreground truncate">
-                            Proprietar: {getUserDisplayName(booking.owner) || 'Proprietar necunoscut'}
-                          </div>
-                          <div className="text-sm text-muted-foreground truncate">
-                            Locație pickup: {booking.pickup_location || 'Nespecificat'}
-                          </div>
-                          <div className="text-sm font-medium text-green-600">
-                            Total: {formatPrice(booking.total_amount) || 'N/A'}
-                          </div>
-                          <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
-                            {booking.status === 'completed' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => setReviewingBooking(booking)}
-                                className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto rounded-xl"
-                              >
-                                <Star className="h-4 w-4 mr-1" />
-                                Lasă recenzie
-                              </Button>
-                            )}
-                            {booking.status === 'returned' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleCompleteRental(booking.id)}
-                                disabled={completingRental}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Finalizează
-                              </Button>
-                            )}
-                            {(booking.status === 'confirmed' || booking.status === 'active') && user?.id === booking.renter_id && (
-                              <div className="w-full">
-                                <BookingStatusFlow 
-                                  booking={booking} 
-                                  onStatusUpdate={() => {
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                  }} 
-                                  onPaymentClick={handlePaymentClick}
-                                  onSetPickupLocation={setPickupBooking}
-                                />
-                              </div>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => navigate('/messages')}
-                              className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto rounded-xl"
-                            >
-                              <MessageSquare className="h-4 w-4 mr-1" />
-                              Mesaje
-                            </Button>
-                            {(booking.status !== 'cancelled' && user?.id === booking.renter_id) && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setClaimBooking(booking)}
-                                className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
-                              >
-                                <AlertCircle className="h-4 w-4 mr-1" />
-                                Revendică daune
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
                   ))}
                 </div>
               </section>
@@ -347,153 +347,153 @@ export const BookingsPage: React.FC = () => {
                   {ownerBookings.map((booking: any) => (
                     <Card key={booking.id} className="rounded-2xl shadow-md p-4 sm:p-6 transition-shadow">
                       <CardHeader className="p-0 mb-2">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
-                          <div>
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+                            <div>
                             <CardTitle className="text-base sm:text-lg line-clamp-2 break-words">{booking.gear?.title || 'Echipament necunoscut'}</CardTitle>
                             <CardDescription className="text-xs sm:text-sm">
-                              {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                            </CardDescription>
-                          </div>
-                          <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
+                                {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-row sm:flex-col gap-2 items-end sm:items-end justify-end">
                             <div className="flex items-center gap-1 flex-wrap">
-                              {getBookingBadges(booking, user?.id)}
-                              {(booking.activeClaim as any) && (
-                                <ClaimStatusBadge 
-                                  status={(booking.activeClaim as any).claim_status}
-                                  claim={booking.activeClaim}
-                                  booking={booking}
-                                  currentUserId={user?.id}
-                                />
-                              )}
-                              {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
-                                <ClaimStatusBadge 
-                                  status={(booking.resolvedClaim as any).claim_status}
-                                  claim={booking.resolvedClaim}
-                                  booking={booking}
-                                  currentUserId={user?.id}
-                                />
-                              )}
+                                {getBookingBadges(booking, user?.id)}
+                                {(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.activeClaim as any).claim_status}
+                                    claim={booking.activeClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                                {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
+                                  <ClaimStatusBadge 
+                                    status={(booking.resolvedClaim as any).claim_status}
+                                    claim={booking.resolvedClaim}
+                                    booking={booking}
+                                    currentUserId={user?.id}
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </CardHeader>
+                        </CardHeader>
                       <CardContent className="p-0">
-                        <div className="space-y-2">
+                          <div className="space-y-2">
                           <div className="text-sm text-muted-foreground truncate">
-                            Chiriaș: {getUserDisplayName(booking.renter) || 'Chiriaș necunoscut'}
-                          </div>
+                              Chiriaș: {getUserDisplayName(booking.renter) || 'Chiriaș necunoscut'}
+                            </div>
                           <div className="text-sm text-muted-foreground truncate">
-                            Locație pickup: {booking.pickup_location || 'Nespecificat'}
-                          </div>
-                          <div className="text-sm font-medium text-green-600">
-                            Total: {formatPrice(booking.total_amount) || 'N/A'}
-                          </div>
+                              Locație pickup: {booking.pickup_location || 'Nespecificat'}
+                            </div>
+                            <div className="text-sm font-medium text-green-600">
+                              Total: {formatPrice(booking.total_amount) || 'N/A'}
+                            </div>
                           <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
-                            {booking.status === 'pending' && (
-                              <>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => setPickupBooking(booking)}
+                              {booking.status === 'pending' && (
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setPickupBooking(booking)}
                                   className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
-                                >
-                                  <MapPin className="h-4 w-4 mr-1" />
-                                  Setează locația
-                                </Button>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span>
-                                        <Button 
-                                          variant="default" 
-                                          size="sm" 
-                                          onClick={() => handleBookingAction(booking.id, 'confirmed')}
-                                          disabled={acceptingBooking}
+                                  >
+                                    <MapPin className="h-4 w-4 mr-1" />
+                                    Setează locația
+                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span>
+                                          <Button 
+                                            variant="default" 
+                                            size="sm" 
+                                            onClick={() => handleBookingAction(booking.id, 'confirmed')}
+                                            disabled={acceptingBooking}
                                           className="bg-green-600 hover:bg-green-700 w-full sm:w-auto rounded-xl"
-                                        >
-                                          <CheckCircle className="h-4 w-4 mr-1" />
-                                          Confirmă
-                                        </Button>
-                                      </span>
-                                    </TooltipTrigger>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                          >
+                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                            Confirmă
+                                          </Button>
+                                        </span>
+                                      </TooltipTrigger>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleBookingAction(booking.id, 'rejected')}
+                                    disabled={acceptingBooking}
+                                  className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Respinge
+                                  </Button>
+                                </>
+                              )}
+                              {booking.status === 'confirmed' && user?.id === booking.owner_id && (
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => {
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
+                                    onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
+                                  />
+                                </div>
+                              )}
+                              {booking.status === 'active' && user?.id === booking.owner_id && (
+                                <div className="w-full">
+                                  <BookingStatusFlow 
+                                    booking={booking} 
+                                    onStatusUpdate={() => {
+                                      queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+                                      queryClient.invalidateQueries({ queryKey: ['user-listings'] });
+                                    }} 
+                                    onPaymentClick={handlePaymentClick}
+                                    onSetPickupLocation={setPickupBooking}
+                                  />
+                                </div>
+                              )}
+                              {booking.status === 'returned' && (
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  onClick={() => handleBookingAction(booking.id, 'rejected')}
-                                  disabled={acceptingBooking}
-                                  className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
+                                  onClick={() => handleCompleteRental(booking.id)}
+                                  disabled={completingRental}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
                                 >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Respinge
+                                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                                  Finalizează
                                 </Button>
-                              </>
-                            )}
-                            {booking.status === 'confirmed' && user?.id === booking.owner_id && (
-                              <div className="w-full">
-                                <BookingStatusFlow 
-                                  booking={booking} 
-                                  onStatusUpdate={() => {
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                  }} 
-                                  onPaymentClick={handlePaymentClick}
-                                  onSetPickupLocation={setPickupBooking}
-                                />
-                              </div>
-                            )}
-                            {booking.status === 'active' && user?.id === booking.owner_id && (
-                              <div className="w-full">
-                                <BookingStatusFlow 
-                                  booking={booking} 
-                                  onStatusUpdate={() => {
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user?.id] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
-                                    queryClient.invalidateQueries({ queryKey: ['user-listings'] });
-                                  }} 
-                                  onPaymentClick={handlePaymentClick}
-                                  onSetPickupLocation={setPickupBooking}
-                                />
-                              </div>
-                            )}
-                            {booking.status === 'returned' && (
+                              )}
+                              {(['confirmed', 'active', 'returned', 'completed'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.owner_id) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setClaimBooking(booking)}
+                                className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
+                                >
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Revendică daune
+                                </Button>
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                onClick={() => handleCompleteRental(booking.id)}
-                                disabled={completingRental}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto rounded-xl"
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Finalizează
-                              </Button>
-                            )}
-                            {(['confirmed', 'active', 'returned', 'completed'].includes(booking.status) && booking.payment_status === 'completed' && user?.id === booking.owner_id) && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setClaimBooking(booking)}
-                                className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto rounded-xl"
-                              >
-                                <AlertCircle className="h-4 w-4 mr-1" />
-                                Revendică daune
-                              </Button>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => navigate('/messages')}
+                                onClick={() => navigate('/messages')}
                               className="text-gray-600 border-gray-200 hover:bg-gray-50 w-full sm:w-auto rounded-xl"
-                            >
-                              <MessageSquare className="h-4 w-4 mr-1" />
-                              Mesaje
-                            </Button>
+                              >
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Mesaje
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
                   ))}
                 </div>
               </section>

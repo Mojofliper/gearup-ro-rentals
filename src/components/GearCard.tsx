@@ -72,14 +72,14 @@ export const GearCard = React.memo<GearCardProps>(({
     >
       {/* Image Block */}
       <div className="relative w-full sm:w-64 flex-shrink-0 aspect-[4/3] sm:aspect-[4/3] bg-gray-100">
-        {getFirstImage() ? (
-          <img
-            src={getFirstImage() as string}
-            alt={gear.title}
+          {getFirstImage() ? (
+            <img
+              src={getFirstImage() as string}
+              alt={gear.title}
             className="w-full h-full object-cover rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
+              loading="lazy"
+            />
+          ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none">
             <Camera className="h-10 w-10 text-gray-400" />
           </div>
@@ -88,18 +88,18 @@ export const GearCard = React.memo<GearCardProps>(({
         <span className="absolute bottom-3 left-3 z-10 bg-white/90 text-blue-700 text-xs font-medium px-2 py-0.5 rounded shadow flex items-center gap-1">
           <Camera className="h-4 w-4 text-blue-400" /> {gearType}
         </span>
-      </div>
+          </div>
       {/* Info Block */}
       <div className="flex-1 flex flex-col justify-between p-4 gap-2">
         {/* Top row: name + disponibil badge (inline) */}
         <div className="flex items-center gap-2 mb-1">
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight truncate">
-            {gear.title}
-          </h3>
+              {gear.title}
+            </h3>
           {isAvailable && (
             <span className="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 shadow ml-2">
               <CheckCircle className="h-4 w-4 text-green-500" /> Disponibil
-            </span>
+                  </span>
           )}
         </div>
         {/* Seller + rating + location */}
@@ -115,7 +115,7 @@ export const GearCard = React.memo<GearCardProps>(({
             <MapPin className="h-4 w-4 text-gray-400" />
             <span className="truncate">{gear.pickup_location || 'România'}</span>
           </span>
-        </div>
+            </div>
         {/* Price + deposit row */}
         <div className="flex flex-wrap items-center gap-4 mb-2">
           <span className="flex items-center gap-1 text-base sm:text-lg font-bold text-blue-700">
@@ -126,7 +126,7 @@ export const GearCard = React.memo<GearCardProps>(({
             <Lock className="h-4 w-4 text-gray-400" />
             Depozit: <span className="font-semibold ml-1">{formatPrice(gear.deposit_amount)}</span>
           </span>
-        </div>
+            </div>
         {/* CTAs: right-aligned on desktop, stacked on mobile */}
         <div className="flex flex-col gap-2 mt-2 sm:flex-row sm:justify-end">
           {onBookNow && isAvailable && (
@@ -139,17 +139,17 @@ export const GearCard = React.memo<GearCardProps>(({
               Închiriază acum
             </Button>
           )}
-          {onViewDetails && (
-            <Button
-              variant="outline"
+            {onViewDetails && (
+              <Button
+                variant="outline"
               size="lg"
               className="w-full sm:w-auto border-gray-300 text-blue-700 font-medium"
               onClick={e => { e.stopPropagation(); onViewDetails(gear.id); }}
               aria-label="Vezi detalii"
-            >
-              Vezi detalii
-            </Button>
-          )}
+              >
+                Vezi detalii
+              </Button>
+            )}
         </div>
       </div>
     </Card>
