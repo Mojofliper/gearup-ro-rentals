@@ -163,6 +163,53 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
 
     setLoading(true);
     try {
+      // Refetch latest booking before confirming
+      const { data: latest, error: fetchError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', booking.id)
+        .single();
+      if (fetchError) {
+        toast({
+          title: 'Eroare',
+          description: 'Nu s-a putut verifica statusul actual. Încearcă din nou.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+      // Check if confirmation is still valid
+      if (by === 'owner' && latest.return_confirmed_by_owner) {
+        toast({
+          title: 'Deja confirmat',
+          description: 'Ai confirmat deja primirea echipamentului. Se va actualiza statusul.',
+        });
+        onStatusUpdate?.();
+        queryClient.invalidateQueries({ queryKey: ['bookings', booking.id] });
+        setLoading(false);
+        return;
+      }
+      if (by === 'renter' && latest.return_confirmed_by_renter) {
+        toast({
+          title: 'Deja confirmat',
+          description: 'Ai confirmat deja returnarea echipamentului. Se va actualiza statusul.',
+        });
+        onStatusUpdate?.();
+        queryClient.invalidateQueries({ queryKey: ['bookings', booking.id] });
+        setLoading(false);
+        return;
+      }
+      if (latest.status !== 'active') {
+        toast({
+          title: 'Status schimbat',
+          description: 'Statusul rezervării s-a schimbat. Se va actualiza automat.',
+        });
+        onStatusUpdate?.();
+        queryClient.invalidateQueries({ queryKey: ['bookings', booking.id] });
+        setLoading(false);
+        return;
+      }
+      // Proceed with confirmation if still valid
       const update: any = {};
       if (by === 'owner') {
         update.return_confirmed_by_owner = true;
@@ -189,19 +236,15 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
           title: 'Returnare confirmată',
           description: `Confirmarea ${role}ului pentru returnare a fost înregistrată.`,
         });
-        
         // Check if both parties have confirmed return
-        const newReturnConfirmedByOwner = by === 'owner' ? true : returnConfirmedByOwner;
-        const newReturnConfirmedByRenter = by === 'renter' ? true : returnConfirmedByRenter;
-        
+        const newReturnConfirmedByOwner = by === 'owner' ? true : latest.return_confirmed_by_owner;
+        const newReturnConfirmedByRenter = by === 'renter' ? true : latest.return_confirmed_by_renter;
         if (newReturnConfirmedByOwner && newReturnConfirmedByRenter) {
-          // Both parties confirmed return - database trigger will handle escrow release
           toast({
             title: 'Returnare completă',
             description: 'Ambele părți au confirmat returnarea. Plățile vor fi procesate automat.',
           });
         }
-        
         onStatusUpdate?.();
         queryClient.invalidateQueries({ queryKey: ['bookings', booking.id] });
       }
