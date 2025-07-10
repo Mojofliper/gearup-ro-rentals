@@ -36,7 +36,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { mutate: createBooking, isPending } = useCreateBooking();
-  const [notes, setNotes] = useState('');
 
   const handleSubmit = () => {
     if (!user || selectedDates.length === 0) return;
@@ -55,8 +54,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       gear_id: gear.id,
       start_date: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`,
       end_date: `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`,
-      pickup_location: notes || null,
-      renter_notes: notes || null
+      // Removed notes fields
     }, {
       onSuccess: () => {
         toast({
@@ -133,18 +131,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             )}
               <p>* Taxa platformă se aplică doar la suma de închiriere</p>
             </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <Label htmlFor="notes">Mesaj pentru proprietar (opțional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Detalii suplimentare despre închiriere..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-1"
-            />
           </div>
 
           {/* Safety Notice */}

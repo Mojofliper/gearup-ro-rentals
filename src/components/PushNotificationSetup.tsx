@@ -213,20 +213,7 @@ export const PushNotificationSetup: React.FC<PushNotificationSetupProps> = ({ cl
     }
   };
 
-  const testNotification = async () => {
-    if (!isSubscribed) {
-      toast.error('Trebuie să fii abonat la notificări pentru a testa');
-      return;
-    }
 
-    try {
-      await pushNotificationService.sendTestNotification(user!.id);
-      toast.success('Notificare de test trimisă!');
-    } catch (error) {
-      console.error('Error sending test notification:', error);
-      toast.error('Eroare la trimiterea notificării de test');
-    }
-  };
 
   // Utility functions
   const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
@@ -425,15 +412,6 @@ export const PushNotificationSetup: React.FC<PushNotificationSetupProps> = ({ cl
             </div>
 
             <Separator />
-
-            {/* Test Notification */}
-            <Button 
-              variant="outline" 
-              onClick={testNotification}
-              className="w-full"
-            >
-              Trimite Notificare de Test
-            </Button>
           </>
         )}
 

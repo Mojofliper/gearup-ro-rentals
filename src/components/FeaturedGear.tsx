@@ -99,16 +99,6 @@ const FeaturedGearCard: React.FC<{ gear: Record<string, unknown>; onStartConvers
           </div>
         )}
         {/* Quick Actions */}
-        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="flex space-x-2">
-            <Button size="sm" variant="secondary" className="w-8 h-8 p-0 rounded-full bg-white/90 backdrop-blur-sm">
-              <Heart className="h-4 w-4" />
-            </Button>
-            <Button size="sm" variant="secondary" className="w-8 h-8 p-0 rounded-full bg-white/90 backdrop-blur-sm">
-              <Eye className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
       </div>
 
       <CardContent className="p-6">

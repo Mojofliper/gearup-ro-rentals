@@ -83,30 +83,7 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const testNotification = async () => {
-    if (!user) return;
-    try {
-      console.log('NotificationBell: Testing notification creation...');
-      const { error } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: user.id,
-          title: 'Test Notification',
-          message: 'This is a test notification to verify the system is working.',
-          type: 'admin_message',
-          data: { type: 'system', action: 'test' },
-          is_read: false
-        });
-      
-      if (error) {
-        console.error('NotificationBell: Test notification failed:', error);
-      } else {
-        console.log('NotificationBell: Test notification created successfully');
-      }
-    } catch (err) {
-      console.error('NotificationBell: Exception creating test notification:', err);
-    }
-  };
+
 
 
   if (!user) return null;
@@ -130,10 +107,6 @@ export const NotificationBell: React.FC = () => {
             <Button variant="link" size="sm" onClick={markAllRead}>Marchează citite</Button>
           )}
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={testNotification} className="text-xs text-blue-600">
-          🧪 Test Notification
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {loading ? (
           <div className="p-4 space-y-2">

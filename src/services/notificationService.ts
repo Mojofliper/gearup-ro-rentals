@@ -358,7 +358,7 @@ class NotificationService {
 
       // Use service role client to bypass RLS policies
       const client = this.serviceRoleClient || supabase;
-      
+
       // Save to database
       const { error } = await client
         .from('notifications')
