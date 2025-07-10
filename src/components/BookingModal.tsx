@@ -83,7 +83,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-full max-w-xs sm:max-w-md p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Confirmă rezervarea</DialogTitle>
         </DialogHeader>
