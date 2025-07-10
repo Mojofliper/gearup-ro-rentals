@@ -54,10 +54,11 @@ export const OwnerClaimForm: React.FC<OwnerClaimFormProps> = ({ bookingId, onSub
           return;
         }
 
-        // Allow claims for active or completed bookings with completed payments
+        // Allow claims for any booking except cancelled or completed
         const isEligible = (
-          bookingData.payment_status === 'completed' && 
-          ['active', 'returned', 'completed'].includes(bookingData.status)
+          bookingData.owner_id === user?.id &&
+          bookingData.status !== 'cancelled' &&
+          bookingData.status !== 'completed'
         );
 
         setEligible(isEligible);

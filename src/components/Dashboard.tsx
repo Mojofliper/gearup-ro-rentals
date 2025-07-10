@@ -42,8 +42,6 @@ function getBookingBadges(booking: any, userId: string) {
   const badges = [];
   const status = booking.status;
   const paymentStatus = booking.payment_status;
-  const claim = booking.activeClaim || booking.resolvedClaim;
-  const claimStatus = claim?.claim_status;
 
   // 1. Cancelled
   if (status === 'cancelled') {
@@ -57,11 +55,6 @@ function getBookingBadges(booking: any, userId: string) {
   // 2. Completed
   if (status === 'completed') {
     badges.push(<Badge key="completed" variant="default" className="bg-green-100 text-green-800">Finalizată</Badge>);
-    if (claimStatus === 'approved') {
-      badges.push(<Badge key="claim-approved" variant="default" className="bg-green-100 text-green-800 ml-1">Revendicare aprobată</Badge>);
-    } else if (claimStatus === 'rejected') {
-      badges.push(<Badge key="claim-rejected" variant="destructive" className="ml-1">Revendicare respinsă</Badge>);
-    }
     return badges;
   }
 
@@ -72,14 +65,6 @@ function getBookingBadges(booking: any, userId: string) {
     badges.push(<Badge key="active" variant="secondary" className="bg-blue-100 text-blue-800">În curs</Badge>);
   } else if (status === 'returned') {
     badges.push(<Badge key="returned" variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Returnat</Badge>);
-  }
-  // Claim status for active bookings
-  if (claimStatus === 'pending') {
-    badges.push(<Badge key="claim-active" variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 ml-1">Revendicare activă</Badge>);
-  } else if (claimStatus === 'approved') {
-    badges.push(<Badge key="claim-approved" variant="default" className="bg-green-100 text-green-800 ml-1">Revendicare aprobată</Badge>);
-  } else if (claimStatus === 'rejected') {
-    badges.push(<Badge key="claim-rejected" variant="destructive" className="ml-1">Revendicare respinsă</Badge>);
   }
   // Payment status for active bookings
   if (paymentStatus === 'completed' && status !== 'completed') {
@@ -543,17 +528,19 @@ export const Dashboard: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Recent bookings for both renter and owner */}
+                    {/* All bookings consolidated - recent bookings for both renter and owner */}
                     {(() => {
                       const allBookings = [...userBookings, ...ownerBookings]
                         .sort((a, b) => new Date((b as any).created_at).getTime() - new Date((a as any).created_at).getTime())
-                        .slice(0, 3);
+                        .slice(0, 5); // Show up to 5 most recent bookings
                       
                       if (allBookings.length > 0) {
                         return allBookings.map((booking) => {
                           const isOwner = booking.owner_id === user?.id;
+                          const isPending = booking.status === 'pending';
+                          
                           return (
-                            <div key={booking.id as string} className="p-3 border rounded-lg hover:bg-gray-50">
+                            <div key={booking.id as string} className={`p-3 border rounded-lg ${isPending ? 'bg-orange-50 border-orange-200' : 'hover:bg-gray-50'}`}>
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
@@ -572,6 +559,22 @@ export const Dashboard: React.FC = () => {
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                   <div className="flex items-center gap-1">
                                     {getBookingBadges(booking, user?.id)}
+                                    {(booking.activeClaim as any) && (
+                                      <ClaimStatusBadge 
+                                        status={(booking.activeClaim as any).claim_status}
+                                        claim={booking.activeClaim}
+                                        booking={booking}
+                                        currentUserId={user?.id}
+                                      />
+                                    )}
+                                    {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
+                                      <ClaimStatusBadge 
+                                        status={(booking.resolvedClaim as any).claim_status}
+                                        claim={booking.resolvedClaim}
+                                        booking={booking}
+                                        currentUserId={user?.id}
+                                      />
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Button 
@@ -582,6 +585,21 @@ export const Dashboard: React.FC = () => {
                                     >
                                       Vezi
                                     </Button>
+                                    
+                                    {/* Confirm button for pending owner bookings */}
+                                    {isPending && isOwner && (
+                                      <Button 
+                                        variant="default" 
+                                        size="sm" 
+                                        onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
+                                        disabled={acceptingBooking}
+                                        className="bg-green-600 hover:bg-green-700 text-xs px-3 py-1 h-7"
+                                      >
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Confirmă
+                                      </Button>
+                                    )}
+                                    
                                     {/* Claim buttons */}
                                     {(!['pending', 'cancelled'].includes(booking.status as string) && user?.id === booking.renter_id) && (
                                       <Button
@@ -612,79 +630,22 @@ export const Dashboard: React.FC = () => {
                           );
                         });
                       }
-                      return null;
-                    })()}
-
-                    {/* Pending owner bookings */}
-                    {ownerBookings
-                      .filter(booking => booking.status === 'pending')
-                      .slice(0, 2)
-                      .map((booking) => (
-                      <div key={booking.id as string} className="p-3 border rounded-lg bg-orange-50">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{(booking.gear as any)?.title || 'Echipament necunoscut'}</p>
-                            <p className="text-xs text-gray-600 truncate">Chiriaș: {getUserDisplayName(booking.renter as any)}</p>
-                            <p className="text-xs text-gray-600">
-                              {format(new Date(booking.start_date as string), 'dd MMM yyyy')} - {format(new Date(booking.end_date as string), 'dd MMM yyyy')}
-                            </p>
-                          </div>
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                            <div className="flex items-center gap-1">
-                              {getStatusBadge(booking.status as string)}
-                              {(booking.activeClaim as any) && (
-                                <ClaimStatusBadge 
-                                  status={(booking.activeClaim as any).claim_status}
-                                  claim={booking.activeClaim}
-                                  booking={booking}
-                                  currentUserId={user?.id}
-                                />
-                              )}
-                              {(booking.resolvedClaim as any) && !(booking.activeClaim as any) && (
-                                <ClaimStatusBadge 
-                                  status={(booking.resolvedClaim as any).claim_status}
-                                  claim={booking.resolvedClaim}
-                                  booking={booking}
-                                  currentUserId={user?.id}
-                                />
-                              )}
-                            </div>
-                            <Button 
-                              variant="default" 
-                              size="sm" 
-                              onClick={() => handleBookingAction(String(booking.id), 'confirmed')}
-                              disabled={acceptingBooking}
-                              className="bg-green-600 hover:bg-green-700 text-xs px-3 py-1 h-7"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Confirmă
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {(() => {
-                      const hasBookings = [...userBookings, ...ownerBookings].length > 0;
-                      const hasPendingBookings = ownerBookings.some(b => b.status === 'pending');
                       
-                      if (!hasBookings && !hasPendingBookings) {
-                        return (
-                          <div className="text-center py-8">
-                            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-sm text-gray-600">Nu ai rezervări</p>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => navigate('/browse')}
-                              className="mt-2"
-                            >
-                              Caută echipamente
-                            </Button>
-                          </div>
-                        );
-                      }
-                      return null;
+                      // Show empty state if no bookings
+                      return (
+                        <div className="text-center py-8">
+                          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                          <p className="text-sm text-gray-600">Nu ai rezervări</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => navigate('/browse')}
+                            className="mt-2"
+                          >
+                            Caută echipamente
+                          </Button>
+                        </div>
+                      );
                     })()}
                   </div>
                 )}

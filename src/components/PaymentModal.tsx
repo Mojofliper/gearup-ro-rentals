@@ -141,6 +141,46 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+    if (paymentStatus === 'processing') return;
+    
+    // Only cancel if payment was actually initiated but failed (error)
+    // Do NOT cancel on modal close or payment start
+    if (paymentStatus === 'error') {
+      handlePaymentCancellation();
+    }
+    
+    setPaymentStatus('idle');
+    setErrorMessage('');
+    setShowOwnerSetup(false);
+    onClose();
+  };
+
+  const handlePaymentCancellation = async () => {
+    if (!booking?.id) return;
+
+    try {
+      // Update booking status to cancelled and payment_status to failed
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          status: 'cancelled',
+          payment_status: 'failed',
+          cancellation_reason: 'Payment cancelled by user'
+        })
+        .eq('id', booking.id);
+
+      if (error) {
+        console.error('Error updating booking status:', error);
+      } else {
+        console.log('Booking status updated to cancelled (payment failed)');
+        toast.success('Plata a fost anulată. Rezervarea a fost anulată.');
+      }
+    } catch (error: unknown) {
+      console.error('Error handling payment cancellation:', error);
+    }
+  };
+
   const handleEscrowPayment = async () => {
     if (!user || !booking) return;
 
@@ -157,6 +197,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     setPaymentStatus('processing');
     setErrorMessage('');
+
+    // Do NOT set booking status to cancelled or pending here. Let the cleanup job handle abandoned bookings.
 
     // Defensive logging
     console.log('Calling createPaymentIntent with:', {
@@ -186,45 +228,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       if ((error as Error).message?.includes('Owner account not ready')) {
         setShowOwnerSetup(true);
       }
-    }
-  };
-
-  const handleClose = () => {
-    if (paymentStatus === 'processing') return;
-    
-    // If payment was initiated but not completed, mark booking as cancelled
-    if (paymentStatus === 'error') {
-      handlePaymentCancellation();
-    }
-    
-    setPaymentStatus('idle');
-    setErrorMessage('');
-    setShowOwnerSetup(false);
-    onClose();
-  };
-
-  const handlePaymentCancellation = async () => {
-    if (!booking?.id) return;
-
-    try {
-      // Update booking status to cancelled
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          status: 'cancelled',
-          payment_status: 'failed', // Use valid enum value
-          cancellation_reason: 'Payment cancelled by user'
-        })
-        .eq('id', booking.id);
-
-      if (error) {
-        console.error('Error updating booking status:', error);
-      } else {
-        console.log('Booking status updated to cancelled');
-        toast.success('Rezervarea a fost anulată');
-      }
-    } catch (error: unknown) {
-      console.error('Error handling payment cancellation:', error);
     }
   };
 

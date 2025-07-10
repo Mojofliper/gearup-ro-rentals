@@ -323,8 +323,8 @@ export const BookingsPage: React.FC = () => {
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Mesaje
                               </Button>
-                              {/* Renter can claim at any step except pending/cancelled */}
-                              {(!['pending', 'cancelled'].includes(booking.status) && user?.id === booking.renter_id) && (
+                              {/* Renter can claim at any step except cancelled */}
+                              {(booking.status !== 'cancelled' && user?.id === booking.renter_id) && (
                                 <Button
                                   variant="outline"
                                   size="sm"

@@ -54,10 +54,10 @@ export const RenterClaimForm: React.FC<RenterClaimFormProps> = ({ bookingId, onS
           return;
         }
 
-        // Allow claims for active or completed bookings with completed payments
+        // Allow claims for any booking except cancelled
         const isEligible = (
-          bookingData.payment_status === 'completed' && 
-          ['active', 'returned', 'completed'].includes(bookingData.status)
+          bookingData.renter_id === user?.id &&
+          bookingData.status !== 'cancelled'
         );
 
         setEligible(isEligible);

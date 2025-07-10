@@ -89,7 +89,7 @@ export const BookingStatusFlow: React.FC<BookingStatusFlowProps> = ({
   const returnConfirmedByOwner = booking.return_confirmed_by_owner;
 
   // Check if current user can confirm - ONLY if payment is completed
-  const canOwnerConfirmPickup = isOwner && !pickupConfirmedByOwner && currentStatus === 'confirmed' && booking.payment_status === 'completed';
+  const canOwnerConfirmPickup = isOwner && !pickupConfirmedByOwner && currentStatus === 'confirmed' && booking.payment_status === 'completed' && booking.pickup_location && booking.pickup_location !== 'To be set';
   const canRenterConfirmPickup = isRenter && !pickupConfirmedByRenter && currentStatus === 'confirmed' && booking.payment_status === 'completed';
   const canOwnerConfirmReturn = isOwner && !returnConfirmedByOwner && currentStatus === 'active';
   const canRenterConfirmReturn = isRenter && !returnConfirmedByRenter && currentStatus === 'active';
