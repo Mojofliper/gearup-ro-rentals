@@ -101,9 +101,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           description: result.error,
           variant: 'destructive',
         });
-      } else if (result && result.error === undefined) {
+        setLoading(false);
+        return;
+      }
+      if (result && !result.error) {
         console.log('AuthModal: Showing success toast for mode:', mode);
-        
         if (mode === 'login') {
           toast({
             title: 'Conectare reușită',
@@ -113,13 +115,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
           resetForm();
           navigate('/browse');
         } else {
-          // For signup, show success message and switch to login mode
           toast({
             title: 'Cont creat cu succes!',
             description: 'Contul tău a fost creat cu succes. Te poți conecta acum cu emailul și parola.',
           });
-          
-          // Switch to login mode and clear form
           onSwitchMode('login');
           resetForm();
         }
@@ -207,7 +206,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onS
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-full max-w-xs sm:max-w-md p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-center">
             {mode === 'login' ? 'Conectează-te' : 'Creează un cont'}

@@ -371,21 +371,31 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden relative group"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <div className="relative">
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-              ) : (
-                <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
-              )}
-            </div>
-          </Button>
+          {/* Mobile Header Actions */}
+          <div className="flex items-center gap-2 lg:hidden">
+            {!user && (
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-lg px-4 py-2 text-sm shadow-md hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
+                onClick={() => handleAuthClick('signup')}
+              >
+                Înregistrează-te
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="relative group"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <div className="relative">
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+                ) : (
+                  <Menu className="h-5 w-5 transition-all duration-200 group-hover:scale-110" />
+                )}
+              </div>
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
@@ -542,32 +552,31 @@ export const Header: React.FC<{ unreadCount?: number }> = ({ unreadCount }) => {
                 </>
               ) : (
                 <div className="space-y-4">
-                  
-                  <Link 
-                    to="/browse"
-                    className="flex items-center space-x-3 p-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                  {/* Prominent Register button at the top */}
+                  <Button
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-lg font-bold py-3 rounded-xl mb-4"
+                    onClick={() => handleAuthClick('signup')}
                   >
-                    <Compass className="h-5 w-5" />
-                    <span className="font-medium">Caută</span>
-                  </Link>
-                  
-                  <div className="space-y-2">
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start hover:bg-blue-50 hover:text-blue-700 transition-all duration-200" 
+                    <Sparkles className="h-5 w-5 mr-2" />
+                    Înregistrează-te gratuit
+                  </Button>
+                  <div className="flex flex-col space-y-2">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 py-3 text-base"
                       onClick={() => handleAuthClick('login')}
                     >
-                      <User className="h-4 w-4 mr-2" />
+                      <User className="h-5 w-5 mr-2" />
                       Conectează-te
                     </Button>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
-                      onClick={() => handleAuthClick('signup')}
+                    <Link
+                      to="/browse"
+                      className="flex items-center space-x-3 p-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 text-base"
+                      onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Înregistrează-te gratuit
-                    </Button>
+                      <Compass className="h-5 w-5" />
+                      <span className="font-medium">Caută</span>
+                    </Link>
                   </div>
                 </div>
               )}
