@@ -44,11 +44,42 @@ export const BookingsPage: React.FC = () => {
   const [confirmationBooking, setConfirmationBooking] = useState<any>(null);
   const [confirmationType, setConfirmationType] = useState<'pickup' | 'return'>('pickup');
   const [claimBooking, setClaimBooking] = useState<any>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
 
   // Filter bookings using the actual authenticated user ID
   const userBookings = bookings.filter((b: any) => b.renter_id === user?.id);
   const ownerBookings = bookings.filter((b: any) => b.owner_id === user?.id);
+
+  // Real-time subscription for connection status
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('bookings-page-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `renter_id=eq.${user.id} OR owner_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('BookingsPage: Real-time update received:', payload);
+          setLastUpdateTime(new Date());
+        }
+      )
+      .subscribe((status) => {
+        console.log('BookingsPage: Real-time subscription status:', status);
+        setIsRealtimeConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const handleBookingAction = (bookingId: string, status: 'confirmed' | 'rejected') => {
     if (status === 'confirmed') {

@@ -21,6 +21,7 @@ export const useUserBookings = () => {
       return await getUserBookings(user.id);
     },
     enabled: !!user?.id,
+    refetchInterval: 10000, // Refetch every 10 seconds as fallback
     retry: (failureCount, error) => {
       // Retry up to 3 times, but only if it's a session-related error
       if (failureCount < 3 && error?.message?.includes('401')) {
@@ -51,11 +52,17 @@ export const useUserBookings = () => {
         (payload) => {
           console.log('useBookings: Booking update received:', payload);
           console.log('useBookings: New booking status:', (payload.new as Record<string, unknown>)?.status);
+          console.log('useBookings: New payment status:', (payload.new as Record<string, unknown>)?.payment_status);
           console.log('useBookings: Old booking status:', (payload.old as Record<string, unknown>)?.status);
+          console.log('useBookings: Old payment status:', (payload.old as Record<string, unknown>)?.payment_status);
+          
           // Invalidate and refetch bookings when any booking changes
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
           // Also refresh calendar availability when booking status changes
           queryClient.invalidateQueries({ queryKey: ['gear-unavailable-dates'] });
+          
+          // Force refetch to ensure immediate update
+          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
       .on(
@@ -67,8 +74,11 @@ export const useUserBookings = () => {
         },
         (payload) => {
           console.log('useBookings: Escrow transaction update received:', payload);
+          console.log('useBookings: Escrow status:', (payload.new as Record<string, unknown>)?.escrow_status);
           // Invalidate and refetch bookings when escrow status changes
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+          // Force refetch to ensure immediate update
+          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
       .on(
@@ -78,9 +88,12 @@ export const useUserBookings = () => {
           schema: 'public',
           table: 'transactions'
         },
-        () => {
-          console.log('useBookings: Transaction update received');
+        (payload) => {
+          console.log('useBookings: Transaction update received:', payload);
+          console.log('useBookings: Transaction status:', (payload.new as Record<string, unknown>)?.status);
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+          // Force refetch to ensure immediate update
+          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
       .on(
@@ -90,9 +103,12 @@ export const useUserBookings = () => {
           schema: 'public',
           table: 'claims'
         },
-        () => {
-          console.log('useBookings: Claim update received');
+        (payload) => {
+          console.log('useBookings: Claim update received:', payload);
+          console.log('useBookings: Claim status:', (payload.new as Record<string, unknown>)?.claim_status);
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+          // Force refetch to ensure immediate update
+          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
       .on(
@@ -102,9 +118,11 @@ export const useUserBookings = () => {
           schema: 'public',
           table: 'reviews'
         },
-        () => {
-          console.log('useBookings: Review update received');
+        (payload) => {
+          console.log('useBookings: Review update received:', payload);
           queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+          // Force refetch to ensure immediate update
+          queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
         }
       )
       .subscribe((status) => {
@@ -113,6 +131,10 @@ export const useUserBookings = () => {
           console.log('useBookings: Real-time subscription active');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('useBookings: Real-time subscription error');
+        } else if (status === 'TIMED_OUT') {
+          console.error('useBookings: Real-time subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.log('useBookings: Real-time subscription closed');
         }
       });
 
@@ -120,6 +142,7 @@ export const useUserBookings = () => {
     const pollInterval = setInterval(() => {
       console.log('useBookings: Polling fallback - refreshing bookings');
       queryClient.invalidateQueries({ queryKey: ['bookings', 'user', user.id] });
+      queryClient.refetchQueries({ queryKey: ['bookings', 'user', user.id] });
     }, 30000);
 
     return () => {
