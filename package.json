@@ -44,6 +44,8 @@
     "@stripe/stripe-js": "^7.4.0",
     "@supabase/supabase-js": "^2.50.3",
     "@tanstack/react-query": "^5.81.5",
+    "auto-prefixer": "^0.4.2",
+    "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
